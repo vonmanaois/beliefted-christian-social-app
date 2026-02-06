@@ -8,6 +8,7 @@ import {
   BellSimple,
   GoogleLogo,
   House,
+  MagnifyingGlass,
   Plus,
   SlidersHorizontal,
   UserCircle,
@@ -22,6 +23,7 @@ export default function Sidebar() {
   const [showThemes, setShowThemes] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
   const router = useRouter();
 
@@ -74,35 +76,47 @@ export default function Sidebar() {
   }, [isAuthenticated]);
 
   return (
-    <aside className="panel p-5 flex flex-col gap-5 h-fit">
+    <>
+      <aside className="hidden md:flex p-5 flex-col gap-5 h-fit items-center text-center md:items-start md:text-left bg-transparent border-none shadow-none">
       <button
         type="button"
         onClick={() => router.push("/")}
         className="flex items-center gap-3 text-left cursor-pointer"
       >
         <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#2d6cdf] to-[#9b6cff]" />
-        <div>
+        <div className="hidden md:block">
           <p className="text-sm font-semibold text-[color:var(--ink)]">Lifted</p>
           <p className="text-xs text-[color:var(--subtle)]">Prayer Wall</p>
         </div>
       </button>
 
-      <UserSearch />
+      <div className="hidden md:block w-full">
+        <UserSearch />
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setShowSearch(true)}
+        className="md:hidden h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center text-[color:var(--ink)] hover:text-[color:var(--accent)] cursor-pointer"
+        aria-label="Search people"
+      >
+        <MagnifyingGlass size={22} weight="regular" />
+      </button>
 
       <div className="flex flex-col gap-3 text-base text-[color:var(--ink)]">
         <button
           type="button"
-          className="flex items-center gap-3 cursor-pointer"
+          className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
           onClick={() => router.push("/")}
         >
-          <span className="h-10 w-10 rounded-2xl border border-slate-200 bg-[color:var(--panel)] flex items-center justify-center">
-            <House size={20} weight="regular" />
+          <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
+            <House size={22} weight="regular" />
           </span>
-          Home
+          <span className="hidden md:inline">Home</span>
         </button>
         <button
           type="button"
-          className="flex items-center gap-3 cursor-pointer"
+          className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
           onClick={() => {
             if (isAuthenticated) {
               if (profileUsername) {
@@ -115,45 +129,45 @@ export default function Sidebar() {
             }
           }}
         >
-          <span className="h-10 w-10 rounded-2xl border border-slate-200 bg-[color:var(--panel)] flex items-center justify-center">
-            <UserCircle size={20} weight="regular" />
+          <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
+            <UserCircle size={22} weight="regular" />
           </span>
-          Profile
+          <span className="hidden md:inline">Profile</span>
         </button>
         <a
           href="#prayer-form"
-          className="flex items-center gap-3 cursor-pointer"
+          className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
         >
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--accent)] text-white flex items-center justify-center">
-            <Plus size={20} weight="regular" />
+            <Plus size={22} weight="regular" />
           </span>
-          Post a Prayer
+          <span className="hidden md:inline">Post a Prayer</span>
         </a>
         <button
           type="button"
-          className="flex items-center gap-3 cursor-pointer"
+          className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
           aria-label="Notifications"
           onClick={openNotifications}
         >
-          <span className="h-10 w-10 rounded-2xl border border-slate-200 bg-[color:var(--panel)] flex items-center justify-center">
-            <BellSimple size={20} weight="regular" />
+          <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
+            <BellSimple size={22} weight="regular" />
           </span>
-          Notifications
+          <span className="hidden md:inline">Notifications</span>
         </button>
         <button
           type="button"
-          className="flex items-center gap-3 cursor-pointer"
+          className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
           onClick={() => setShowThemes((prev) => !prev)}
         >
-          <span className="h-10 w-10 rounded-2xl border border-slate-200 bg-[color:var(--panel)] flex items-center justify-center">
-            <SlidersHorizontal size={20} weight="regular" />
+          <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
+            <SlidersHorizontal size={22} weight="regular" />
           </span>
-          Preferences
+          <span className="hidden md:inline">Preferences</span>
         </button>
       </div>
 
       <div
-        className={`overflow-hidden transition-all duration-300 ${
+        className={`hidden md:block overflow-hidden transition-all duration-300 ${
           showThemes ? "max-h-[520px] opacity-100 mt-2" : "max-h-0 opacity-0"
         }`}
       >
@@ -208,6 +222,19 @@ export default function Sidebar() {
         <GoogleLogo size={16} weight="regular" />
         Continue with Google
       </button>
+      </Modal>
+
+      <Modal
+        title="Search"
+        isOpen={showSearch}
+        onClose={() => setShowSearch(false)}
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-[color:var(--subtle)]">
+            Find people by name or username.
+          </p>
+          <UserSearch />
+        </div>
       </Modal>
 
       <Modal
@@ -266,6 +293,57 @@ export default function Sidebar() {
           </div>
         )}
       </Modal>
-    </aside>
+      </aside>
+
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-[color:var(--panel-border)] bg-[color:var(--panel)]/95 backdrop-blur">
+        <div className="flex items-center justify-around px-5 py-4 text-[color:var(--ink)]">
+          <button
+            type="button"
+            className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+            onClick={() => router.push("/")}
+          >
+            <House size={24} weight="regular" />
+          </button>
+          <button
+            type="button"
+            className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+            onClick={() => {
+              if (isAuthenticated) {
+                if (profileUsername) {
+                  router.push(`/profile/${profileUsername}`);
+                } else {
+                  router.push("/profile");
+                }
+              } else {
+                setShowSignIn(true);
+              }
+            }}
+          >
+            <UserCircle size={24} weight="regular" />
+          </button>
+          <a
+            href="#prayer-form"
+            className="flex flex-col items-center gap-1 text-[color:var(--accent)]"
+          >
+            <Plus size={24} weight="regular" />
+          </a>
+          <button
+            type="button"
+            className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+            onClick={openNotifications}
+          >
+            <BellSimple size={24} weight="regular" />
+          </button>
+          <button
+            type="button"
+            className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+            onClick={() => setShowSearch(true)}
+            aria-label="Search people"
+          >
+            <MagnifyingGlass size={24} weight="regular" />
+          </button>
+        </div>
+      </nav>
+    </>
   );
 }

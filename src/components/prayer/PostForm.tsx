@@ -1,18 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 
 type PostFormProps = {
   onPosted?: () => void;
   compact?: boolean;
   flat?: boolean;
+  variant?: "modal" | "inline";
 };
 
 export default function PostForm({
   onPosted,
   compact = false,
   flat = false,
+  variant = "modal",
 }: PostFormProps) {
   const { data: session } = useSession();
   const [content, setContent] = useState("");
@@ -58,7 +60,9 @@ export default function PostForm({
     <form
       id="prayer-form"
       onSubmit={handleSubmit}
-      className={`${flat ? "feed-form" : "panel-glass"} flex flex-col gap-3 scroll-mt-24 ${
+      className={`${
+        variant === "modal" ? "modal-form" : flat ? "feed-form" : "panel-glass"
+      } flex flex-col gap-3 scroll-mt-24 ${
         compact ? "p-3" : "p-4"
       }`}
     >
@@ -71,34 +75,45 @@ export default function PostForm({
       )}
 
       <textarea
-        className={`soft-input text-sm ${compact ? "min-h-[90px]" : "min-h-[110px]"}`}
+        className={`soft-input modal-input text-sm ${compact ? "min-h-[90px]" : "min-h-[110px]"}`}
         placeholder="Write your prayer..."
         value={content}
         onChange={(event) => setContent(event.target.value)}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-        <label className="inline-flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-4 text-sm">
+        <label className="switch-toggle text-[color:var(--subtle)]">
           <input
             type="checkbox"
             checked={isAnonymous}
             onChange={(event) => setIsAnonymous(event.target.checked)}
           />
-          Post anonymously
+          <span className="switch-track">
+            <span className="switch-thumb" />
+          </span>
+          Anonymous
         </label>
 
-        <div className="flex items-center gap-2">
-          <span className="text-[color:var(--subtle)]">Expires</span>
-          <select
-            className="soft-input"
-            value={expiresInDays}
-            onChange={(event) =>
-              setExpiresInDays(event.target.value === "30" ? 30 : 7)
-            }
-          >
-            <option value={7}>7 days</option>
-            <option value={30}>30 days</option>
-          </select>
+        <div className="flex items-center gap-3 text-[color:var(--subtle)]">
+          <span>Expires</span>
+          <label className="inline-flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="expires"
+              checked={expiresInDays === 7}
+              onChange={() => setExpiresInDays(7)}
+            />
+            7d
+          </label>
+          <label className="inline-flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="expires"
+              checked={expiresInDays === 30}
+              onChange={() => setExpiresInDays(30)}
+            />
+            30d
+          </label>
         </div>
       </div>
 
@@ -106,9 +121,9 @@ export default function PostForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="pill-button bg-[color:var(--accent)] text-white disabled:opacity-60"
+          className="post-button disabled:opacity-60"
         >
-          {isSubmitting ? "Posting..." : "Post Prayer"}
+          {isSubmitting ? "Posting..." : "Post"}
         </button>
       </div>
     </form>

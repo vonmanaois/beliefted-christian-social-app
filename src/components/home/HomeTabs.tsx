@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { ArrowRight, ArrowLeft } from "@phosphor-icons/react";
 import PrayerWall from "@/components/prayer/PrayerWall";
 import WordWall from "@/components/word/WordWall";
 
@@ -24,7 +25,7 @@ export default function HomeTabs() {
 
   return (
     <section className="flex flex-col gap-6">
-      <div className="flex items-center gap-3 justify-end">
+      <div className="hidden md:flex items-center gap-3 justify-end">
         {tabs.map((tab) => (
           <button
             key={tab}
@@ -42,6 +43,27 @@ export default function HomeTabs() {
             {tab}
           </button>
         ))}
+      </div>
+
+      <div className="md:hidden flex items-center justify-end">
+        <button
+          type="button"
+          onClick={() => {
+            const next = activeTab === "Prayer Wall" ? "Word of the Day" : "Prayer Wall";
+            setActiveTab(next);
+            router.push(next === "Prayer Wall" ? "/" : "/wordoftheday");
+          }}
+          className="pill-button text-sm cursor-pointer bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+        >
+          <span className="inline-flex items-center gap-2">
+            {activeTab === "Prayer Wall" ? "Word of the Day" : "Prayer Wall"}
+            {activeTab === "Prayer Wall" ? (
+              <ArrowRight size={16} weight="regular" />
+            ) : (
+              <ArrowLeft size={16} weight="regular" />
+            )}
+          </span>
+        </button>
       </div>
 
       {activeTab === "Prayer Wall" ? <PrayerWall /> : <WordWall />}

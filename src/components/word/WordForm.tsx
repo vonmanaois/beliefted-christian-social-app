@@ -7,12 +7,14 @@ type WordFormProps = {
   onPosted?: () => void;
   compact?: boolean;
   flat?: boolean;
+  variant?: "modal" | "inline";
 };
 
 export default function WordForm({
   onPosted,
   compact = false,
   flat = false,
+  variant = "modal",
 }: WordFormProps) {
   const { data: session } = useSession();
   const [content, setContent] = useState("");
@@ -53,7 +55,9 @@ export default function WordForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className={`${flat ? "feed-form" : "panel-glass"} flex flex-col gap-3 ${
+      className={`${
+        variant === "modal" ? "modal-form" : flat ? "feed-form" : "panel-glass"
+      } flex flex-col gap-3 ${
         compact ? "p-3" : "p-4"
       }`}
     >
@@ -66,7 +70,7 @@ export default function WordForm({
       )}
 
       <textarea
-        className={`soft-input text-sm ${compact ? "min-h-[90px]" : "min-h-[110px]"}`}
+        className={`soft-input modal-input text-sm ${compact ? "min-h-[90px]" : "min-h-[110px]"}`}
         placeholder="Share a verse or reflection..."
         value={content}
         onChange={(event) => setContent(event.target.value)}
@@ -76,9 +80,9 @@ export default function WordForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="pill-button bg-[color:var(--accent)] text-white disabled:opacity-60"
+          className="post-button disabled:opacity-60"
         >
-          {isSubmitting ? "Posting..." : "Post Word"}
+          {isSubmitting ? "Posting..." : "Post"}
         </button>
       </div>
     </form>
