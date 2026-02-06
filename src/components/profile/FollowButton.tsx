@@ -6,17 +6,14 @@ import { signIn, useSession } from "next-auth/react";
 type FollowButtonProps = {
   targetUserId: string;
   initialFollowing: boolean;
-  initialFollowersCount: number;
 };
 
 export default function FollowButton({
   targetUserId,
   initialFollowing,
-  initialFollowersCount,
 }: FollowButtonProps) {
   const { data: session } = useSession();
   const [isFollowing, setIsFollowing] = useState(initialFollowing);
-  const [followersCount, setFollowersCount] = useState(initialFollowersCount);
   const [isUpdating, setIsUpdating] = useState(false);
 
   const handleFollow = async () => {
@@ -38,9 +35,18 @@ export default function FollowButton({
         throw new Error("Failed to update follow status");
       }
 
-      const data = (await response.json()) as { following: boolean };
+      const data = (await response.json()) as {
+        following: boolean;
+        followersCount?: number;
+      };
       setIsFollowing(data.following);
-      setFollowersCount((prev) => (data.following ? prev + 1 : prev - 1));
+      if (typeof data.followersCount === "number") {
+        window.dispatchEvent(
+          new CustomEvent("follow:updated", {
+            detail: { followersCount: data.followersCount },
+          })
+        );
+      }
     } catch (error) {
       console.error(error);
     } finally {
@@ -60,9 +66,6 @@ export default function FollowButton({
       }`}
     >
       {isFollowing ? "Following" : "Follow"}
-      <span className="ml-2 text-xs text-[color:var(--subtle)]">
-        {followersCount}
-      </span>
     </button>
   );
 }

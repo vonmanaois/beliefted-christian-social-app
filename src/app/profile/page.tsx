@@ -9,6 +9,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import ProfileTabs from "@/components/profile/ProfileTabs";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import ProfileUpdateModal from "@/components/profile/ProfileUpdateModal";
+import ProfileStats from "@/components/profile/ProfileStats";
 
 export const dynamic = "force-dynamic";
 
@@ -58,26 +59,11 @@ export default async function ProfilePage() {
             </div>
           </div>
 
-          <div className="mt-6 flex flex-wrap gap-6 text-sm text-[color:var(--subtle)]">
-            <div className="flex flex-col">
-              <span>Prayers lifted</span>
-              <span className="text-lg font-semibold text-[color:var(--ink)]">
-                {prayedCount}
-              </span>
-            </div>
-            <div className="flex flex-col">
-              <span>Followers</span>
-              <span className="text-lg font-semibold text-[color:var(--ink)]">
-                {user?.followers?.length ?? 0}
-              </span>
-            </div>
-            <div className="flex flex-col">
-              <span>Following</span>
-              <span className="text-lg font-semibold text-[color:var(--ink)]">
-                {user?.following?.length ?? 0}
-              </span>
-            </div>
-          </div>
+          <ProfileStats
+            initialPrayedCount={prayedCount}
+            initialFollowersCount={user?.followers?.length ?? 0}
+            initialFollowingCount={user?.following?.length ?? 0}
+          />
 
           <div className="mt-6">
           <ProfileUpdateModal

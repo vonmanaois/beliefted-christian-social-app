@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import dbConnect from "@/lib/db";
-import UserModel from "@/models/User";
+import clientPromise from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -18,34 +18,60 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid user" }, { status: 400 });
   }
 
-  await dbConnect();
+  const client = await clientPromise;
+  const db = client.db();
 
-  const currentUser = await UserModel.findById(session.user.id);
-  const targetUser = await UserModel.findById(targetUserId);
+  const currentUserId = ObjectId.isValid(session.user.id)
+    ? new ObjectId(session.user.id)
+    : null;
+  const targetId = ObjectId.isValid(targetUserId)
+    ? new ObjectId(targetUserId)
+    : null;
+
+  if (!targetId) {
+    return NextResponse.json({ error: "Invalid user" }, { status: 400 });
+  }
+
+  const currentUser = currentUserId
+    ? await db.collection("users").findOne({ _id: currentUserId })
+    : await db.collection("users").findOne({ email: session.user.email });
+
+  const targetUser = await db.collection("users").findOne({ _id: targetId });
 
   if (!currentUser || !targetUser) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const isFollowing = currentUser.following?.some(
-    (id) => id.toString() === targetUserId
-  );
+  const isFollowing = Array.isArray(currentUser.following)
+    ? currentUser.following.some((id: ObjectId) => id.toString() === targetUserId)
+    : false;
 
   if (isFollowing) {
-    await UserModel.findByIdAndUpdate(session.user.id, {
-      $pull: { following: targetUserId },
-    });
-    await UserModel.findByIdAndUpdate(targetUserId, {
-      $pull: { followers: session.user.id },
-    });
+    await db.collection("users").updateOne(
+      { _id: currentUser._id },
+      { $pull: { following: targetId } }
+    );
+    await db.collection("users").updateOne(
+      { _id: targetId },
+      { $pull: { followers: currentUser._id } }
+    );
   } else {
-    await UserModel.findByIdAndUpdate(session.user.id, {
-      $addToSet: { following: targetUserId },
-    });
-    await UserModel.findByIdAndUpdate(targetUserId, {
-      $addToSet: { followers: session.user.id },
-    });
+    await db.collection("users").updateOne(
+      { _id: currentUser._id },
+      { $addToSet: { following: targetId } }
+    );
+    await db.collection("users").updateOne(
+      { _id: targetId },
+      { $addToSet: { followers: currentUser._id } }
+    );
   }
 
-  return NextResponse.json({ following: !isFollowing });
+  const updatedTarget = await db.collection("users").findOne({ _id: targetId });
+
+  return NextResponse.json({
+    following: !isFollowing,
+    followersCount: Array.isArray(updatedTarget?.followers)
+      ? updatedTarget.followers.length
+      : 0,
+  });
 }

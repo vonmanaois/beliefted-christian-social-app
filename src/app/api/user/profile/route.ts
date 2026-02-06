@@ -82,6 +82,8 @@ export async function GET(req: Request) {
       name: user.name ?? null,
       username: user.username ?? null,
       bio: user.bio ?? null,
+      followersCount: Array.isArray(user.followers) ? user.followers.length : 0,
+      followingCount: Array.isArray(user.following) ? user.following.length : 0,
     });
   }
 
@@ -107,5 +109,7 @@ export async function GET(req: Request) {
     name: user?.name ?? null,
     username: user?.username ?? null,
     bio: user?.bio ?? null,
+    followersCount: Array.isArray(user?.followers) ? user.followers.length : 0,
+    followingCount: Array.isArray(user?.following) ? user.following.length : 0,
   });
 }
