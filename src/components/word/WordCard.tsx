@@ -74,13 +74,21 @@ export default function WordCard({ word }: WordCardProps) {
   };
   const wordId = normalizeId(word._id);
   const [likeCount, setLikeCount] = useState(word.likedBy?.length ?? 0);
+  const [hasLiked, setHasLiked] = useState(
+    session?.user?.id ? word.likedBy?.includes(String(session.user.id)) ?? false : false
+  );
+  const [likeBurst, setLikeBurst] = useState(false);
   const [commentCount, setCommentCount] = useState(word.commentCount ?? 0);
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState("");
+  const commentFormRef = useRef<HTMLDivElement | null>(null);
+  const commentInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const commentButtonRef = useRef<HTMLButtonElement | null>(null);
   const [isLiking, setIsLiking] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
+  const [showCommentConfirm, setShowCommentConfirm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [content, setContent] = useState(word.content);
   const [editText, setEditText] = useState(word.content);
@@ -161,6 +169,17 @@ export default function WordCard({ word }: WordCardProps) {
       }
       return (await response.json()) as { count: number };
     },
+    onMutate: async () => {
+      if (!session?.user?.id) return;
+      setLikeBurst(true);
+      setTimeout(() => setLikeBurst(false), 180);
+      setHasLiked((prev) => !prev);
+      setLikeCount((prev) => (hasLiked ? Math.max(0, prev - 1) : prev + 1));
+    },
+    onError: () => {
+      setHasLiked((prev) => !prev);
+      setLikeCount((prev) => (hasLiked ? prev + 1 : Math.max(0, prev - 1)));
+    },
     onSuccess: (data) => {
       setLikeCount(data.count ?? 0);
     },
@@ -237,7 +256,18 @@ export default function WordCard({ word }: WordCardProps) {
   });
 
   const toggleComments = () => {
-    setShowComments((prev) => !prev);
+    setShowComments((prev) => {
+      if (prev) {
+        if (commentText.trim().length > 0) {
+          setShowCommentConfirm(true);
+          return prev;
+        }
+        setCommentText("");
+        return false;
+      }
+      setTimeout(() => commentInputRef.current?.focus(), 0);
+      return true;
+    });
   };
 
   const handleLike = async () => {
@@ -256,6 +286,13 @@ export default function WordCard({ word }: WordCardProps) {
     }
   };
 
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    if (word.likedBy?.includes(String(session.user.id))) {
+      setHasLiked(true);
+    }
+  }, [word.likedBy, session?.user?.id]);
+
   const handleCommentSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -268,6 +305,24 @@ export default function WordCard({ word }: WordCardProps) {
 
     commentMutation.mutate();
   };
+
+  useEffect(() => {
+    if (!showComments) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!commentFormRef.current) return;
+      if (commentButtonRef.current?.contains(event.target as Node)) {
+        return;
+      }
+      if (commentFormRef.current.contains(event.target as Node)) return;
+      if (commentText.trim().length > 0) {
+        setShowCommentConfirm(true);
+      } else {
+        setShowComments(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showComments, commentText]);
 
   const handleEditStart = () => {
     setEditText(content);
@@ -398,12 +453,20 @@ export default function WordCard({ word }: WordCardProps) {
             type="button"
             onClick={handleLike}
             disabled={isLiking}
-            className="pill-button text-[color:var(--ink)] hover:text-[color:var(--accent)] cursor-pointer"
+            className={`pill-button cursor-pointer transition-colors ${
+              hasLiked
+                ? "text-[color:var(--accent-strong)]"
+                : "text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
+            }`}
           >
             <span className="inline-flex items-center gap-2">
-              <Heart size={22} weight="regular" />
+              <Heart
+                size={22}
+                weight={hasLiked ? "fill" : "regular"}
+                className={likeBurst ? "scale-110 transition-transform duration-150" : "transition-transform duration-150"}
+              />
               {likeCount > 0 && (
-                <span className="text-xs font-semibold text-[color:var(--ink)]">
+                <span className="text-xs font-semibold text-[color:var(--ink)] transition-all duration-200">
                   {likeCount}
                 </span>
               )}
@@ -412,12 +475,13 @@ export default function WordCard({ word }: WordCardProps) {
           <button
             type="button"
             onClick={toggleComments}
-            className="pill-button text-[color:var(--ink)] hover:text-[color:var(--accent)] cursor-pointer"
+            className="pill-button cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
+            ref={commentButtonRef}
           >
             <span className="inline-flex items-center gap-2">
               <ChatCircle size={22} weight="regular" />
               {commentCount > 0 && (
-                <span className="text-xs font-semibold text-[color:var(--ink)]">
+                <span className="text-xs font-semibold text-[color:var(--ink)] transition-all duration-200">
                   {commentCount}
                 </span>
               )}
@@ -426,18 +490,19 @@ export default function WordCard({ word }: WordCardProps) {
         </div>
 
         {showComments && (
-          <div className="mt-5 border-t border-slate-100 pt-4">
+          <div className="mt-5 border-t border-slate-100 pt-4" ref={commentFormRef}>
             <form onSubmit={handleCommentSubmit} className="flex flex-col gap-3">
               <textarea
-                className="soft-input min-h-[90px] text-sm"
+                className="soft-input comment-input min-h-[90px] text-sm"
                 placeholder="Write a comment..."
                 value={commentText}
+                ref={commentInputRef}
                 onChange={(event) => setCommentText(event.target.value)}
               />
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  className="pill-button bg-[color:var(--accent)] text-white cursor-pointer"
+                  className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--accent)] text-white cursor-pointer"
                 >
                   Post comment
                 </button>
@@ -548,6 +613,36 @@ export default function WordCard({ word }: WordCardProps) {
               setShowEditConfirm(false);
             }}
             className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer pointer-events-auto hover:opacity-90 active:translate-y-[1px]"
+          >
+            Discard
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        title="Discard comment?"
+        isOpen={showCommentConfirm}
+        onClose={() => setShowCommentConfirm(false)}
+      >
+        <p className="text-sm text-[color:var(--subtle)]">
+          You have an unsent comment. Discard it?
+        </p>
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setShowCommentConfirm(false)}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer"
+          >
+            Keep
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setCommentText("");
+              setShowComments(false);
+              setShowCommentConfirm(false);
+            }}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer"
           >
             Discard
           </button>

@@ -11,7 +11,7 @@ import {
   MagnifyingGlass,
   Plus,
   SlidersHorizontal,
-  UserCircle,
+  User,
 } from "@phosphor-icons/react";
 import Modal from "@/components/layout/Modal";
 import ThemeToggle from "@/components/layout/ThemeToggle";
@@ -155,7 +155,7 @@ export default function Sidebar() {
           }}
         >
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
-            <UserCircle size={22} weight="regular" />
+            <User size={22} weight="regular" />
           </span>
           <span className="hidden md:inline">Profile</span>
         </button>
@@ -357,7 +357,7 @@ export default function Sidebar() {
               }
             }}
           >
-            <UserCircle size={24} weight="regular" />
+            <User size={24} weight="regular" />
           </button>
           <button
             type="button"

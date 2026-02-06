@@ -7,7 +7,7 @@ import Image from "next/image";
 import {
   ChatCircle,
   DotsThreeOutline,
-  HandsPraying,
+  HandsClapping,
   UserCircle,
 } from "@phosphor-icons/react";
 import Modal from "@/components/layout/Modal";
@@ -88,7 +88,11 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
   const [count, setCount] = useState(prayer.prayedBy.length);
   const [isPending, setIsPending] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [showCommentConfirm, setShowCommentConfirm] = useState(false);
   const [commentText, setCommentText] = useState("");
+  const commentFormRef = useRef<HTMLDivElement | null>(null);
+  const commentInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const commentButtonRef = useRef<HTMLButtonElement | null>(null);
   const [commentCount, setCommentCount] = useState(prayer.commentCount ?? 0);
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -291,7 +295,18 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
   };
 
   const toggleComments = () => {
-    setShowComments((prev) => !prev);
+    setShowComments((prev) => {
+      if (prev) {
+        if (commentText.trim().length > 0) {
+          setShowCommentConfirm(true);
+          return prev;
+        }
+        setCommentText("");
+        return false;
+      }
+      setTimeout(() => commentInputRef.current?.focus(), 0);
+      return true;
+    });
   };
 
   const handleCommentSubmit = async (event: React.FormEvent) => {
@@ -306,6 +321,24 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
 
     commentMutation.mutate();
   };
+
+  useEffect(() => {
+    if (!showComments) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!commentFormRef.current) return;
+      if (commentButtonRef.current?.contains(event.target as Node)) {
+        return;
+      }
+      if (commentFormRef.current.contains(event.target as Node)) return;
+      if (commentText.trim().length > 0) {
+        setShowCommentConfirm(true);
+      } else {
+        setShowComments(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showComments, commentText]);
 
   const handleDelete = async () => {
     if (!isOwner) return;
@@ -450,25 +483,38 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
             {content}
           </p>
         )}
-        <div className="mt-4 flex items-center gap-3">
-          {!isOwner && (
+        <div className="mt-4 flex items-center gap-2">
+          {isOwner ? (
+            <span className="text-xs font-semibold text-[color:var(--subtle)]">
+              Your prayer
+            </span>
+          ) : (
             <button
               type="button"
               onClick={handlePray}
               disabled={!session?.user?.id || isPending || hasPrayed}
-              className="pill-button text-[color:var(--ink)] hover:text-[color:var(--accent)] disabled:opacity-50"
+              className={`pill-button inline-flex items-center justify-center rounded-lg transition-colors ${
+                hasPrayed
+                  ? "cursor-not-allowed text-[color:var(--accent-strong)] opacity-60"
+                  : "cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
+              }`}
               aria-label={hasPrayed ? "Prayed" : "Pray"}
             >
-              <HandsPraying size={22} weight={hasPrayed ? "fill" : "regular"} />
+              <HandsClapping
+                size={24}
+                weight={hasPrayed ? "fill" : "regular"}
+                className={hasPrayed ? "text-[color:var(--accent-strong)]" : undefined}
+              />
             </button>
           )}
           <button
             type="button"
             onClick={toggleComments}
-            className="pill-button text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+            className="inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
+            ref={commentButtonRef}
           >
             <span className="inline-flex items-center gap-2">
-              <ChatCircle size={22} weight="regular" />
+              <ChatCircle size={24} weight="regular" />
               {commentCount > 0 && (
                 <span className="text-xs font-semibold text-[color:var(--ink)]">
                   {commentCount}
@@ -485,18 +531,19 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
         </div>
 
         {showComments && (
-          <div className="mt-5 border-t border-slate-100 pt-4">
+          <div ref={commentFormRef} className="mt-5 border-t border-slate-100 pt-4">
             <form onSubmit={handleCommentSubmit} className="flex flex-col gap-3">
               <textarea
-                className="soft-input min-h-[90px] text-sm"
+                className="soft-input comment-input min-h-[90px] text-sm"
                 placeholder="Write a comment..."
                 value={commentText}
+                ref={commentInputRef}
                 onChange={(event) => setCommentText(event.target.value)}
               />
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  className="pill-button bg-[color:var(--accent)] text-white"
+                  className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--accent)] text-white cursor-pointer"
                 >
                   Post comment
                 </button>
@@ -607,6 +654,36 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
               setShowEditConfirm(false);
             }}
             className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer pointer-events-auto hover:opacity-90 active:translate-y-[1px]"
+          >
+            Discard
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        title="Discard comment?"
+        isOpen={showCommentConfirm}
+        onClose={() => setShowCommentConfirm(false)}
+      >
+        <p className="text-sm text-[color:var(--subtle)]">
+          You have an unsent comment. Discard it?
+        </p>
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setShowCommentConfirm(false)}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer"
+          >
+            Keep
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setCommentText("");
+              setShowComments(false);
+              setShowCommentConfirm(false);
+            }}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer"
           >
             Discard
           </button>
