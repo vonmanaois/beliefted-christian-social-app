@@ -6,20 +6,18 @@ import PostForm from "@/components/prayer/PostForm";
 import PrayerFeed from "@/components/prayer/PrayerFeed";
 import Modal from "@/components/layout/Modal";
 
-type PrayerWallProps = {
-  openComposerKey?: number;
-};
-
-export default function PrayerWall({ openComposerKey }: PrayerWallProps) {
+export default function PrayerWall() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [showComposer, setShowComposer] = useState(false);
   const { data: session } = useSession();
 
   useEffect(() => {
-    if (openComposerKey) {
+    const handleOpenPrayer = () => {
       setShowComposer(true);
-    }
-  }, [openComposerKey]);
+    };
+    window.addEventListener("open-prayer-composer", handleOpenPrayer);
+    return () => window.removeEventListener("open-prayer-composer", handleOpenPrayer);
+  }, []);
 
   return (
     <section className="feed-surface">

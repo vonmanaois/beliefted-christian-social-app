@@ -31,7 +31,7 @@ export default function WordWall() {
               (session?.user?.name?.[0] ?? "U").toUpperCase()
             )}
           </span>
-          Share God's word today
+          Share God&apos;s word today
         </span>
       </button>
       <WordFeed refreshKey={refreshKey} />

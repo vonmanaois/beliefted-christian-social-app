@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowRight, ArrowLeft } from "@phosphor-icons/react";
 import PrayerWall from "@/components/prayer/PrayerWall";
@@ -11,27 +11,23 @@ const tabs = ["Prayer Wall", "Word of the Day"] as const;
 type Tab = (typeof tabs)[number];
 
 export default function HomeTabs() {
-  const [activeTab, setActiveTab] = useState<Tab>("Prayer Wall");
-  const [openPrayerComposerKey, setOpenPrayerComposerKey] = useState(0);
   const router = useRouter();
   const pathname = usePathname();
 
-  useEffect(() => {
+  const activeTab = useMemo<Tab>(() => {
     if (pathname === "/wordoftheday" || pathname === "/word") {
-      setActiveTab("Word of the Day");
-    } else {
-      setActiveTab("Prayer Wall");
+      return "Word of the Day";
     }
+    return "Prayer Wall";
   }, [pathname]);
 
   useEffect(() => {
     const handleOpenPrayer = () => {
-      setActiveTab("Prayer Wall");
-      setOpenPrayerComposerKey((prev) => prev + 1);
+      router.push("/");
     };
     window.addEventListener("open-prayer-composer", handleOpenPrayer);
     return () => window.removeEventListener("open-prayer-composer", handleOpenPrayer);
-  }, []);
+  }, [router]);
 
   return (
     <section className="flex flex-col gap-6">
@@ -42,7 +38,6 @@ export default function HomeTabs() {
               key={tab}
               type="button"
               onClick={() => {
-                setActiveTab(tab);
                 router.push(tab === "Prayer Wall" ? "/" : "/wordoftheday");
               }}
               className={`px-4 py-2 text-sm font-semibold transition ${
@@ -62,7 +57,6 @@ export default function HomeTabs() {
           type="button"
           onClick={() => {
             const next = activeTab === "Prayer Wall" ? "Word of the Day" : "Prayer Wall";
-            setActiveTab(next);
             router.push(next === "Prayer Wall" ? "/" : "/wordoftheday");
           }}
           className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-3 py-2 text-sm font-semibold text-[color:var(--ink)] transition hover:text-[color:var(--accent)]"
@@ -76,11 +70,7 @@ export default function HomeTabs() {
         </button>
       </div>
 
-      {activeTab === "Prayer Wall" ? (
-        <PrayerWall openComposerKey={openPrayerComposerKey} />
-      ) : (
-        <WordWall />
-      )}
+      {activeTab === "Prayer Wall" ? <PrayerWall /> : <WordWall />}
     </section>
   );
 }

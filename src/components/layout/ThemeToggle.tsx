@@ -39,7 +39,7 @@ export default function ThemeToggle() {
     };
 
     loadTheme();
-  }, [session?.user?.id, setTheme]);
+  }, [session?.user?.id, setTheme, theme]);
 
   const handleThemeChange = async (value: string) => {
     lastRequestedTheme.current = value;
