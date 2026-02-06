@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { DotsThreeOutline } from "@phosphor-icons/react";
+import { ChatCircle, DotsThreeOutline, Heart } from "@phosphor-icons/react";
 
 type WordUser = {
   name?: string | null;
@@ -101,12 +101,22 @@ export default function WordCard({ word }: WordCardProps) {
         method: "POST",
       });
       if (!response.ok) {
-        throw new Error("Failed to like word");
+        let message = "Failed to like word";
+        try {
+          const data = (await response.json()) as { error?: string };
+          if (data?.error) message = data.error;
+        } catch {
+          // ignore JSON parse errors
+        }
+        if (response.status === 401) {
+          signIn("google");
+        }
+        throw new Error(message);
       }
       return (await response.json()) as { count: number };
     },
     onSuccess: (data) => {
-      setLikeCount(data.count);
+      setLikeCount(data.count ?? 0);
     },
   });
 
@@ -268,7 +278,7 @@ export default function WordCard({ word }: WordCardProps) {
                 <button
                   type="button"
                   onClick={() => setShowMenu((prev) => !prev)}
-                  className="h-8 w-8 rounded-full text-[color:var(--subtle)] hover:bg-[color:var(--surface-strong)]"
+                  className="h-8 w-8 rounded-full text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
                   aria-label="More actions"
                 >
                   <DotsThreeOutline size={20} weight="regular" />
@@ -329,16 +339,30 @@ export default function WordCard({ word }: WordCardProps) {
             type="button"
             onClick={handleLike}
             disabled={isLiking}
-            className="pill-button bg-[color:var(--surface-strong)] text-[color:var(--ink)] hover:bg-[color:var(--surface)] cursor-pointer"
+            className="pill-button text-[color:var(--ink)] hover:text-[color:var(--accent)] cursor-pointer"
           >
-            Like · {likeCount}
+            <span className="inline-flex items-center gap-2">
+              <Heart size={22} weight="regular" />
+              {likeCount > 0 && (
+                <span className="text-xs font-semibold text-[color:var(--ink)]">
+                  {likeCount}
+                </span>
+              )}
+            </span>
           </button>
           <button
             type="button"
             onClick={toggleComments}
-            className="pill-button bg-[color:var(--surface-strong)] text-[color:var(--ink)] hover:bg-[color:var(--surface)] cursor-pointer"
+            className="pill-button text-[color:var(--ink)] hover:text-[color:var(--accent)] cursor-pointer"
           >
-            Comments · {commentCount}
+            <span className="inline-flex items-center gap-2">
+              <ChatCircle size={22} weight="regular" />
+              {commentCount > 0 && (
+                <span className="text-xs font-semibold text-[color:var(--ink)]">
+                  {commentCount}
+                </span>
+              )}
+            </span>
           </button>
         </div>
 

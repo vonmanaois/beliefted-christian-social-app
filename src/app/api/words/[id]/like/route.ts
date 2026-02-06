@@ -4,50 +4,63 @@ import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import NotificationModel from "@/models/Notification";
 import WordModel from "@/models/Word";
+import { Types } from "mongoose";
 
 export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-  const session = await getServerSession(authOptions);
+  try {
+    const { id } = await params;
+    const session = await getServerSession(authOptions);
 
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  await dbConnect();
+    const rawId = id ?? "";
+    const cleanedId = rawId.replace(/^ObjectId\(\"(.+)\"\)$/, "$1");
+    if (!Types.ObjectId.isValid(cleanedId)) {
+      return NextResponse.json({ error: "Invalid word id" }, { status: 400 });
+    }
 
-  const rawId = id;
-  const cleanedId = rawId.replace(/^ObjectId\(\"(.+)\"\)$/, "$1");
-  const word = await WordModel.findById(cleanedId);
+    await dbConnect();
 
-  if (!word) {
-    return NextResponse.json({ error: "Word not found" }, { status: 404 });
-  }
+    const word = await WordModel.findById(cleanedId);
 
-  const userId = session.user.id;
-  const alreadyLiked = word.likedBy?.some((id) => id.toString() === userId);
+    if (!word) {
+      return NextResponse.json({ error: "Word not found" }, { status: 404 });
+    }
 
-  const update = alreadyLiked
-    ? { $pull: { likedBy: userId } }
-    : { $addToSet: { likedBy: userId } };
+    const userId = session.user.id;
+    const alreadyLiked = (word.likedBy ?? []).some((id) => id.toString() === userId);
 
-  const updated = await WordModel.findByIdAndUpdate(word.id, update, {
-    new: true,
-  });
+    const update = alreadyLiked
+      ? { $pull: { likedBy: userId } }
+      : { $addToSet: { likedBy: userId } };
 
-  if (!alreadyLiked && word.userId?.toString() !== userId) {
-    await NotificationModel.create({
-      userId: word.userId,
-      actorId: userId,
-      wordId: word.id,
-      type: "word_like",
+    const updated = await WordModel.findByIdAndUpdate(cleanedId, update, {
+      new: true,
+      select: "likedBy",
     });
-  }
 
-  return NextResponse.json({
-    liked: !alreadyLiked,
-    count: updated?.likedBy.length ?? word.likedBy.length,
-  });
+    if (!alreadyLiked && word.userId?.toString() !== userId) {
+      await NotificationModel.create({
+        userId: word.userId,
+        actorId: userId,
+        wordId: word.id,
+        type: "word_like",
+      });
+    }
+
+    const count = updated?.likedBy?.length ?? word.likedBy?.length ?? 0;
+
+    return NextResponse.json({
+      liked: !alreadyLiked,
+      count,
+    });
+  } catch (error) {
+    console.error("[word-like]", error);
+    return NextResponse.json({ error: "Failed to like word" }, { status: 500 });
+  }
 }

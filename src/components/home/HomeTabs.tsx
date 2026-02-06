@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import PrayerWall from "@/components/prayer/PrayerWall";
 import WordWall from "@/components/word/WordWall";
 
@@ -10,6 +11,16 @@ type Tab = (typeof tabs)[number];
 
 export default function HomeTabs() {
   const [activeTab, setActiveTab] = useState<Tab>("Prayer Wall");
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (pathname === "/wordoftheday" || pathname === "/word") {
+      setActiveTab("Word of the Day");
+    } else {
+      setActiveTab("Prayer Wall");
+    }
+  }, [pathname]);
 
   return (
     <section className="flex flex-col gap-6">
@@ -18,7 +29,10 @@ export default function HomeTabs() {
           <button
             key={tab}
             type="button"
-            onClick={() => setActiveTab(tab)}
+            onClick={() => {
+              setActiveTab(tab);
+              router.push(tab === "Prayer Wall" ? "/" : "/wordoftheday");
+            }}
             className={`pill-button text-sm cursor-pointer transition ${
               activeTab === tab
                 ? "bg-[color:var(--accent)] text-white shadow-sm"
