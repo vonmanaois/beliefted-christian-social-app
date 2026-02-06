@@ -80,7 +80,7 @@ export default function ThemeToggle() {
             onClick={() => handleThemeChange(item.value)}
             className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm transition cursor-pointer ${
               theme === item.value
-                ? "border-transparent bg-[color:var(--accent)] text-white"
+                ? "border-transparent bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
                 : "border-[color:var(--panel-border)] text-[color:var(--ink)] hover:border-[color:var(--accent)]"
             }`}
           >

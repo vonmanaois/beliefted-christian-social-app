@@ -43,7 +43,7 @@ export default function ProfileTabs({ userId, showComposer = true }: ProfileTabs
             onClick={() => setActiveTab(tab)}
             className={`pill-button border text-sm cursor-pointer ${
               activeTab === tab
-                ? "border-transparent bg-[color:var(--accent)] text-white"
+                ? "border-transparent bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
                 : "border-slate-200 text-[color:var(--ink)]"
             }`}
           >

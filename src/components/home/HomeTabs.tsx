@@ -47,7 +47,7 @@ export default function HomeTabs() {
               }}
               className={`px-4 py-2 text-sm font-semibold transition ${
                 activeTab === tab
-                  ? "rounded-lg bg-[color:var(--accent)] text-white"
+                  ? "rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
                   : "rounded-lg text-[color:var(--ink)] hover:text-[color:var(--accent)]"
               }`}
             >

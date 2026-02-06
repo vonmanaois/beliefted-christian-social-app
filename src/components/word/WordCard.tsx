@@ -508,7 +508,7 @@ export default function WordCard({ word }: WordCardProps) {
               <button
                 type="button"
                 onClick={handleEditSave}
-                className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--accent)] text-white cursor-pointer pointer-events-auto hover:opacity-90 active:translate-y-[1px]"
+                className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--accent)] text-[color:var(--accent-contrast)] cursor-pointer pointer-events-auto hover:opacity-90 active:translate-y-[1px]"
               >
                 Save
               </button>
@@ -580,7 +580,7 @@ export default function WordCard({ word }: WordCardProps) {
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--accent)] text-white cursor-pointer"
+                  className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--accent)] text-[color:var(--accent-contrast)] cursor-pointer"
                 >
                   Post comment
                 </button>
@@ -720,7 +720,7 @@ export default function WordCard({ word }: WordCardProps) {
                                   content: editingCommentText.trim(),
                                 })
                               }
-                              className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--accent)] text-white cursor-pointer"
+                              className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--accent)] text-[color:var(--accent-contrast)] cursor-pointer"
                               disabled={!editingCommentText.trim()}
                             >
                               Save
@@ -804,7 +804,7 @@ export default function WordCard({ word }: WordCardProps) {
               await handleEditSave();
               setShowEditConfirm(false);
             }}
-            className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--accent)] cursor-pointer pointer-events-auto hover:opacity-90 active:translate-y-[1px]"
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--accent-contrast)] bg-[color:var(--accent)] cursor-pointer pointer-events-auto hover:opacity-90 active:translate-y-[1px]"
           >
             Save
           </button>

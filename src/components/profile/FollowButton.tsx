@@ -62,7 +62,7 @@ export default function FollowButton({
       className={`pill-button border text-sm cursor-pointer ${
         isFollowing
           ? "border-slate-200 text-[color:var(--ink)]"
-          : "border-transparent bg-[color:var(--accent)] text-white"
+          : "border-transparent bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
       }`}
     >
       {isFollowing ? "Following" : "Follow"}

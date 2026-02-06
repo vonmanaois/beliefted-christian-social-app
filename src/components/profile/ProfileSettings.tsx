@@ -136,7 +136,7 @@ export default function ProfileSettings({
         <button
           type="submit"
           disabled={isSaving}
-          className="pill-button bg-[color:var(--accent)] text-white disabled:opacity-60 cursor-pointer"
+          className="pill-button bg-[color:var(--accent)] text-[color:var(--accent-contrast)] disabled:opacity-60 cursor-pointer"
         >
           {isSaving ? "Updating..." : "Update profile"}
         </button>

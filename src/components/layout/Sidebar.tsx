@@ -168,7 +168,7 @@ export default function Sidebar() {
           }}
           className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
         >
-          <span className="h-10 w-10 rounded-2xl bg-[color:var(--accent)] text-white flex items-center justify-center">
+          <span className="h-10 w-10 rounded-2xl bg-[color:var(--accent)] text-[color:var(--accent-contrast)] flex items-center justify-center">
             <Plus size={22} weight="regular" />
           </span>
           <span className="hidden md:inline">Add a Prayer</span>
