@@ -24,6 +24,10 @@ export default function PrayerFeed({ refreshKey, userId }: PrayerFeedProps) {
           typeof prayer._id === "string"
             ? prayer._id
             : String((prayer._id as { $oid?: string })?.$oid ?? prayer._id),
+        prayedBy: Array.isArray(prayer.prayedBy)
+          ? prayer.prayedBy.map((id) => String(id))
+          : [],
+        userId: prayer.userId ? String(prayer.userId) : null,
       }));
     },
   });

@@ -10,7 +10,6 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  console.log("[pray] raw id:", id);
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
@@ -21,7 +20,6 @@ export async function POST(
 
   const rawId = id;
   const cleanedId = rawId.replace(/^ObjectId\(\"(.+)\"\)$/, "$1");
-  console.log("[pray] cleaned id:", cleanedId);
   const prayer = await PrayerModel.findById(cleanedId);
 
   if (!prayer) {

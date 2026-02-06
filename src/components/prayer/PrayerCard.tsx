@@ -55,10 +55,15 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [commentCount, setCommentCount] = useState(prayer.commentCount ?? 0);
-  const hasPrayed = session?.user?.id
-    ? prayer.prayedBy.some((id) => id === session.user?.id)
-    : false;
-  const isOwner = session?.user?.id && prayer.userId === session.user.id;
+  const [hasPrayed, setHasPrayed] = useState(
+    session?.user?.id ? prayer.prayedBy.includes(session.user.id) : false
+  );
+  const isOwner = Boolean(
+    session?.user?.id &&
+      prayer.userId &&
+      String(prayer.userId) === String(session.user.id)
+  );
+
 
   const { data: comments = [], isLoading: isLoadingComments } = useQuery({
     queryKey: ["prayer-comments", prayerId],
@@ -124,6 +129,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
     },
     onSuccess: (data) => {
       setCount(data.count);
+      setHasPrayed(true);
     },
   });
 
