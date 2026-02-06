@@ -7,6 +7,9 @@ import UserModel from "@/models/User";
 import Sidebar from "@/components/layout/Sidebar";
 import ProfileTabs from "@/components/profile/ProfileTabs";
 import FollowButton from "@/components/profile/FollowButton";
+import ProfileHeader from "@/components/profile/ProfileHeader";
+
+export const dynamic = "force-dynamic";
 
 export default async function PublicProfilePage({
   params,
@@ -20,7 +23,7 @@ export default async function PublicProfilePage({
   const user = await UserModel.findOne({ username: params.username }).lean();
 
   if (!user) {
-    redirect("/");
+    redirect("/profile");
   }
 
   const prayedCount = await PrayerModel.countDocuments({
@@ -39,22 +42,12 @@ export default async function PublicProfilePage({
         <Sidebar />
         <div className="panel p-8">
           <div className="flex flex-wrap items-center justify-between gap-6">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--subtle)]">
-                Profile
-              </p>
-              <h1 className="mt-3 text-3xl text-[color:var(--ink)]">
-                {user?.name ?? "User"}
-              </h1>
-              <p className="mt-2 text-sm text-[color:var(--subtle)]">
-                @{user?.username ?? "username"}
-              </p>
-              {user?.bio && (
-                <p className="mt-2 text-sm text-[color:var(--subtle)]">
-                  {user.bio}
-                </p>
-              )}
-            </div>
+            <ProfileHeader
+              initialName={user?.name ?? "User"}
+              initialUsername={user?.username ?? "username"}
+              initialBio={user?.bio ?? null}
+              usernameParam={user?.username ?? null}
+            />
             <div className="flex items-center gap-4">
               {!isSelf && (
                 <FollowButton
@@ -81,12 +74,6 @@ export default async function PublicProfilePage({
               <span>Prayers lifted</span>
               <span className="text-lg font-semibold text-[color:var(--ink)]">
                 {prayedCount}
-              </span>
-            </div>
-            <div className="flex flex-col">
-              <span>Username</span>
-              <span className="text-lg font-semibold text-[color:var(--ink)]">
-                @{user?.username ?? "username"}
               </span>
             </div>
             <div className="flex flex-col">

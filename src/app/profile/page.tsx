@@ -7,6 +7,9 @@ import UserModel from "@/models/User";
 import ProfileSettings from "@/components/profile/ProfileSettings";
 import Sidebar from "@/components/layout/Sidebar";
 import ProfileTabs from "@/components/profile/ProfileTabs";
+import ProfileHeader from "@/components/profile/ProfileHeader";
+
+export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
   const session = await getServerSession(authOptions);
@@ -33,22 +36,11 @@ export default async function ProfilePage() {
             </div>
           )}
           <div className="flex flex-wrap items-center justify-between gap-6">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--subtle)]">
-                Profile
-              </p>
-              <h1 className="mt-3 text-3xl text-[color:var(--ink)]">
-                {user?.name ?? session.user.name ?? "Your Name"}
-              </h1>
-              <p className="mt-2 text-sm text-[color:var(--subtle)]">
-                @{user?.username ?? "username"}
-              </p>
-              {user?.bio && (
-                <p className="mt-2 text-sm text-[color:var(--subtle)]">
-                  {user.bio}
-                </p>
-              )}
-            </div>
+            <ProfileHeader
+              initialName={user?.name ?? session.user.name ?? "Your Name"}
+              initialUsername={user?.username ?? "username"}
+              initialBio={user?.bio ?? null}
+            />
             <div className="h-24 w-24 rounded-full overflow-hidden border border-slate-200 bg-slate-200">
               {user?.image || session.user.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -66,12 +58,6 @@ export default async function ProfilePage() {
               <span>Prayers lifted</span>
               <span className="text-lg font-semibold text-[color:var(--ink)]">
                 {prayedCount}
-              </span>
-            </div>
-            <div className="flex flex-col">
-              <span>Username</span>
-              <span className="text-lg font-semibold text-[color:var(--ink)]">
-                @{user?.username ?? "username"}
               </span>
             </div>
             <div className="flex flex-col">

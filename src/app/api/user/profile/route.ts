@@ -38,9 +38,42 @@ export async function PATCH(req: Request) {
 
   await UserModel.findByIdAndUpdate(session.user.id, {
     username,
-    ...(name ? { name } : {}),
-    ...(bio ? { bio: bio.slice(0, 280) } : { bio: "" }),
+    name,
+    bio: bio.slice(0, 280),
   });
 
-  return NextResponse.json({ username, name: name || undefined, bio });
+  return NextResponse.json({ username, name, bio });
+}
+
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const usernameParam = searchParams.get("username");
+
+  await dbConnect();
+
+  if (usernameParam) {
+    const user = await UserModel.findOne({ username: usernameParam }).lean();
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    return NextResponse.json({
+      name: user.name ?? null,
+      username: user.username ?? null,
+      bio: user.bio ?? null,
+    });
+  }
+
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const user = await UserModel.findById(session.user.id).lean();
+
+  return NextResponse.json({
+    name: user?.name ?? null,
+    username: user?.username ?? null,
+    bio: user?.bio ?? null,
+  });
 }

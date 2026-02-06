@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 type ProfileSettingsProps = {
   currentUsername?: string | null;
@@ -15,6 +16,7 @@ export default function ProfileSettings({
   currentName,
   currentBio,
 }: ProfileSettingsProps) {
+  const router = useRouter();
   const [name, setName] = useState(currentName ?? "");
   const [username, setUsername] = useState(currentUsername ?? "");
   const [bio, setBio] = useState(currentBio ?? "");
@@ -43,7 +45,8 @@ export default function ProfileSettings({
         throw new Error(data.error || "Failed to update profile");
       }
 
-      setMessage("Username saved.");
+      setMessage("Profile updated successfully.");
+      router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Something went wrong");
     } finally {
@@ -94,13 +97,15 @@ export default function ProfileSettings({
         onChange={(event) => setUsername(event.target.value)}
       />
       <div className="flex items-center justify-between">
-        <span className="text-xs text-[color:var(--subtle)]">@{username || "username"}</span>
+        <span className="text-xs text-[color:var(--subtle)]">
+          @{username || "username"}
+        </span>
         <button
           type="submit"
           disabled={isSaving}
           className="pill-button bg-[color:var(--accent)] text-white disabled:opacity-60 cursor-pointer"
         >
-          {isSaving ? "Saving..." : "Save"}
+          {isSaving ? "Updating..." : "Update profile"}
         </button>
       </div>
       {message && <p className="text-xs text-[color:var(--subtle)]">{message}</p>}
