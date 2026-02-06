@@ -7,8 +7,10 @@ import PrayerModel from "@/models/Prayer";
 
 export async function POST(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+  console.log("[pray] raw id:", id);
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
@@ -17,7 +19,10 @@ export async function POST(
 
   await dbConnect();
 
-  const prayer = await PrayerModel.findById(params.id);
+  const rawId = id;
+  const cleanedId = rawId.replace(/^ObjectId\(\"(.+)\"\)$/, "$1");
+  console.log("[pray] cleaned id:", cleanedId);
+  const prayer = await PrayerModel.findById(cleanedId);
 
   if (!prayer) {
     return NextResponse.json({ error: "Prayer not found" }, { status: 404 });
@@ -28,9 +33,14 @@ export async function POST(
     (id) => id.toString() === userId
   );
 
-  const update = alreadyPrayed
-    ? { $pull: { prayedBy: userId } }
-    : { $addToSet: { prayedBy: userId } };
+  if (alreadyPrayed) {
+    return NextResponse.json({
+      prayed: true,
+      count: prayer.prayedBy.length,
+    });
+  }
+
+  const update = { $addToSet: { prayedBy: userId } };
 
   const updated = await PrayerModel.findByIdAndUpdate(prayer.id, update, {
     new: true,

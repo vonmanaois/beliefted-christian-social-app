@@ -27,7 +27,7 @@ export async function GET(req: Request) {
       const commentCount = await WordCommentModel.countDocuments({
         wordId: word._id,
       });
-      return { ...rest, user: author ?? null, commentCount };
+      return { ...rest, _id: word._id.toString(), user: author ?? null, commentCount };
     })
   );
 

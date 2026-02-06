@@ -22,20 +22,32 @@ export async function GET(req: Request) {
   const sanitized = await Promise.all(
     prayers.map(async (prayer) => {
       const { userId, ...rest } = prayer as typeof prayer & {
-        userId?: { name?: string; image?: string } | null;
+        userId?: { name?: string; image?: string; _id?: { toString: () => string } } | null;
       };
+
+      const rawUserId = (prayer as { userId?: { _id?: { toString: () => string } } | { toString: () => string } }).userId;
+      const userIdString =
+        typeof rawUserId === "string"
+          ? rawUserId
+          : rawUserId && typeof (rawUserId as { toString?: () => string }).toString === "function"
+            ? (rawUserId as { toString: () => string }).toString()
+            : rawUserId && typeof (rawUserId as { _id?: { toString: () => string } })._id?.toString === "function"
+              ? (rawUserId as { _id: { toString: () => string } })._id.toString()
+              : null;
+
+      const base = { ...rest, _id: prayer._id.toString(), userId: userIdString };
 
       if (prayer.isAnonymous) {
         const commentCount = await CommentModel.countDocuments({
           prayerId: prayer._id,
         });
-        return { ...rest, user: null, commentCount };
+        return { ...base, user: null, commentCount };
       }
 
       const commentCount = await CommentModel.countDocuments({
         prayerId: prayer._id,
       });
-      return { ...rest, user: userId ?? null, commentCount };
+      return { ...base, user: userId ?? null, commentCount };
     })
   );
 

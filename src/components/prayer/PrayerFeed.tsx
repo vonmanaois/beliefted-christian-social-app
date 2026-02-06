@@ -17,7 +17,14 @@ export default function PrayerFeed({ refreshKey, userId }: PrayerFeedProps) {
       if (!response.ok) {
         throw new Error("Failed to load prayers");
       }
-      return (await response.json()) as Prayer[];
+      const data = (await response.json()) as Prayer[];
+      return data.map((prayer) => ({
+        ...prayer,
+        _id:
+          typeof prayer._id === "string"
+            ? prayer._id
+            : String((prayer._id as { $oid?: string })?.$oid ?? prayer._id),
+      }));
     },
   });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -10,7 +10,7 @@ type WordUser = {
 };
 
 type Word = {
-  _id: string;
+  _id: string | { $oid?: string };
   content: string;
   createdAt: string;
   likedBy?: string[];
@@ -32,6 +32,16 @@ type WordCardProps = {
 export default function WordCard({ word }: WordCardProps) {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
+  const normalizeId = (raw: Word["_id"]) => {
+    if (typeof raw === "string") {
+      return raw.replace(/^ObjectId\\(\"(.+)\"\\)$/, "$1");
+    }
+    const asObj = raw as { $oid?: string; toString?: () => string };
+    if (asObj?.$oid) return asObj.$oid;
+    if (asObj?.toString) return asObj.toString().replace(/^ObjectId\\(\"(.+)\"\\)$/, "$1");
+    return String(raw);
+  };
+  const wordId = normalizeId(word._id);
   const [likeCount, setLikeCount] = useState(word.likedBy?.length ?? 0);
   const [commentCount, setCommentCount] = useState(word.commentCount ?? 0);
   const [showComments, setShowComments] = useState(false);
@@ -39,9 +49,9 @@ export default function WordCard({ word }: WordCardProps) {
   const [isLiking, setIsLiking] = useState(false);
 
   const { data: comments = [], isLoading: isLoadingComments } = useQuery({
-    queryKey: ["word-comments", word._id],
+    queryKey: ["word-comments", wordId],
     queryFn: async () => {
-      const response = await fetch(`/api/words/${word._id}/comments`, {
+      const response = await fetch(`/api/words/${wordId}/comments`, {
         cache: "no-store",
       });
       if (!response.ok) {
@@ -50,14 +60,17 @@ export default function WordCard({ word }: WordCardProps) {
       return (await response.json()) as WordComment[];
     },
     enabled: showComments,
-    onSuccess: (data) => {
-      setCommentCount(data.length);
-    },
   });
+
+  useEffect(() => {
+    if (showComments) {
+      setCommentCount(comments.length);
+    }
+  }, [comments.length, showComments]);
 
   const likeMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`/api/words/${word._id}/like`, {
+      const response = await fetch(`/api/words/${wordId}/like`, {
         method: "POST",
       });
       if (!response.ok) {
@@ -75,7 +88,7 @@ export default function WordCard({ word }: WordCardProps) {
       const response = await fetch("/api/word-comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wordId: word._id, content: commentText.trim() }),
+        body: JSON.stringify({ wordId, content: commentText.trim() }),
       });
       if (!response.ok) {
         throw new Error("Failed to post comment");
@@ -84,7 +97,7 @@ export default function WordCard({ word }: WordCardProps) {
     onSuccess: async () => {
       setCommentText("");
       await queryClient.invalidateQueries({
-        queryKey: ["word-comments", word._id],
+        queryKey: ["word-comments", wordId],
       });
     },
   });
@@ -151,14 +164,14 @@ export default function WordCard({ word }: WordCardProps) {
             type="button"
             onClick={handleLike}
             disabled={isLiking}
-            className="pill-button border border-slate-200 text-[color:var(--ink)] cursor-pointer"
+            className="pill-button bg-[color:var(--surface-strong)] text-[color:var(--ink)] hover:bg-[color:var(--surface)] cursor-pointer"
           >
             Like · {likeCount}
           </button>
           <button
             type="button"
             onClick={toggleComments}
-            className="pill-button border border-slate-200 text-[color:var(--ink)] cursor-pointer"
+            className="pill-button bg-[color:var(--surface-strong)] text-[color:var(--ink)] hover:bg-[color:var(--surface)] cursor-pointer"
           >
             Comments · {commentCount}
           </button>

@@ -1,7 +1,7 @@
 "use client";
 
 import { signIn, useSession } from "next-auth/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export type PrayerUser = {
@@ -11,13 +11,14 @@ export type PrayerUser = {
 };
 
 export type Prayer = {
-  _id: string;
+  _id: string | { $oid?: string };
   content: string;
   createdAt: string;
   isAnonymous: boolean;
   prayedBy: string[];
   commentCount?: number;
   user?: PrayerUser | null;
+  userId?: string;
 };
 
 type PrayerCardProps = {
@@ -39,16 +40,30 @@ type Comment = {
 export default function PrayerCard({ prayer }: PrayerCardProps) {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
+  const normalizeId = (raw: Prayer["_id"]) => {
+    if (typeof raw === "string") {
+      return raw.replace(/^ObjectId\\(\"(.+)\"\\)$/, "$1");
+    }
+    const asObj = raw as { $oid?: string; toString?: () => string };
+    if (asObj?.$oid) return asObj.$oid;
+    if (asObj?.toString) return asObj.toString().replace(/^ObjectId\\(\"(.+)\"\\)$/, "$1");
+    return String(raw);
+  };
+  const prayerId = normalizeId(prayer._id);
   const [count, setCount] = useState(prayer.prayedBy.length);
   const [isPending, setIsPending] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [commentCount, setCommentCount] = useState(prayer.commentCount ?? 0);
+  const hasPrayed = session?.user?.id
+    ? prayer.prayedBy.some((id) => id === session.user?.id)
+    : false;
+  const isOwner = session?.user?.id && prayer.userId === session.user.id;
 
   const { data: comments = [], isLoading: isLoadingComments } = useQuery({
-    queryKey: ["prayer-comments", prayer._id],
+    queryKey: ["prayer-comments", prayerId],
     queryFn: async () => {
-      const response = await fetch(`/api/prayers/${prayer._id}/comments`, {
+      const response = await fetch(`/api/prayers/${prayerId}/comments`, {
         cache: "no-store",
       });
       if (!response.ok) {
@@ -57,10 +72,13 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
       return (await response.json()) as Comment[];
     },
     enabled: showComments,
-    onSuccess: (data) => {
-      setCommentCount(data.length);
-    },
   });
+
+  useEffect(() => {
+    if (showComments) {
+      setCommentCount(comments.length);
+    }
+  }, [comments.length, showComments]);
 
   const commentMutation = useMutation({
     mutationFn: async () => {
@@ -68,7 +86,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prayerId: prayer._id,
+          prayerId,
           content: commentText.trim(),
         }),
       });
@@ -79,18 +97,28 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
     onSuccess: async () => {
       setCommentText("");
       await queryClient.invalidateQueries({
-        queryKey: ["prayer-comments", prayer._id],
+        queryKey: ["prayer-comments", prayerId],
       });
     },
   });
 
   const prayMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`/api/prayers/${prayer._id}/pray`, {
+      const response = await fetch(`/api/prayers/${prayerId}/pray`, {
         method: "POST",
       });
       if (!response.ok) {
-        throw new Error("Failed to update prayer");
+        let message = "Failed to update prayer";
+        try {
+          const data = (await response.json()) as { error?: string };
+          if (data?.error) message = data.error;
+        } catch {
+          // ignore JSON parse errors
+        }
+        if (response.status === 401) {
+          signIn("google");
+        }
+        throw new Error(message);
       }
       return (await response.json()) as { count: number };
     },
@@ -173,18 +201,20 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
           {prayer.content}
         </p>
         <div className="mt-4 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handlePray}
-            disabled={!session?.user?.id || isPending}
-            className="pill-button border border-slate-200 text-slate-700 disabled:opacity-50"
-          >
-            Pray
-          </button>
+          {!isOwner && (
+            <button
+              type="button"
+              onClick={handlePray}
+              disabled={!session?.user?.id || isPending || hasPrayed}
+              className="pill-button bg-[color:var(--surface-strong)] text-[color:var(--ink)] hover:bg-[color:var(--surface)] disabled:opacity-50"
+            >
+              {hasPrayed ? "Prayed" : "Pray"}
+            </button>
+          )}
           <button
             type="button"
             onClick={toggleComments}
-            className="pill-button border border-slate-200 text-[color:var(--ink)]"
+            className="pill-button bg-[color:var(--surface-strong)] text-[color:var(--ink)] hover:bg-[color:var(--surface)]"
           >
             Comments · {commentCount}
           </button>

@@ -24,7 +24,14 @@ export default function WordFeed({ refreshKey, userId }: WordFeedProps) {
       if (!response.ok) {
         throw new Error("Failed to load words");
       }
-      return (await response.json()) as Word[];
+      const data = (await response.json()) as Word[];
+      return data.map((word) => ({
+        ...word,
+        _id:
+          typeof word._id === "string"
+            ? word._id
+            : String((word._id as { $oid?: string })?.$oid ?? word._id),
+      }));
     },
   });
 
