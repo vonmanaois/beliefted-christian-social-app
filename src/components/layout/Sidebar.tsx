@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -25,6 +25,7 @@ export default function Sidebar() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
+  const prefsRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
 
   type NotificationActor = { name?: string | null; image?: string | null };
@@ -74,6 +75,18 @@ export default function Sidebar() {
 
     loadProfile();
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!showThemes) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!prefsRef.current) return;
+      if (!prefsRef.current.contains(event.target as Node)) {
+        setShowThemes(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showThemes]);
 
   return (
     <>
@@ -167,6 +180,7 @@ export default function Sidebar() {
       </div>
 
       <div
+        ref={prefsRef}
         className={`hidden md:block overflow-hidden transition-all duration-300 ${
           showThemes ? "max-h-[520px] opacity-100 mt-2" : "max-h-0 opacity-0"
         }`}
