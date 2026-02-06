@@ -163,6 +163,18 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
   }, [showMenu]);
 
   useEffect(() => {
+    if (!commentMenuId) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (target.closest("[data-comment-menu]")) return;
+      setCommentMenuId(null);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [commentMenuId]);
+
+  useEffect(() => {
     if (!isEditing) return;
     const handleClickOutside = (event: MouseEvent) => {
       if (!editRef.current) return;
@@ -657,7 +669,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
                           </p>
                         </div>
                         {isCommentOwner && (
-                          <div className="relative">
+                          <div className="relative" data-comment-menu>
                             <button
                               type="button"
                               onClick={() =>
