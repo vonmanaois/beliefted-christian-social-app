@@ -6,9 +6,14 @@ import { useSession } from "next-auth/react";
 type PostFormProps = {
   onPosted?: () => void;
   compact?: boolean;
+  flat?: boolean;
 };
 
-export default function PostForm({ onPosted, compact = false }: PostFormProps) {
+export default function PostForm({
+  onPosted,
+  compact = false,
+  flat = false,
+}: PostFormProps) {
   const { data: session } = useSession();
   const [content, setContent] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -53,7 +58,7 @@ export default function PostForm({ onPosted, compact = false }: PostFormProps) {
     <form
       id="prayer-form"
       onSubmit={handleSubmit}
-      className={`panel-glass flex flex-col gap-3 scroll-mt-24 ${
+      className={`${flat ? "feed-form" : "panel-glass"} flex flex-col gap-3 scroll-mt-24 ${
         compact ? "p-3" : "p-4"
       }`}
     >

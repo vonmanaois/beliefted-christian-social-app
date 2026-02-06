@@ -8,8 +8,8 @@ export default function PrayerWall() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   return (
-    <section className="flex flex-col gap-6">
-      <PostForm onPosted={() => setRefreshKey((prev) => prev + 1)} />
+    <section className="feed-surface">
+      <PostForm flat onPosted={() => setRefreshKey((prev) => prev + 1)} />
       <PrayerFeed refreshKey={refreshKey} />
     </section>
   );

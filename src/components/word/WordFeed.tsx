@@ -8,6 +8,8 @@ type Word = {
   content: string;
   createdAt: string;
   user?: { name?: string | null; username?: string | null } | null;
+  userId?: string | null;
+  isOwner?: boolean;
 };
 
 type WordFeedProps = {
@@ -31,6 +33,7 @@ export default function WordFeed({ refreshKey, userId }: WordFeedProps) {
           typeof word._id === "string"
             ? word._id
             : String((word._id as { $oid?: string })?.$oid ?? word._id),
+        userId: word.userId ? String(word.userId) : null,
       }));
     },
   });
@@ -67,7 +70,7 @@ export default function WordFeed({ refreshKey, userId }: WordFeedProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col">
       {words.map((word) => (
         <WordCard key={word._id} word={word} />
       ))}

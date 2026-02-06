@@ -64,7 +64,7 @@ export default function PrayerFeed({ refreshKey, userId }: PrayerFeedProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col">
       {prayers.map((prayer) => (
         <PrayerCard key={prayer._id} prayer={prayer} />
       ))}

@@ -8,9 +8,11 @@
   --panel-border: #e5e7ef;
   --surface: #f6f2ee;
   --surface-strong: #efe8e2;
+  --menu: #f1ebe6;
   --accent: #2d6cdf;
   --accent-strong: #1247b7;
   --ring: rgba(45, 108, 223, 0.2);
+  --danger: #d93b3b;
 }
 
 html[data-theme="midnight"] {
@@ -21,9 +23,11 @@ html[data-theme="midnight"] {
   --panel-border: #1a2542;
   --surface: #0a0f1f;
   --surface-strong: #0f1830;
+  --menu: #141c33;
   --accent: #5c8cff;
   --accent-strong: #2f5fda;
   --ring: rgba(92, 140, 255, 0.28);
+  --danger: #ff8a8a;
 }
 
 html[data-theme="purple-rose"] {
@@ -34,9 +38,11 @@ html[data-theme="purple-rose"] {
   --panel-border: #f2d7ef;
   --surface: #fdeef7;
   --surface-strong: #f7e0f0;
+  --menu: #f2d8ea;
   --accent: #c43bd7;
   --accent-strong: #8d2aa8;
   --ring: rgba(196, 59, 215, 0.25);
+  --danger: #d93b73;
 }
 
 * {
@@ -157,10 +163,25 @@ html[data-theme="midnight"] .panel-glass {
 }
 
 .wall-card {
-  border-radius: 20px;
-  border: 1px solid var(--panel-border);
-  background: var(--panel);
+  border-radius: 0;
+  border: none;
+  background: transparent;
   padding: 20px;
+}
+
+.feed-surface {
+  background: var(--panel);
+  border-radius: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.feed-form {
+  background: var(--panel);
+  border: none;
+  border-bottom: 1px solid var(--panel-border);
+  box-shadow: none;
+  border-radius: 0;
 }
 
 .avatar-ring {

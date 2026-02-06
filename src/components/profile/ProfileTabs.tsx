@@ -41,14 +41,14 @@ export default function ProfileTabs({ userId, showComposer = true }: ProfileTabs
       {activeTab === "My Prayers" ? (
         <>
           {showComposer && (
-            <PostForm compact onPosted={() => setRefreshKey((prev) => prev + 1)} />
+            <PostForm compact flat onPosted={() => setRefreshKey((prev) => prev + 1)} />
           )}
           <PrayerFeed refreshKey={refreshKey} userId={userId} />
         </>
       ) : (
         <>
           {showComposer && (
-            <WordForm compact onPosted={() => setRefreshKey((prev) => prev + 1)} />
+            <WordForm compact flat onPosted={() => setRefreshKey((prev) => prev + 1)} />
           )}
           <WordFeed refreshKey={refreshKey} userId={userId} />
         </>

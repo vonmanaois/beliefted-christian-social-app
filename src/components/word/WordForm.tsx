@@ -6,9 +6,14 @@ import { signIn, useSession } from "next-auth/react";
 type WordFormProps = {
   onPosted?: () => void;
   compact?: boolean;
+  flat?: boolean;
 };
 
-export default function WordForm({ onPosted, compact = false }: WordFormProps) {
+export default function WordForm({
+  onPosted,
+  compact = false,
+  flat = false,
+}: WordFormProps) {
   const { data: session } = useSession();
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,7 +53,7 @@ export default function WordForm({ onPosted, compact = false }: WordFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className={`panel-glass flex flex-col gap-3 ${
+      className={`${flat ? "feed-form" : "panel-glass"} flex flex-col gap-3 ${
         compact ? "p-3" : "p-4"
       }`}
     >

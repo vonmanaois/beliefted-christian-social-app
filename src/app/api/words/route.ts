@@ -6,6 +6,7 @@ import WordModel from "@/models/Word";
 import WordCommentModel from "@/models/WordComment";
 
 export async function GET(req: Request) {
+  const session = await getServerSession(authOptions);
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get("userId");
 
@@ -21,13 +22,36 @@ export async function GET(req: Request) {
   const sanitized = await Promise.all(
     words.map(async (word) => {
       const { userId: author, ...rest } = word as typeof word & {
-        userId?: { name?: string; image?: string; username?: string } | null;
+        userId?: { name?: string; image?: string; username?: string; _id?: { toString: () => string } } | null;
       };
+
+      const rawUserId = (word as {
+        userId?: { _id?: { toString: () => string } } | { toString: () => string } | string | null;
+      }).userId;
+      let userIdString: string | null = null;
+      if (typeof rawUserId === "string") {
+        userIdString = rawUserId;
+      } else if (
+        rawUserId &&
+        typeof (rawUserId as { _id?: { toString: () => string } })._id?.toString === "function"
+      ) {
+        userIdString = (rawUserId as { _id: { toString: () => string } })._id.toString();
+      } else if (rawUserId && typeof (rawUserId as { toString?: () => string }).toString === "function") {
+        const asString = (rawUserId as { toString: () => string }).toString();
+        userIdString = asString !== "[object Object]" ? asString : null;
+      }
 
       const commentCount = await WordCommentModel.countDocuments({
         wordId: word._id,
       });
-      return { ...rest, _id: word._id.toString(), user: author ?? null, commentCount };
+      return {
+        ...rest,
+        _id: word._id.toString(),
+        user: author ?? null,
+        commentCount,
+        userId: userIdString,
+        isOwner: Boolean(session?.user?.id && userIdString && session.user.id === userIdString),
+      };
     })
   );
 
