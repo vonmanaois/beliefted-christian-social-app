@@ -28,7 +28,7 @@ export default function Providers({ children }: ProvidersProps) {
         <ThemeProvider
           attribute="data-theme"
           defaultTheme="light"
-          themes={["light", "midnight", "purple-rose"]}
+          themes={["light", "dark", "midnight", "purple-rose"]}
         >
           {children}
         </ThemeProvider>

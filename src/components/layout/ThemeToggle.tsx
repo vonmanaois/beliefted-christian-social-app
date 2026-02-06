@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 
 const themes = [
   { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
   { value: "midnight", label: "Midnight" },
   { value: "purple-rose", label: "Purple Rose" },
 ];

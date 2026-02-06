@@ -30,6 +30,21 @@ html[data-theme="midnight"] {
   --danger: #ff8a8a;
 }
 
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #f3f4f6;
+  --subtle: #9ca3af;
+  --panel: #111315;
+  --panel-border: #1f2328;
+  --surface: #0c0e10;
+  --surface-strong: #171a1f;
+  --menu: #1a1d23;
+  --accent: #5b8def;
+  --accent-strong: #3d6edb;
+  --ring: rgba(91, 141, 239, 0.28);
+  --danger: #ff8b8b;
+}
+
 html[data-theme="purple-rose"] {
   color-scheme: light;
   --ink: #1a141d;
@@ -65,6 +80,13 @@ html[data-theme="midnight"] body {
   background:
     radial-gradient(circle at top left, rgba(255, 255, 255, 0.02) 0%, transparent 55%),
     radial-gradient(circle at 35% 20%, rgba(92, 140, 255, 0.18), transparent 45%),
+    linear-gradient(135deg, var(--surface) 0%, var(--surface-strong) 55%, var(--surface) 100%);
+}
+
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.02) 0%, transparent 55%),
+    radial-gradient(circle at 40% 20%, rgba(91, 141, 239, 0.1), transparent 45%),
     linear-gradient(135deg, var(--surface) 0%, var(--surface-strong) 55%, var(--surface) 100%);
 }
 
@@ -143,6 +165,20 @@ html[data-theme="midnight"] .soft-input:focus {
   color: var(--ink);
 }
 
+html[data-theme="dark"] .soft-input {
+  background: rgba(16, 20, 28, 0.7);
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .soft-input::placeholder {
+  color: rgba(156, 163, 175, 0.8);
+}
+
+html[data-theme="dark"] .soft-input:focus {
+  background: rgba(18, 22, 30, 0.95);
+  color: var(--ink);
+}
+
 html[data-theme="midnight"] .panel-glass {
   background: linear-gradient(160deg, rgba(12, 18, 36, 0.96) 0%, rgba(14, 20, 40, 0.98) 100%);
   border: 1px solid rgba(92, 140, 255, 0.2);
@@ -167,6 +203,7 @@ html[data-theme="midnight"] .panel-glass {
   border: none;
   background: transparent;
   padding: 20px;
+  border-bottom: 1px solid var(--panel-border);
 }
 
 .feed-surface {

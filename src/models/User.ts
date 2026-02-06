@@ -17,7 +17,7 @@ const UserSchema = new Schema(
     following: [{ type: Schema.Types.ObjectId, ref: "User" }],
     theme: {
       type: String,
-      enum: ["light", "midnight", "purple-rose"],
+      enum: ["light", "dark", "midnight", "purple-rose"],
       default: "light",
     },
   },
