@@ -146,7 +146,18 @@ export async function POST(req: Request) {
   }
 
   const PrayerSchema = z.object({
-    content: z.string().trim().min(1).max(2000),
+    kind: z.enum(["prayer", "request"]).optional(),
+    content: z.string().trim().max(2000).optional().or(z.literal("")),
+    heading: z.string().trim().max(120).optional().or(z.literal("")),
+    prayerPoints: z
+      .array(
+        z.object({
+          title: z.string().trim().min(1).max(120),
+          description: z.string().trim().min(1).max(400),
+        })
+      )
+      .max(8)
+      .optional(),
     isAnonymous: z.boolean().optional(),
     expiresInDays: z.union([z.literal(7), z.literal(30), z.literal("never")]).optional(),
   });
@@ -156,12 +167,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid prayer data" }, { status: 400 });
   }
 
-  const content = body.data.content.trim();
+  const kind = body.data.kind ?? "prayer";
+  const content = (body.data.content ?? "").trim();
+  const heading = (body.data.heading ?? "").trim();
+  const prayerPoints = body.data.prayerPoints ?? [];
   const isAnonymous = Boolean(body.data.isAnonymous);
   const expiresInDays = body.data.expiresInDays ?? 7;
 
-  if (!content) {
+  if (kind === "prayer" && !content) {
     return NextResponse.json({ error: "Content is required" }, { status: 400 });
+  }
+  if (kind === "request" && prayerPoints.length === 0) {
+    return NextResponse.json(
+      { error: "Add at least one prayer point" },
+      { status: 400 }
+    );
   }
 
   let expiresAt: Date | undefined;
@@ -178,10 +198,13 @@ export async function POST(req: Request) {
 
   const prayer = await PrayerModel.create({
     content,
+    kind,
     userId: session.user.id,
     authorName: author?.name ?? null,
     authorUsername: author?.username ?? null,
     authorImage: author?.image ?? null,
+    heading,
+    prayerPoints,
     isAnonymous,
     prayedBy: [],
     expiresAt,

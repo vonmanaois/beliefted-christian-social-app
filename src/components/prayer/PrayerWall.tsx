@@ -52,7 +52,7 @@ export default function PrayerWall() {
             )}
           </span>
           {isAuthenticated
-            ? "Write your new prayer request ..."
+            ? "Write a prayer"
             : "Sign in to post a prayer"}
         </span>
       </button>

@@ -5,9 +5,11 @@ import { memo, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Avatar from "@/components/ui/Avatar";
 import {
+  BookOpenText,
   ChatCircle,
   DotsThreeOutline,
   HandsClapping,
+  NotePencil,
   UserCircle,
 } from "@phosphor-icons/react";
 import Modal from "@/components/layout/Modal";
@@ -21,6 +23,9 @@ export type PrayerUser = {
 export type Prayer = {
   _id: string | { $oid?: string };
   content: string;
+  heading?: string;
+  kind?: "prayer" | "request";
+  prayerPoints?: { title: string; description: string }[];
   createdAt: string;
   isAnonymous: boolean;
   prayedBy: string[];
@@ -232,7 +237,6 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
       await queryClient.invalidateQueries({
         queryKey: ["prayer-comments", prayerId],
       });
-      queryClient.invalidateQueries({ queryKey: ["prayers"] });
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("notifications:refresh"));
       }
@@ -256,7 +260,6 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
       await queryClient.invalidateQueries({
         queryKey: ["prayer-comments", prayerId],
       });
-      queryClient.invalidateQueries({ queryKey: ["prayers"] });
     },
   });
 
@@ -274,7 +277,6 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
         queryKey: ["prayer-comments", prayerId],
       });
       setCommentCount((prev) => Math.max(0, prev - 1));
-      queryClient.invalidateQueries({ queryKey: ["prayers"] });
     },
   });
 
@@ -375,7 +377,6 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
           body: JSON.stringify({ event: "prayed", entityId: prayerId }),
         });
       }
-      queryClient.invalidateQueries({ queryKey: ["prayers"] });
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("stats:refresh"));
         window.dispatchEvent(new Event("notifications:refresh"));
@@ -499,36 +500,38 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
         )}
       </div>
       <div className="flex-1">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            {prayer.isAnonymous ? (
-              <p className="text-xs sm:text-sm font-semibold text-[color:var(--ink)]">
-                Anonymous
-              </p>
-            ) : (
-              <div className="flex flex-wrap items-center gap-2">
-                <a
-                  href={
-                    prayer.user?.username
-                      ? `/profile/${prayer.user.username}`
-                      : "/profile"
-                  }
-                  className="text-xs sm:text-sm font-semibold text-[color:var(--ink)] hover:underline"
-                >
-                  {prayer.user?.name ?? "User"}
-                </a>
-                {prayer.user?.username && (
-                  <span className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
-                    @{prayer.user.username}
-                  </span>
-                )}
-              </div>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {prayer.isAnonymous ? (
+                <p className="text-xs sm:text-sm font-semibold text-[color:var(--ink)]">
+                  Anonymous
+                </p>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2">
+                  <a
+                    href={
+                      prayer.user?.username
+                        ? `/profile/${prayer.user.username}`
+                        : "/profile"
+                    }
+                    className="text-xs sm:text-sm font-semibold text-[color:var(--ink)] hover:underline"
+                  >
+                    {prayer.user?.name ?? "User"}
+                  </a>
+                  {prayer.user?.username && (
+                    <span className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
+                      @{prayer.user.username}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
             <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
               {formatPostTime(prayer.createdAt)}
             </p>
-          </div>
-          <div className="flex items-center gap-2">
             {isOwner && (
               <div className="relative" ref={menuRef}>
                 <button
@@ -588,10 +591,35 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
               </button>
             </div>
           </div>
+        ) : prayer.kind === "request" && prayer.prayerPoints?.length ? (
+          <>
+            <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-3 py-1 text-sm font-semibold text-[color:var(--accent)]">
+              <NotePencil size={16} weight="regular" />
+              Request
+            </div>
+            <div className="mt-4 space-y-3 border-l-2 border-[color:var(--accent)] pl-3">
+              {prayer.prayerPoints.map((point, index) => (
+                <div key={`${point.title}-${index}`}>
+                  <p className="text-[13px] sm:text-sm font-semibold text-[color:var(--ink)]">
+                    {point.title}
+                  </p>
+                  <p className="mt-1 pl-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)]">
+                    {point.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </>
         ) : (
-          <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)]">
-            {content}
-          </p>
+          <>
+            <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--surface)] px-3 py-1 text-sm font-semibold text-[color:var(--subtle)]">
+              <BookOpenText size={16} weight="regular" />
+              Prayer
+            </div>
+            <p className="mt-4 border-l border-[color:var(--panel-border)] pl-4 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)]">
+              {content}
+            </p>
+          </>
         )}
         <div className="mt-3 flex items-center gap-3 text-xs">
           {isOwner ? (
