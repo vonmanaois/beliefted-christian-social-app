@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
+import Modal from "@/components/layout/Modal";
 
 type ProfileSettingsProps = {
   currentUsername?: string | null;
@@ -24,6 +26,8 @@ export default function ProfileSettings({
   const [bio, setBio] = useState(currentBio ?? "");
   const [message, setMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -142,6 +146,65 @@ export default function ProfileSettings({
         </button>
       </div>
       {message && <p className="text-xs text-[color:var(--subtle)]">{message}</p>}
+
+      <div className="mt-4 border-t border-[color:var(--panel-border)] pt-4">
+        <p className="text-sm font-semibold text-[color:var(--ink)]">Danger Zone</p>
+        <p className="text-xs text-[color:var(--subtle)]">
+          Deleting your account is permanent and cannot be undone.
+        </p>
+        <button
+          type="button"
+          onClick={() => setShowDeleteConfirm(true)}
+          className="mt-3 rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--danger)] border border-[color:var(--danger)] cursor-pointer"
+        >
+          Delete account
+        </button>
+      </div>
+
+      <Modal
+        title="Delete account?"
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+      >
+        <p className="text-sm text-[color:var(--subtle)]">
+          This will permanently delete your account, prayers, words, and comments.
+        </p>
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(false)}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              setIsDeleting(true);
+              try {
+                const response = await fetch("/api/user/account", {
+                  method: "DELETE",
+                });
+                if (!response.ok) {
+                  throw new Error("Failed to delete account");
+                }
+                await signOut({ callbackUrl: "/" });
+              } catch (error) {
+                setMessage(
+                  error instanceof Error ? error.message : "Something went wrong"
+                );
+              } finally {
+                setIsDeleting(false);
+                setShowDeleteConfirm(false);
+              }
+            }}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer"
+            disabled={isDeleting}
+          >
+            {isDeleting ? "Deleting..." : "Delete"}
+          </button>
+        </div>
+      </Modal>
     </form>
   );
 }
