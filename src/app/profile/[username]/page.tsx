@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
-import PrayerModel from "@/models/Prayer";
 import clientPromise from "@/lib/mongodb";
 import Sidebar from "@/components/layout/Sidebar";
 import ProfileTabs from "@/components/profile/ProfileTabs";
@@ -30,9 +29,7 @@ export default async function PublicProfilePage({
   }
 
   await dbConnect();
-  const prayedCount = await PrayerModel.countDocuments({
-    prayedBy: user._id,
-  });
+  const prayedCount = user?.prayersLiftedCount ?? 0;
 
   const isSelf = session?.user?.id === user._id.toString();
   const isFollowing = Boolean(
@@ -45,7 +42,7 @@ export default async function PublicProfilePage({
     <main className="container">
       <div className="page-grid">
         <Sidebar />
-        <div className="panel p-8">
+        <div className="panel p-8 rounded-none">
           <div className="flex flex-wrap items-center justify-between gap-6">
             <ProfileHeader
               initialName={user?.name ?? "User"}
@@ -79,6 +76,8 @@ export default async function PublicProfilePage({
             initialFollowingCount={user?.following?.length ?? 0}
             usernameParam={user?.username ?? null}
           />
+
+          <div className="my-6 border-t border-[color:var(--panel-border)]" />
 
           {isSelf && (
             <div className="mt-6">

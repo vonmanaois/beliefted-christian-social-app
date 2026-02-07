@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Modal from "@/components/layout/Modal";
 import ProfileSettings from "@/components/profile/ProfileSettings";
+import Button from "@/components/ui/Button";
 
 type ProfileUpdateModalProps = {
   currentUsername?: string | null;
@@ -21,13 +22,14 @@ export default function ProfileUpdateModal({
 
   return (
     <div>
-      <button
+      <Button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="pill-button border border-slate-200 text-[color:var(--ink)] cursor-pointer"
+        variant="outline"
+        size="sm"
       >
         Update profile
-      </button>
+      </Button>
       <Modal title="Update profile" isOpen={isOpen} onClose={() => setIsOpen(false)}>
         <ProfileSettings
           currentUsername={currentUsername}

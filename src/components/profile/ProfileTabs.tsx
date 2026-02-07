@@ -8,7 +8,7 @@ import PostForm from "@/components/prayer/PostForm";
 import WordForm from "@/components/word/WordForm";
 import Modal from "@/components/layout/Modal";
 
-const tabs = ["My Prayers", "My Words"] as const;
+const tabs = ["Prayers", "Words"] as const;
 
 type Tab = (typeof tabs)[number];
 
@@ -18,7 +18,7 @@ type ProfileTabsProps = {
 };
 
 export default function ProfileTabs({ userId, showComposer = true }: ProfileTabsProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("My Prayers");
+  const [activeTab, setActiveTab] = useState<Tab>("Prayers");
   const [refreshKey, setRefreshKey] = useState(0);
   const [showPrayerComposer, setShowPrayerComposer] = useState(false);
   const [showWordComposer, setShowWordComposer] = useState(false);
@@ -26,7 +26,7 @@ export default function ProfileTabs({ userId, showComposer = true }: ProfileTabs
 
   useEffect(() => {
     const handleOpenPrayer = () => {
-      setActiveTab("My Prayers");
+      setActiveTab("Prayers");
       setShowPrayerComposer(true);
     };
     window.addEventListener("open-prayer-composer", handleOpenPrayer);
@@ -35,24 +35,26 @@ export default function ProfileTabs({ userId, showComposer = true }: ProfileTabs
 
   return (
     <section className="mt-6 flex flex-col gap-6">
-      <div className="flex items-center gap-3">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setActiveTab(tab)}
-            className={`pill-button border text-sm cursor-pointer ${
-              activeTab === tab
-                ? "border-transparent bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
-                : "border-slate-200 text-[color:var(--ink)]"
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
+      <div className="w-full">
+        <div className="grid w-full grid-cols-2 rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              className={`w-full rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                activeTab === tab
+                  ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
+                  : "text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {activeTab === "My Prayers" ? (
+      {activeTab === "Prayers" ? (
         <>
           {showComposer && (
             <button

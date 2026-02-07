@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
-import PrayerModel from "@/models/Prayer";
 import UserModel from "@/models/User";
 import ProfileSettings from "@/components/profile/ProfileSettings";
 import Sidebar from "@/components/layout/Sidebar";
@@ -24,18 +23,18 @@ export default async function ProfilePage() {
 
   const user = await UserModel.findById(session.user.id).lean();
 
-  if (user?.username) {
+  if (user?.onboardingComplete) {
     redirect(`/profile/${user.username}`);
+  } else {
+    redirect("/onboarding");
   }
-  const prayedCount = await PrayerModel.countDocuments({
-    prayedBy: session.user.id,
-  });
+  const prayedCount = user?.prayersLiftedCount ?? 0;
 
   return (
     <main className="container">
       <div className="page-grid">
         <Sidebar />
-        <div className="panel p-8">
+        <div className="panel p-8 rounded-none">
           {!user?.username && (
             <div className="mb-6">
               <ProfileSettings required currentName={user?.name ?? null} />
@@ -64,6 +63,8 @@ export default async function ProfilePage() {
             initialFollowersCount={user?.followers?.length ?? 0}
             initialFollowingCount={user?.following?.length ?? 0}
           />
+
+          <div className="my-6 border-t border-[color:var(--panel-border)]" />
 
           <div className="mt-6">
           <ProfileUpdateModal

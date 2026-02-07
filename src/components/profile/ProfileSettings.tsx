@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import Modal from "@/components/layout/Modal";
+import Button from "@/components/ui/Button";
 
 type ProfileSettingsProps = {
   currentUsername?: string | null;
@@ -61,6 +62,10 @@ export default function ProfileSettings({
 
   useEffect(() => {
     const trimmed = username.trim();
+    if (currentUsername && trimmed === currentUsername) {
+      setUsernameStatus("idle");
+      return;
+    }
     if (!trimmed) {
       setUsernameStatus("idle");
       return;
@@ -174,19 +179,22 @@ export default function ProfileSettings({
             <span className="text-[color:var(--subtle)]">Checking...</span>
           )}
           {usernameStatus === "ok" && (
-            <span className="text-green-600">Available</span>
+            <span className="text-green-600">Username is available</span>
           )}
           {usernameStatus === "taken" && (
-            <span className="text-[color:var(--danger)]">Taken</span>
+            <span className="text-[color:var(--danger)]">
+              Username already exists
+            </span>
           )}
         </span>
-        <button
+        <Button
           type="submit"
           disabled={isSaving || submitDisabled}
-          className="pill-button bg-[color:var(--accent)] text-[color:var(--accent-contrast)] disabled:opacity-60 cursor-pointer"
+          variant="solid"
+          size={required ? "sm" : "md"}
         >
           {isSaving ? "Updating..." : "Update profile"}
-        </button>
+        </Button>
       </div>
       {submitDisabled && submitDisabledMessage && (
         <p className="text-xs text-[color:var(--subtle)]">
@@ -201,13 +209,15 @@ export default function ProfileSettings({
         <p className="text-xs text-[color:var(--subtle)]">
           Account deletion has a 30-day grace period. Signing back in will restore it.
         </p>
-          <button
+          <Button
             type="button"
             onClick={() => setShowDeleteConfirm(true)}
-            className="mt-3 rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--danger)] border border-[color:var(--danger)] cursor-pointer"
+            variant="outline"
+            size="sm"
+            className="mt-3 border-[color:var(--danger)] text-[color:var(--danger)]"
           >
             Delete account
-          </button>
+          </Button>
         </div>
       )}
 
@@ -221,14 +231,15 @@ export default function ProfileSettings({
           This will schedule your account for deletion. You can restore it by signing in within 30 days.
         </p>
           <div className="mt-5 flex items-center justify-end gap-2">
-            <button
+            <Button
               type="button"
               onClick={() => setShowDeleteConfirm(false)}
-              className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer"
+              variant="ghost"
+              size="sm"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={async () => {
                 setIsDeleting(true);
@@ -249,11 +260,13 @@ export default function ProfileSettings({
                   setShowDeleteConfirm(false);
                 }
               }}
-              className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer"
+              variant="solid"
+              size="sm"
+              className="bg-[color:var(--danger)] text-white"
               disabled={isDeleting}
             >
               {isDeleting ? "Deleting..." : "Delete"}
-            </button>
+            </Button>
           </div>
         </Modal>
       )}
