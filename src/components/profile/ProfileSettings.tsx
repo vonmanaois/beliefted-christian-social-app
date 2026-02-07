@@ -11,6 +11,9 @@ type ProfileSettingsProps = {
   currentName?: string | null;
   currentBio?: string | null;
   onUpdated?: () => void;
+  showDangerZone?: boolean;
+  submitDisabled?: boolean;
+  submitDisabledMessage?: string | null;
 };
 
 export default function ProfileSettings({
@@ -19,6 +22,9 @@ export default function ProfileSettings({
   currentName,
   currentBio,
   onUpdated,
+  showDangerZone = true,
+  submitDisabled = false,
+  submitDisabledMessage = null,
 }: ProfileSettingsProps) {
   const router = useRouter();
   const [name, setName] = useState(currentName ?? "");
@@ -139,72 +145,81 @@ export default function ProfileSettings({
         </span>
         <button
           type="submit"
-          disabled={isSaving}
+          disabled={isSaving || submitDisabled}
           className="pill-button bg-[color:var(--accent)] text-[color:var(--accent-contrast)] disabled:opacity-60 cursor-pointer"
         >
           {isSaving ? "Updating..." : "Update profile"}
         </button>
       </div>
+      {submitDisabled && submitDisabledMessage && (
+        <p className="text-xs text-[color:var(--subtle)]">
+          {submitDisabledMessage}
+        </p>
+      )}
       {message && <p className="text-xs text-[color:var(--subtle)]">{message}</p>}
 
-      <div className="mt-4 border-t border-[color:var(--panel-border)] pt-4">
-        <p className="text-sm font-semibold text-[color:var(--ink)]">Danger Zone</p>
+      {showDangerZone && (
+        <div className="mt-4 border-t border-[color:var(--panel-border)] pt-4">
+          <p className="text-sm font-semibold text-[color:var(--ink)]">Danger Zone</p>
         <p className="text-xs text-[color:var(--subtle)]">
-          Deleting your account is permanent and cannot be undone.
+          Account deletion has a 30-day grace period. Signing back in will restore it.
         </p>
-        <button
-          type="button"
-          onClick={() => setShowDeleteConfirm(true)}
-          className="mt-3 rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--danger)] border border-[color:var(--danger)] cursor-pointer"
-        >
-          Delete account
-        </button>
-      </div>
-
-      <Modal
-        title="Delete account?"
-        isOpen={showDeleteConfirm}
-        onClose={() => setShowDeleteConfirm(false)}
-      >
-        <p className="text-sm text-[color:var(--subtle)]">
-          This will permanently delete your account, prayers, words, and comments.
-        </p>
-        <div className="mt-5 flex items-center justify-end gap-2">
           <button
             type="button"
-            onClick={() => setShowDeleteConfirm(false)}
-            className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="mt-3 rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--danger)] border border-[color:var(--danger)] cursor-pointer"
           >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={async () => {
-              setIsDeleting(true);
-              try {
-                const response = await fetch("/api/user/account", {
-                  method: "DELETE",
-                });
-                if (!response.ok) {
-                  throw new Error("Failed to delete account");
-                }
-                await signOut({ callbackUrl: "/" });
-              } catch (error) {
-                setMessage(
-                  error instanceof Error ? error.message : "Something went wrong"
-                );
-              } finally {
-                setIsDeleting(false);
-                setShowDeleteConfirm(false);
-              }
-            }}
-            className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer"
-            disabled={isDeleting}
-          >
-            {isDeleting ? "Deleting..." : "Delete"}
+            Delete account
           </button>
         </div>
-      </Modal>
+      )}
+
+      {showDangerZone && (
+        <Modal
+          title="Delete account?"
+          isOpen={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+        >
+        <p className="text-sm text-[color:var(--subtle)]">
+          This will schedule your account for deletion. You can restore it by signing in within 30 days.
+        </p>
+          <div className="mt-5 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(false)}
+              className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                setIsDeleting(true);
+                try {
+                  const response = await fetch("/api/user/account", {
+                    method: "DELETE",
+                  });
+                  if (!response.ok) {
+                    throw new Error("Failed to delete account");
+                  }
+                  await signOut({ callbackUrl: "/" });
+                } catch (error) {
+                  setMessage(
+                    error instanceof Error ? error.message : "Something went wrong"
+                  );
+                } finally {
+                  setIsDeleting(false);
+                  setShowDeleteConfirm(false);
+                }
+              }}
+              className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer"
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </button>
+          </div>
+        </Modal>
+      )}
     </form>
   );
 }
