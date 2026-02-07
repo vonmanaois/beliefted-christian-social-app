@@ -3,7 +3,7 @@
 import { signIn, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Image from "next/image";
+import Avatar from "@/components/ui/Avatar";
 import {
   ChatCircle,
   DotsThreeOutline,
@@ -468,26 +468,18 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
             <UserCircle size={28} weight="regular" />
           </div>
         ) : (
-          <a
+          <Avatar
+            src={prayer.user?.image ?? null}
+            alt={prayer.user?.name ?? "User"}
+            size={48}
             href={
               prayer.user?.username
                 ? `/profile/${prayer.user.username}`
                 : "/profile"
             }
+            fallback={(prayer.user?.name?.[0] ?? "U").toUpperCase()}
             className="avatar-core cursor-pointer"
-          >
-            {prayer.user?.image ? (
-              <Image
-                src={prayer.user.image}
-                alt={prayer.user?.name ?? "User"}
-                width={48}
-                height={48}
-                className="h-full w-full rounded-full object-cover"
-              />
-            ) : (
-              (prayer.user?.name?.[0] ?? "U").toUpperCase()
-            )}
-          </a>
+          />
         )}
       </div>
       <div className="flex-1">
@@ -692,26 +684,18 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
                         index === 0 ? "" : "border-t border-[color:var(--panel-border)]"
                       }`}
                     >
-                    <a
+                    <Avatar
+                      src={comment.userId?.image ?? null}
+                      alt={comment.userId?.name ?? "User"}
+                      size={36}
                       href={
                         comment.userId?.username
                           ? `/profile/${comment.userId.username}`
                           : "/profile"
                       }
-                      className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-slate-200 flex items-center justify-center text-[11px] sm:text-xs font-semibold text-slate-500 cursor-pointer overflow-hidden"
-                    >
-                      {comment.userId?.image ? (
-                        <Image
-                          src={comment.userId.image}
-                          alt={comment.userId?.name ?? "User"}
-                          width={36}
-                          height={36}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        (comment.userId?.name?.[0] ?? "U").toUpperCase()
-                      )}
-                    </a>
+                      fallback={(comment.userId?.name?.[0] ?? "U").toUpperCase()}
+                      className="h-8 w-8 sm:h-9 sm:w-9 text-[11px] sm:text-xs cursor-pointer"
+                    />
                     <div className="flex-1">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-2">

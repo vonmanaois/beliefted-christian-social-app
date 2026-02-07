@@ -2,6 +2,8 @@
 
 import { useInfiniteQuery } from "@tanstack/react-query";
 import WordCard from "@/components/word/WordCard";
+import EmptyState from "@/components/ui/EmptyState";
+import FeedSkeleton from "@/components/ui/FeedSkeleton";
 
 type Word = {
   _id: string;
@@ -25,6 +27,8 @@ export default function WordFeed({ refreshKey, userId }: WordFeedProps) {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isError,
+    refetch,
   } = useInfiniteQuery({
     queryKey: ["words", userId, refreshKey],
     queryFn: async ({ pageParam }: { pageParam?: string | null }) => {
@@ -62,33 +66,31 @@ export default function WordFeed({ refreshKey, userId }: WordFeedProps) {
   const words = data?.pages.flatMap((page) => page.items) ?? [];
 
   if (isLoading) {
+    return <FeedSkeleton />;
+  }
+
+  if (isError) {
     return (
-      <div className="flex flex-col gap-4">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <div key={index} className="wall-card">
-            <div className="flex gap-4">
-              <div className="h-12 w-12 rounded-full bg-slate-200 animate-pulse" />
-              <div className="flex-1">
-                <div className="h-3 w-32 bg-slate-200 rounded-full animate-pulse" />
-                <div className="mt-2 h-3 w-24 bg-slate-200 rounded-full animate-pulse" />
-                <div className="mt-4 h-3 w-full bg-slate-200 rounded-full animate-pulse" />
-                <div className="mt-2 h-3 w-5/6 bg-slate-200 rounded-full animate-pulse" />
-              </div>
-            </div>
-          </div>
-        ))}
+      <div className="panel p-6 text-sm text-[color:var(--subtle)]">
+        <p className="text-[color:var(--ink)] font-semibold">Something went wrong.</p>
+        <p className="mt-1">We couldn&apos;t load words. Try again.</p>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          className="mt-4 post-button bg-transparent border border-[color:var(--panel-border)] text-[color:var(--ink)]"
+        >
+          Retry
+        </button>
       </div>
     );
   }
 
   if (words.length === 0) {
     return (
-      <div className="panel p-6 text-sm text-[color:var(--subtle)]">
-        <p className="text-[color:var(--ink)] font-semibold">
-          No words yet.
-        </p>
-        <p className="mt-1">Share a verse or encouragement to start.</p>
-      </div>
+      <EmptyState
+        title="No words yet."
+        description="Share a verse or encouragement to start."
+      />
     );
   }
 

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChatCircle, DotsThreeOutline, Heart } from "@phosphor-icons/react";
-import Image from "next/image";
+import Avatar from "@/components/ui/Avatar";
 import Modal from "@/components/layout/Modal";
 
 type WordUser = {
@@ -460,24 +460,14 @@ export default function WordCard({ word }: WordCardProps) {
   return (
     <article className="wall-card flex gap-4 rounded-none">
       <div className="avatar-ring">
-        <a
-          href={
-            word.user?.username ? `/profile/${word.user.username}` : "/profile"
-          }
+        <Avatar
+          src={word.user?.image ?? null}
+          alt={word.user?.name ?? "User"}
+          size={48}
+          href={word.user?.username ? `/profile/${word.user.username}` : "/profile"}
+          fallback={(word.user?.name?.[0] ?? "W").toUpperCase()}
           className="avatar-core cursor-pointer"
-        >
-          {word.user?.image ? (
-            <Image
-              src={word.user.image}
-              alt={word.user?.name ?? "User"}
-              width={48}
-              height={48}
-              className="h-full w-full rounded-full object-cover"
-            />
-          ) : (
-            (word.user?.name?.[0] ?? "W").toUpperCase()
-          )}
-        </a>
+        />
       </div>
       <div className="flex-1">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -653,26 +643,18 @@ export default function WordCard({ word }: WordCardProps) {
                         index === 0 ? "" : "border-t border-[color:var(--panel-border)]"
                       }`}
                     >
-                    <a
+                    <Avatar
+                      src={comment.userId?.image ?? null}
+                      alt={comment.userId?.name ?? "User"}
+                      size={36}
                       href={
                         comment.userId?.username
                           ? `/profile/${comment.userId.username}`
                           : "/profile"
                       }
-                      className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-slate-200 flex items-center justify-center text-[11px] sm:text-xs font-semibold text-slate-500 cursor-pointer overflow-hidden"
-                    >
-                      {comment.userId?.image ? (
-                        <Image
-                          src={comment.userId.image}
-                          alt={comment.userId?.name ?? "User"}
-                          width={36}
-                          height={36}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        (comment.userId?.name?.[0] ?? "U").toUpperCase()
-                      )}
-                    </a>
+                      fallback={(comment.userId?.name?.[0] ?? "U").toUpperCase()}
+                      className="h-8 w-8 sm:h-9 sm:w-9 text-[11px] sm:text-xs cursor-pointer"
+                    />
                     <div className="flex-1">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
