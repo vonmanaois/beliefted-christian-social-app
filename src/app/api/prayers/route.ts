@@ -7,6 +7,7 @@ import PrayerModel from "@/models/Prayer";
 import { Types } from "mongoose";
 import { revalidateTag, unstable_cache } from "next/cache";
 import { z } from "zod";
+import { rateLimit } from "@/lib/rateLimit";
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -115,6 +116,11 @@ export async function POST(req: Request) {
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const rl = rateLimit(`prayer-post:${session.user.id}`, 5, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
   const PrayerSchema = z.object({

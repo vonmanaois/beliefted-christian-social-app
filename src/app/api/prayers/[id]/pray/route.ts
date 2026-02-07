@@ -5,6 +5,7 @@ import dbConnect from "@/lib/db";
 import NotificationModel from "@/models/Notification";
 import PrayerModel from "@/models/Prayer";
 import UserModel from "@/models/User";
+import { rateLimit } from "@/lib/rateLimit";
 
 export async function POST(
   _req: Request,
@@ -15,6 +16,11 @@ export async function POST(
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const rl = rateLimit(`pray:${session.user.id}`, 20, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
   await dbConnect();

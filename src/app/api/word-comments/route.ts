@@ -6,12 +6,18 @@ import WordCommentModel from "@/models/WordComment";
 import NotificationModel from "@/models/Notification";
 import WordModel from "@/models/Word";
 import { z } from "zod";
+import { rateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const rl = rateLimit(`word-comment-post:${session.user.id}`, 10, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
   const WordCommentSchema = z.object({

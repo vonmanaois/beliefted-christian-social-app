@@ -5,6 +5,7 @@ import dbConnect from "@/lib/db";
 import UserModel from "@/models/User";
 import NotificationModel from "@/models/Notification";
 import { z } from "zod";
+import { rateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: Request) {
   try {
@@ -12,6 +13,11 @@ export async function POST(req: Request) {
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rl = rateLimit(`follow:${session.user.id}`, 10, 60_000);
+    if (!rl.ok) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
     const FollowSchema = z.object({
