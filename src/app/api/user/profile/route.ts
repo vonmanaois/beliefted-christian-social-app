@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
-import PrayerModel from "@/models/Prayer";
 import dbConnect from "@/lib/db";
 import { z } from "zod";
 

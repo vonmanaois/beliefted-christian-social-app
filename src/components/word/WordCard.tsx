@@ -81,12 +81,11 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
     return String(raw);
   };
   const wordId = normalizeId(word._id);
-  const [likeCount, setLikeCount] = useState(word.likedBy?.length ?? 0);
-  const [hasLiked, setHasLiked] = useState(
-    session?.user?.id ? word.likedBy?.includes(String(session.user.id)) ?? false : false
-  );
+  const likedBy = Array.isArray(word.likedBy) ? word.likedBy : [];
+  const hasLiked = session?.user?.id
+    ? likedBy.includes(String(session.user.id))
+    : false;
   const [likeBurst, setLikeBurst] = useState(false);
-  const [commentCount, setCommentCount] = useState(word.commentCount ?? 0);
   const [showComments, setShowComments] = useState(defaultShowComments);
   const [commentText, setCommentText] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -107,7 +106,6 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
   const [showSignIn, setShowSignIn] = useState(false);
   const [showCommentConfirm, setShowCommentConfirm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [content, setContent] = useState(word.content);
   const [editText, setEditText] = useState(word.content);
   const [likeError, setLikeError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -119,6 +117,23 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
         word.userId &&
         String(word.userId) === String(session.user.id)
     );
+  const updateWordCache = (updater: (item: Word) => Word) => {
+    queryClient.setQueriesData<{ pages: { items: Word[] }[]; pageParams: unknown[] }>(
+      { queryKey: ["words"] },
+      (data) => {
+        if (!data) return data;
+        return {
+          ...data,
+          pages: data.pages.map((page) => ({
+            ...page,
+            items: page.items.map((item) =>
+              normalizeId(item._id) === wordId ? updater(item) : item
+            ),
+          })),
+        };
+      }
+    );
+  };
 
   const { data: comments = [], isLoading: isLoadingComments } = useQuery({
     queryKey: ["word-comments", wordId],
@@ -133,12 +148,15 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
     },
     enabled: showComments,
   });
+  const displayedCommentCount = showComments
+    ? comments.length
+    : word.commentCount ?? 0;
 
   useEffect(() => {
-    if (showComments && !isLoadingComments) {
-      setCommentCount(comments.length);
+    if (!isEditing) {
+      setEditText(word.content);
     }
-  }, [comments.length, showComments, isLoadingComments]);
+  }, [word.content, isEditing]);
 
   useEffect(() => {
     if (!showMenu) return;
@@ -169,7 +187,7 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
     const handleClickOutside = (event: MouseEvent) => {
       if (!editRef.current) return;
       if (editRef.current.contains(event.target as Node)) return;
-      if (editText.trim() !== content.trim()) {
+      if (editText.trim() !== word.content.trim()) {
         setShowEditConfirm(true);
       } else {
         setIsEditing(false);
@@ -177,7 +195,7 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isEditing, editText, content]);
+  }, [isEditing, editText, word.content]);
 
   useEffect(() => {
     if (!editingCommentId) return;
@@ -218,27 +236,32 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
     },
     onMutate: async () => {
       setLikeError(null);
-      if (!session?.user?.id) return { previousCount: likeCount, previousLiked: hasLiked };
-      const previousCount = likeCount;
-      const previousLiked = hasLiked;
-      setLikeBurst(true);
-      setTimeout(() => setLikeBurst(false), 180);
-      setHasLiked((prev) => !prev);
-      setLikeCount((prev) => (previousLiked ? Math.max(0, prev - 1) : prev + 1));
-      return { previousCount, previousLiked };
+      if (!session?.user?.id) return null;
+      const previous = queryClient.getQueriesData({ queryKey: ["words"] });
+      const viewerId = String(session.user.id);
+      updateWordCache((item) => {
+        const current = Array.isArray(item.likedBy) ? item.likedBy : [];
+        const already = current.includes(viewerId);
+        const nextLikedBy = already
+          ? current.filter((id) => id !== viewerId)
+          : [...current, viewerId];
+        return { ...item, likedBy: nextLikedBy };
+      });
+      if (!hasLiked) {
+        setLikeBurst(true);
+        setTimeout(() => setLikeBurst(false), 180);
+      }
+      return { previous };
     },
     onError: (_error, _variables, context) => {
-      if (context) {
-        setHasLiked(context.previousLiked);
-        setLikeCount(context.previousCount);
+      if (context?.previous) {
+        context.previous.forEach(([key, data]) => {
+          queryClient.setQueryData(key, data);
+        });
       }
       setLikeError("Couldn't update like.");
     },
-    onSuccess: (data) => {
-      if (typeof data.liked === "boolean") {
-        setHasLiked(data.liked);
-      }
-      setLikeCount(data.count ?? 0);
+    onSuccess: () => {
       setLikeError(null);
       if (typeof window !== "undefined") {
         void fetch("/api/analytics", {
@@ -273,14 +296,14 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
     onSuccess: async (newComment) => {
       setCommentError(null);
       setCommentText("");
-      setCommentCount((prev) => prev + 1);
+      updateWordCache((item) => ({
+        ...item,
+        commentCount: (item.commentCount ?? 0) + 1,
+      }));
       queryClient.setQueryData<Comment[]>(
         ["word-comments", wordId],
         (current = []) => [newComment as Comment, ...current]
       );
-      await queryClient.invalidateQueries({
-        queryKey: ["word-comments", wordId],
-      });
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("notifications:refresh"));
       }
@@ -317,9 +340,6 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
       }
       setEditingCommentId(null);
       setEditingCommentText("");
-      await queryClient.invalidateQueries({
-        queryKey: ["word-comments", wordId],
-      });
     },
     onError: () => {
       setCommentError("Couldn't update comment.");
@@ -345,10 +365,10 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
         ["word-comments", wordId],
         (current = []) => current.filter((comment) => comment._id !== deletedId)
       );
-      await queryClient.invalidateQueries({
-        queryKey: ["word-comments", wordId],
-      });
-      setCommentCount((prev) => Math.max(0, prev - 1));
+      updateWordCache((item) => ({
+        ...item,
+        commentCount: Math.max(0, (item.commentCount ?? 0) - 1),
+      }));
     },
     onError: () => {
       setCommentError("Couldn't delete comment.");
@@ -378,9 +398,11 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
       return (await response.json()) as { content: string };
     },
     onSuccess: async (data) => {
-      setContent(data.content);
+      updateWordCache((item) => ({
+        ...item,
+        content: data.content,
+      }));
       setIsEditing(false);
-      await queryClient.invalidateQueries({ queryKey: ["words"] });
     },
   });
 
@@ -490,14 +512,14 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
   }, [showComments, commentText]);
 
   const handleEditStart = () => {
-    setEditText(content);
+    setEditText(word.content);
     setIsEditing(true);
     setShowMenu(false);
   };
 
   const handleEditCancel = () => {
     setIsEditing(false);
-    setEditText(content);
+    setEditText(word.content);
   };
 
   const handleEditSave = async () => {
@@ -605,7 +627,7 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
           </div>
         ) : (
           <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)]">
-            {content}
+            {word.content}
           </p>
         )}
         <div className="mt-2 sm:mt-3 flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs">
@@ -625,9 +647,9 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
                 weight={hasLiked ? "fill" : "regular"}
                 className={likeBurst ? "scale-110 transition-transform duration-150" : "transition-transform duration-150"}
               />
-              {likeCount > 0 && (
+              {likedBy.length > 0 && (
                 <span className="text-xs font-semibold text-[color:var(--ink)] transition-all duration-200">
-                  {likeCount}
+                  {likedBy.length}
                 </span>
               )}
             </span>
@@ -640,9 +662,9 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
           >
             <span className="inline-flex items-center gap-2">
               <ChatCircle size={22} weight="regular" />
-              {commentCount > 0 && (
+              {displayedCommentCount > 0 && (
                 <span className="text-xs font-semibold text-[color:var(--ink)] transition-all duration-200">
-                  {commentCount}
+                  {displayedCommentCount}
                 </span>
               )}
             </span>

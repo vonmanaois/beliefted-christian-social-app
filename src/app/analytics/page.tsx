@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import Link from "next/link";
 import Sidebar from "@/components/layout/Sidebar";
 import clientPromise from "@/lib/mongodb";
 
@@ -81,7 +82,7 @@ export default async function AnalyticsPage() {
     days.map((day) => byDay[day]?.[event] ?? 0);
 
   const formatDay = (day: string) => {
-    const [year, month, date] = day.split("-");
+    const [, month, date] = day.split("-");
     return `${month}/${date}`;
   };
 
@@ -127,7 +128,7 @@ export default async function AnalyticsPage() {
               </p>
             </div>
             <div className="inline-flex rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-1 text-xs font-semibold">
-              <a
+              <Link
                 href="/analytics?days=7"
                 className={`rounded-lg px-3 py-1.5 ${
                   rangeDays === 7
@@ -136,8 +137,8 @@ export default async function AnalyticsPage() {
                 }`}
               >
                 7 days
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/analytics?days=30"
                 className={`rounded-lg px-3 py-1.5 ${
                   rangeDays === 30
@@ -146,7 +147,7 @@ export default async function AnalyticsPage() {
                 }`}
               >
                 30 days
-              </a>
+              </Link>
             </div>
           </div>
 

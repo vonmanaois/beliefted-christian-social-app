@@ -85,7 +85,7 @@ export default function ProfileSettings({
       }
     }, 400);
     return () => clearTimeout(timer);
-  }, [username]);
+  }, [username, currentUsername]);
 
   const handleSave = async (event: React.FormEvent) => {
     event.preventDefault();

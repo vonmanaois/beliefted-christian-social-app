@@ -96,7 +96,6 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     return String(raw);
   };
   const prayerId = normalizeId(prayer._id);
-  const [count, setCount] = useState(prayer.prayedBy.length);
   const [isPending, setIsPending] = useState(false);
   const [showComments, setShowComments] = useState(defaultShowComments);
   const [showCommentConfirm, setShowCommentConfirm] = useState(false);
@@ -104,7 +103,6 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
   const commentFormRef = useRef<HTMLDivElement | null>(null);
   const commentInputRef = useRef<HTMLTextAreaElement | null>(null);
   const commentButtonRef = useRef<HTMLButtonElement | null>(null);
-  const [commentCount, setCommentCount] = useState(prayer.commentCount ?? 0);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentText, setEditingCommentText] = useState("");
   const [editingCommentOriginal, setEditingCommentOriginal] = useState("");
@@ -121,11 +119,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
   const [showSignIn, setShowSignIn] = useState(false);
   const [prayError, setPrayError] = useState<string | null>(null);
   const [commentError, setCommentError] = useState<string | null>(null);
-  const [content, setContent] = useState(prayer.content);
   const [editText, setEditText] = useState(prayer.content);
-  const [requestPoints, setRequestPoints] = useState(
-    prayer.prayerPoints ?? []
-  );
   const [editPoints, setEditPoints] = useState(
     prayer.prayerPoints ?? []
   );
@@ -134,9 +128,6 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
   );
   const menuRef = useRef<HTMLDivElement | null>(null);
   const editRef = useRef<HTMLDivElement | null>(null);
-  const [hasPrayed, setHasPrayed] = useState(
-    session?.user?.id ? prayer.prayedBy.includes(String(session.user.id)) : false
-  );
   const isOwner =
     prayer.isOwner ??
     Boolean(
@@ -144,6 +135,28 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
         prayer.userId &&
         String(prayer.userId) === String(session.user.id)
     );
+  const prayedBy = Array.isArray(prayer.prayedBy) ? prayer.prayedBy : [];
+  const hasPrayed = session?.user?.id
+    ? prayedBy.includes(String(session.user.id))
+    : false;
+  const requestPoints = prayer.prayerPoints ?? [];
+  const updatePrayerCache = (updater: (item: Prayer) => Prayer) => {
+    queryClient.setQueriesData<{ pages: { items: Prayer[] }[]; pageParams: unknown[] }>(
+      { queryKey: ["prayers"] },
+      (data) => {
+        if (!data) return data;
+        return {
+          ...data,
+          pages: data.pages.map((page) => ({
+            ...page,
+            items: page.items.map((item) =>
+              normalizeId(item._id) === prayerId ? updater(item) : item
+            ),
+          })),
+        };
+      }
+    );
+  };
 
 
   const { data: comments = [], isLoading: isLoadingComments } = useQuery({
@@ -159,31 +172,22 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     },
     enabled: showComments,
   });
+  const displayedCommentCount = showComments
+    ? comments.length
+    : prayer.commentCount ?? 0;
 
   useEffect(() => {
-    if (showComments && !isLoadingComments) {
-      setCommentCount(comments.length);
+    if (!isEditing) {
+      setEditText(prayer.content);
     }
-  }, [comments.length, showComments, isLoadingComments]);
+  }, [prayer.content, isEditing]);
 
   useEffect(() => {
-    if (!session?.user?.id) return;
-    if (prayer.prayedBy.includes(String(session.user.id))) {
-      setHasPrayed(true);
-    }
-  }, [prayer.prayedBy, session?.user?.id]);
-
-  useEffect(() => {
-    if (prayer.kind === "request" && !isEditing) {
-      setRequestPoints(prayer.prayerPoints ?? []);
+    if (!isEditing && prayer.kind === "request") {
+      setEditPoints(prayer.prayerPoints ?? []);
+      setEditPointsOriginal(JSON.stringify(prayer.prayerPoints ?? []));
     }
   }, [prayer.kind, prayer.prayerPoints, isEditing]);
-
-  useEffect(() => {
-    if (!showComments) {
-      setCommentCount(prayer.commentCount ?? 0);
-    }
-  }, [prayer.commentCount, showComments]);
 
   useEffect(() => {
     if (!showMenu) return;
@@ -228,7 +232,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
         }
         return;
       }
-      if (editText.trim() !== content.trim()) {
+      if (editText.trim() !== prayer.content.trim()) {
         setShowEditConfirm(true);
       } else {
         setIsEditing(false);
@@ -236,7 +240,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isEditing, editText, content]);
+  }, [isEditing, editText, prayer.content, editPoints, editPointsOriginal, prayer.kind]);
 
   useEffect(() => {
     if (!editingCommentId) return;
@@ -276,14 +280,14 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     onSuccess: async (newComment) => {
       setCommentError(null);
       setCommentText("");
-      setCommentCount((prev) => prev + 1);
+      updatePrayerCache((item) => ({
+        ...item,
+        commentCount: (item.commentCount ?? 0) + 1,
+      }));
       queryClient.setQueryData<Comment[]>(
         ["prayer-comments", prayerId],
         (current = []) => [newComment, ...current]
       );
-      await queryClient.invalidateQueries({
-        queryKey: ["prayer-comments", prayerId],
-      });
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("notifications:refresh"));
       }
@@ -345,10 +349,10 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
         ["prayer-comments", prayerId],
         (current = []) => current.filter((comment) => comment._id !== deletedId)
       );
-      await queryClient.invalidateQueries({
-        queryKey: ["prayer-comments", prayerId],
-      });
-      setCommentCount((prev) => Math.max(0, prev - 1));
+      updatePrayerCache((item) => ({
+        ...item,
+        commentCount: Math.max(0, (item.commentCount ?? 0) - 1),
+      }));
     },
     onError: () => {
       setCommentError("Couldn't delete comment.");
@@ -410,14 +414,19 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     },
     onSuccess: async (data) => {
       if (prayer.kind === "request" && "prayerPoints" in data) {
-        setRequestPoints(data.prayerPoints);
         setEditPoints(data.prayerPoints);
         setEditPointsOriginal(JSON.stringify(data.prayerPoints));
+        updatePrayerCache((item) => ({
+          ...item,
+          prayerPoints: data.prayerPoints,
+        }));
       } else if ("content" in data) {
-        setContent(data.content);
+        updatePrayerCache((item) => ({
+          ...item,
+          content: data.content,
+        }));
       }
       setIsEditing(false);
-      await queryClient.invalidateQueries({ queryKey: ["prayers"] });
     },
   });
 
@@ -468,22 +477,25 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     },
     onMutate: async () => {
       setPrayError(null);
-      if (hasPrayed) return { previousCount: count, previousHasPrayed: hasPrayed };
-
-      setHasPrayed(true);
-      setCount((prev) => prev + 1);
-      return { previousCount: count, previousHasPrayed: hasPrayed };
+      if (!session?.user?.id || hasPrayed) return null;
+      const previous = queryClient.getQueriesData({ queryKey: ["prayers"] });
+      const viewerId = String(session.user.id);
+      updatePrayerCache((item) => {
+        const current = Array.isArray(item.prayedBy) ? item.prayedBy : [];
+        if (current.includes(viewerId)) return item;
+        return { ...item, prayedBy: [...current, viewerId] };
+      });
+      return { previous };
     },
     onError: (_error, _variables, context) => {
-      if (context) {
-        setHasPrayed(context.previousHasPrayed);
-        setCount(context.previousCount);
+      if (context?.previous) {
+        context.previous.forEach(([key, data]) => {
+          queryClient.setQueryData(key, data);
+        });
       }
       setPrayError("Couldn't record prayer.");
     },
-    onSuccess: (data) => {
-      setCount(data.count);
-      setHasPrayed(true);
+    onSuccess: () => {
       setPrayError(null);
       if (typeof window !== "undefined") {
         void fetch("/api/analytics", {
@@ -593,7 +605,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
       setEditPoints(requestPoints);
       setEditPointsOriginal(JSON.stringify(requestPoints));
     } else {
-      setEditText(content);
+      setEditText(prayer.content);
     }
     setIsEditing(true);
     setShowMenu(false);
@@ -606,7 +618,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
       setEditPoints(requestPoints);
       setEditPointsOriginal(JSON.stringify(requestPoints));
     } else {
-      setEditText(content);
+      setEditText(prayer.content);
     }
   };
 
@@ -801,7 +813,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
               Prayer
             </div>
             <p className="mt-4 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)]">
-              {content}
+              {prayer.content}
             </p>
           </>
         )}
@@ -840,17 +852,17 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
           >
             <span className="inline-flex items-center gap-2">
               <ChatCircle size={22} weight="regular" />
-              {commentCount > 0 && (
+              {displayedCommentCount > 0 && (
                 <span className="text-xs font-semibold text-[color:var(--ink)]">
-                  {commentCount}
+                  {displayedCommentCount}
                 </span>
               )}
             </span>
           </button>
-          {count > 0 && (
+          {prayedBy.length > 0 && (
             <div className="ml-auto text-[10px] sm:text-xs text-[color:var(--subtle)]">
               <span className="font-semibold text-[color:var(--ink)]">
-                {count}
+                {prayedBy.length}
               </span>{" "}
               people prayed
             </div>

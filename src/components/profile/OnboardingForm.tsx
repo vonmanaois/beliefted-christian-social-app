@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import ProfileSettings from "@/components/profile/ProfileSettings";
 
 type OnboardingFormProps = {
@@ -28,19 +29,19 @@ export default function OnboardingForm({
           />
           <span>
             I agree to the{" "}
-            <a
+            <Link
               href="/terms"
               className="text-[color:var(--ink)] underline underline-offset-2"
             >
               Terms
-            </a>{" "}
+            </Link>{" "}
             and{" "}
-            <a
+            <Link
               href="/privacy"
               className="text-[color:var(--ink)] underline underline-offset-2"
             >
               Privacy Policy
-            </a>
+            </Link>
             . We store your name, email, username, and profile details to create
             your account.
           </span>

@@ -21,7 +21,6 @@ export async function GET(req: Request) {
   await dbConnect();
 
   const loadWords = async (viewerId: string | null) => {
-    const isOwnerView = Boolean(viewerId && userId && viewerId === userId);
     const conditions: Record<string, unknown>[] = [];
     if (userId) {
       conditions.push({ userId });
