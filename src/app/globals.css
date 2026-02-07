@@ -249,7 +249,7 @@ html[data-theme="banana"] .panel-glass {
   border-radius: 0;
   border: none;
   background: transparent;
-  padding: 16px;
+  padding: 14px;
   border-bottom: 1px solid var(--panel-border);
 }
 
@@ -286,7 +286,7 @@ html[data-theme="banana"] .panel-glass {
 
 @media (max-width: 640px) {
   .wall-card {
-    padding: 12px;
+    padding: 10px;
   }
 
   .composer-trigger {

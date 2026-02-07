@@ -47,11 +47,6 @@ export async function PUT(
   }
 
   const body = await req.json();
-  const content = typeof body.content === "string" ? body.content.trim() : "";
-
-  if (!content) {
-    return NextResponse.json({ error: "Content is required" }, { status: 400 });
-  }
 
   await dbConnect();
 
@@ -62,6 +57,37 @@ export async function PUT(
 
   if (prayer.userId.toString() !== session.user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (prayer.kind === "request") {
+    const rawPoints = Array.isArray(body.prayerPoints) ? body.prayerPoints : [];
+    const cleanedPoints = rawPoints
+      .map((point) => ({
+        title: typeof point?.title === "string" ? point.title.trim() : "",
+        description:
+          typeof point?.description === "string" ? point.description.trim() : "",
+      }))
+      .filter((point) => point.title && point.description)
+      .slice(0, 8);
+
+    if (cleanedPoints.length === 0) {
+      return NextResponse.json(
+        { error: "Add at least one prayer point (title + description)" },
+        { status: 400 }
+      );
+    }
+
+    prayer.prayerPoints = cleanedPoints;
+    prayer.content = "";
+    await prayer.save();
+
+    revalidateTag("prayers-feed");
+    return NextResponse.json({ ok: true, prayerPoints: prayer.prayerPoints });
+  }
+
+  const content = typeof body.content === "string" ? body.content.trim() : "";
+  if (!content) {
+    return NextResponse.json({ error: "Content is required" }, { status: 400 });
   }
 
   prayer.content = content;

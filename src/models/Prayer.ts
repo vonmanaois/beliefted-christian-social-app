@@ -2,7 +2,7 @@ import { Schema, model, models, type Model, type InferSchemaType, Types } from "
 
 const PrayerSchema = new Schema(
   {
-    content: { type: String, trim: true, maxlength: 2000 },
+    content: { type: String, trim: true, maxlength: 2000, default: "" },
     userId: { type: Schema.Types.ObjectId, ref: "User" },
     authorName: { type: String, trim: true },
     authorUsername: { type: String, trim: true },

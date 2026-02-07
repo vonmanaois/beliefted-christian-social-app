@@ -58,25 +58,39 @@ export default function Sidebar() {
 
   useEffect(() => {
     if (!isAuthenticated || typeof window === "undefined") return;
-    const source = new EventSource("/api/notifications/stream");
+    let source: EventSource | null = null;
+    let retryDelay = 1000;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
-    source.onmessage = (event) => {
-      try {
-        const payload = JSON.parse(event.data) as { count?: number };
-        if (typeof payload.count === "number") {
-          queryClient.setQueryData(["notifications", "count"], payload.count);
+    const connect = () => {
+      if (!isAuthenticated) return;
+      source = new EventSource("/api/notifications/stream");
+
+      source.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data) as { count?: number };
+          if (typeof payload.count === "number") {
+            queryClient.setQueryData(["notifications", "count"], payload.count);
+          }
+        } catch {
+          // ignore parse errors
         }
-      } catch {
-        // ignore parse errors
-      }
+      };
+
+      source.onerror = () => {
+        source?.close();
+        source = null;
+        if (retryTimer) clearTimeout(retryTimer);
+        retryTimer = setTimeout(connect, retryDelay);
+        retryDelay = Math.min(retryDelay * 2, 30000);
+      };
     };
 
-    source.onerror = () => {
-      source.close();
-    };
+    connect();
 
     return () => {
-      source.close();
+      if (retryTimer) clearTimeout(retryTimer);
+      source?.close();
     };
   }, [isAuthenticated, queryClient]);
 

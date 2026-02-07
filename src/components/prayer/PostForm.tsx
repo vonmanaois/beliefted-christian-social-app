@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 
 type PostFormProps = {
   onPosted?: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
   compact?: boolean;
   flat?: boolean;
   variant?: "modal" | "inline";
@@ -13,6 +14,7 @@ type PostFormProps = {
 
 export default function PostForm({
   onPosted,
+  onDirtyChange,
   compact = false,
   flat = false,
   variant = "modal",
@@ -26,6 +28,7 @@ export default function PostForm({
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [expiresInDays, setExpiresInDays] = useState<7 | 30 | "never">(7);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
@@ -43,8 +46,24 @@ export default function PostForm({
   const canSubmit =
     kind === "prayer" ? content.trim().length > 0 : hasValidRequestPoints;
 
+  const isDirty =
+    kind === "prayer"
+      ? content.trim().length > 0
+      : points.some(
+          (point) => point.title.trim().length > 0 || point.description.trim().length > 0
+        );
+
+  const showRequestValidation =
+    kind === "request" &&
+    Boolean(validationError?.toLowerCase().includes("prayer point"));
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    setValidationError(null);
 
     if (!session?.user) {
       if (typeof window !== "undefined") {
@@ -53,7 +72,14 @@ export default function PostForm({
       return;
     }
 
-    if (!canSubmit) return;
+    if (!canSubmit) {
+      setValidationError(
+        kind === "prayer"
+          ? "Write a prayer before posting."
+          : "Add at least one prayer point with a title and description."
+      );
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -80,7 +106,11 @@ export default function PostForm({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to post prayer");
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        setValidationError(payload?.error ?? "Failed to post prayer.");
+        return;
       }
 
       setKind("prayer");
@@ -88,7 +118,9 @@ export default function PostForm({
       setPoints([{ title: "", description: "" }]);
       setIsAnonymous(false);
       setExpiresInDays(7);
+      setValidationError(null);
       onPosted?.();
+      onDirtyChange?.(false);
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("feed:refresh"));
       }
@@ -157,7 +189,11 @@ export default function PostForm({
           {points.map((point, index) => (
             <div key={index} className="flex flex-col gap-2">
               <input
-                className="soft-input modal-input text-sm"
+                className={`soft-input modal-input text-sm ${
+                  showRequestValidation && !point.title.trim()
+                    ? "border-[color:var(--danger)]"
+                    : ""
+                }`}
                 placeholder="Prayer point (title)"
                 value={point.title}
                 onChange={(event) => {
@@ -167,7 +203,11 @@ export default function PostForm({
                 }}
               />
               <textarea
-                className="soft-input modal-input text-sm min-h-[80px]"
+                className={`soft-input modal-input text-sm min-h-[80px] ${
+                  showRequestValidation && !point.description.trim()
+                    ? "border-[color:var(--danger)]"
+                    : ""
+                }`}
                 placeholder="Prayer description..."
                 value={point.description}
                 onChange={(event) => {
@@ -188,6 +228,15 @@ export default function PostForm({
             <PlusCircle size={16} weight="regular" />
             Add prayer point
           </button>
+          <p
+            className={`text-xs ${
+              !hasValidRequestPoints
+                ? "text-[color:var(--subtle)]"
+                : "text-[color:var(--subtle)]"
+            }`}
+          >
+            Add at least one prayer point with a title and description.
+          </p>
         </div>
       )}
 
@@ -248,6 +297,9 @@ export default function PostForm({
           {isSubmitting ? "Posting..." : "Pray"}
         </button>
       </div>
+      {validationError && (
+        <p className="text-xs text-[color:var(--danger)]">{validationError}</p>
+      )}
     </form>
   );
 }

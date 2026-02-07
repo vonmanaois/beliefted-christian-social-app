@@ -22,6 +22,10 @@ export default function ProfileTabs({ userId, showComposer = true }: ProfileTabs
   const [refreshKey, setRefreshKey] = useState(0);
   const [showPrayerComposer, setShowPrayerComposer] = useState(false);
   const [showWordComposer, setShowWordComposer] = useState(false);
+  const [showPrayerDiscardConfirm, setShowPrayerDiscardConfirm] = useState(false);
+  const [isPrayerDirty, setIsPrayerDirty] = useState(false);
+  const [showWordDiscardConfirm, setShowWordDiscardConfirm] = useState(false);
+  const [isWordDirty, setIsWordDirty] = useState(false);
   const { data: session } = useSession();
 
   useEffect(() => {
@@ -122,27 +126,99 @@ export default function ProfileTabs({ userId, showComposer = true }: ProfileTabs
       <Modal
         title="New Prayer"
         isOpen={showPrayerComposer}
-        onClose={() => setShowPrayerComposer(false)}
+        onClose={() => {
+          if (isPrayerDirty) {
+            setShowPrayerDiscardConfirm(true);
+            return;
+          }
+          setShowPrayerComposer(false);
+        }}
       >
         <PostForm
           onPosted={() => {
             setRefreshKey((prev) => prev + 1);
             setShowPrayerComposer(false);
           }}
+          onDirtyChange={setIsPrayerDirty}
         />
+      </Modal>
+
+      <Modal
+        title="Discard prayer?"
+        isOpen={showPrayerDiscardConfirm}
+        onClose={() => setShowPrayerDiscardConfirm(false)}
+      >
+        <p className="text-sm text-[color:var(--subtle)]">
+          You have unsaved changes. Discard them?
+        </p>
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setShowPrayerDiscardConfirm(false)}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer hover:text-[color:var(--accent)]"
+          >
+            Keep editing
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowPrayerDiscardConfirm(false);
+              setShowPrayerComposer(false);
+            }}
+            className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--danger)] text-white cursor-pointer"
+          >
+            Discard
+          </button>
+        </div>
       </Modal>
 
       <Modal
         title="Post a Word"
         isOpen={showWordComposer}
-        onClose={() => setShowWordComposer(false)}
+        onClose={() => {
+          if (isWordDirty) {
+            setShowWordDiscardConfirm(true);
+            return;
+          }
+          setShowWordComposer(false);
+        }}
       >
         <WordForm
           onPosted={() => {
             setRefreshKey((prev) => prev + 1);
             setShowWordComposer(false);
           }}
+          onDirtyChange={setIsWordDirty}
         />
+      </Modal>
+
+      <Modal
+        title="Discard word?"
+        isOpen={showWordDiscardConfirm}
+        onClose={() => setShowWordDiscardConfirm(false)}
+      >
+        <p className="text-sm text-[color:var(--subtle)]">
+          You have unsaved changes. Discard them?
+        </p>
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setShowWordDiscardConfirm(false)}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer hover:text-[color:var(--accent)]"
+          >
+            Keep editing
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowWordDiscardConfirm(false);
+              setShowWordComposer(false);
+            }}
+            className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--danger)] text-white cursor-pointer"
+          >
+            Discard
+          </button>
+        </div>
       </Modal>
     </section>
   );

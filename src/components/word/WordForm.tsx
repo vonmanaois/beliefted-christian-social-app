@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 
 type WordFormProps = {
   onPosted?: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
   compact?: boolean;
   flat?: boolean;
   variant?: "modal" | "inline";
@@ -12,6 +13,7 @@ type WordFormProps = {
 
 export default function WordForm({
   onPosted,
+  onDirtyChange,
   compact = false,
   flat = false,
   variant = "modal",
@@ -20,6 +22,7 @@ export default function WordForm({
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
+  const isDirty = content.trim().length > 0;
 
   useEffect(() => {
     if (variant !== "modal") return;
@@ -28,6 +31,10 @@ export default function WordForm({
     }, 0);
     return () => clearTimeout(id);
   }, [variant]);
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -56,6 +63,7 @@ export default function WordForm({
 
       setContent("");
       onPosted?.();
+      onDirtyChange?.(false);
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("feed:refresh"));
       }

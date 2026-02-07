@@ -89,6 +89,7 @@ export async function GET(req: Request) {
 
         const base = {
           ...prayer,
+          content: typeof prayer.content === "string" ? prayer.content : "",
           _id: prayer._id.toString(),
           userId: userIdString,
           isOwner: Boolean(viewerId && userIdString && viewerId === userIdString),
@@ -152,8 +153,8 @@ export async function POST(req: Request) {
     prayerPoints: z
       .array(
         z.object({
-          title: z.string().trim().min(1).max(120),
-          description: z.string().trim().min(1).max(400),
+          title: z.string().trim().max(120),
+          description: z.string().trim().max(400),
         })
       )
       .max(8)
@@ -164,13 +165,18 @@ export async function POST(req: Request) {
 
   const body = PrayerSchema.safeParse(await req.json());
   if (!body.success) {
-    return NextResponse.json({ error: "Invalid prayer data" }, { status: 400 });
+    return NextResponse.json(
+      { error: body.error.issues[0]?.message ?? "Invalid prayer data" },
+      { status: 400 }
+    );
   }
 
   const kind = body.data.kind ?? "prayer";
   const content = (body.data.content ?? "").trim();
   const heading = (body.data.heading ?? "").trim();
-  const prayerPoints = body.data.prayerPoints ?? [];
+  const prayerPoints = (body.data.prayerPoints ?? []).filter(
+    (point) => point.title.trim() && point.description.trim()
+  );
   const isAnonymous = Boolean(body.data.isAnonymous);
   const expiresInDays = body.data.expiresInDays ?? 7;
 
@@ -179,7 +185,7 @@ export async function POST(req: Request) {
   }
   if (kind === "request" && prayerPoints.length === 0) {
     return NextResponse.json(
-      { error: "Add at least one prayer point" },
+      { error: "Add at least one prayer point (title + description)" },
       { status: 400 }
     );
   }
@@ -197,7 +203,7 @@ export async function POST(req: Request) {
     .lean();
 
   const prayer = await PrayerModel.create({
-    content,
+    content: kind === "request" ? "" : content,
     kind,
     userId: session.user.id,
     authorName: author?.name ?? null,

@@ -9,6 +9,7 @@ import {
   ChatCircle,
   DotsThreeOutline,
   HandsClapping,
+  PlusCircle,
   NotePencil,
   UserCircle,
 } from "@phosphor-icons/react";
@@ -113,10 +114,21 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const [showSignIn, setShowSignIn] = useState(false);
   const [prayError, setPrayError] = useState<string | null>(null);
+  const [commentError, setCommentError] = useState<string | null>(null);
   const [content, setContent] = useState(prayer.content);
   const [editText, setEditText] = useState(prayer.content);
+  const [requestPoints, setRequestPoints] = useState(
+    prayer.prayerPoints ?? []
+  );
+  const [editPoints, setEditPoints] = useState(
+    prayer.prayerPoints ?? []
+  );
+  const [editPointsOriginal, setEditPointsOriginal] = useState(
+    JSON.stringify(prayer.prayerPoints ?? [])
+  );
   const menuRef = useRef<HTMLDivElement | null>(null);
   const editRef = useRef<HTMLDivElement | null>(null);
   const [hasPrayed, setHasPrayed] = useState(
@@ -159,6 +171,18 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
   }, [prayer.prayedBy, session?.user?.id]);
 
   useEffect(() => {
+    if (prayer.kind === "request" && !isEditing) {
+      setRequestPoints(prayer.prayerPoints ?? []);
+    }
+  }, [prayer.kind, prayer.prayerPoints, isEditing]);
+
+  useEffect(() => {
+    if (!showComments) {
+      setCommentCount(prayer.commentCount ?? 0);
+    }
+  }, [prayer.commentCount, showComments]);
+
+  useEffect(() => {
     if (!showMenu) return;
     const handleClickOutside = (event: MouseEvent) => {
       if (!menuRef.current) return;
@@ -187,6 +211,20 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
     const handleClickOutside = (event: MouseEvent) => {
       if (!editRef.current) return;
       if (editRef.current.contains(event.target as Node)) return;
+      if (prayer.kind === "request") {
+        const cleaned = editPoints
+          .map((point) => ({
+            title: point.title.trim(),
+            description: point.description.trim(),
+          }))
+          .filter((point) => point.title && point.description);
+        if (JSON.stringify(cleaned) !== editPointsOriginal) {
+          setShowEditConfirm(true);
+        } else {
+          setIsEditing(false);
+        }
+        return;
+      }
       if (editText.trim() !== content.trim()) {
         setShowEditConfirm(true);
       } else {
@@ -230,16 +268,25 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
         }
         throw new Error("Failed to post comment");
       }
+      return (await response.json()) as Comment;
     },
-    onSuccess: async () => {
+    onSuccess: async (newComment) => {
+      setCommentError(null);
       setCommentText("");
       setCommentCount((prev) => prev + 1);
+      queryClient.setQueryData<Comment[]>(
+        ["prayer-comments", prayerId],
+        (current = []) => [newComment, ...current]
+      );
       await queryClient.invalidateQueries({
         queryKey: ["prayer-comments", prayerId],
       });
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("notifications:refresh"));
       }
+    },
+    onError: () => {
+      setCommentError("Couldn't post comment.");
     },
   });
 
@@ -253,13 +300,29 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
       if (!response.ok) {
         throw new Error("Failed to update comment");
       }
+      return (await response.json()) as { content: string };
     },
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      setCommentError(null);
+      if (editingCommentId) {
+        queryClient.setQueryData<Comment[]>(
+          ["prayer-comments", prayerId],
+          (current = []) =>
+            current.map((comment) =>
+              comment._id === editingCommentId
+                ? { ...comment, content: data.content }
+                : comment
+            )
+        );
+      }
       setEditingCommentId(null);
       setEditingCommentText("");
       await queryClient.invalidateQueries({
         queryKey: ["prayer-comments", prayerId],
       });
+    },
+    onError: () => {
+      setCommentError("Couldn't update comment.");
     },
   });
 
@@ -271,17 +334,60 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
       if (!response.ok) {
         throw new Error("Failed to delete comment");
       }
+      return id;
     },
-    onSuccess: async () => {
+    onSuccess: async (deletedId) => {
+      setCommentError(null);
+      queryClient.setQueryData<Comment[]>(
+        ["prayer-comments", prayerId],
+        (current = []) => current.filter((comment) => comment._id !== deletedId)
+      );
       await queryClient.invalidateQueries({
         queryKey: ["prayer-comments", prayerId],
       });
       setCommentCount((prev) => Math.max(0, prev - 1));
     },
+    onError: () => {
+      setCommentError("Couldn't delete comment.");
+    },
   });
 
   const editMutation = useMutation({
     mutationFn: async () => {
+      setEditError(null);
+      if (prayer.kind === "request") {
+        const cleanedPoints = editPoints
+          .map((point) => ({
+            title: point.title.trim(),
+            description: point.description.trim(),
+          }))
+          .filter((point) => point.title && point.description);
+
+        if (cleanedPoints.length === 0) {
+          setEditError("Add at least one prayer point with a title and description.");
+          throw new Error("Validation failed");
+        }
+
+        const response = await fetch(`/api/prayers/${prayerId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prayerPoints: cleanedPoints }),
+        });
+        if (!response.ok) {
+          let message = "Failed to update prayer";
+          try {
+            const data = (await response.json()) as { error?: string };
+            if (data?.error) message = data.error;
+          } catch {
+            // ignore JSON parse errors
+          }
+          throw new Error(message);
+        }
+        return (await response.json()) as {
+          prayerPoints: { title: string; description: string }[];
+        };
+      }
+
       const response = await fetch(`/api/prayers/${prayerId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -300,7 +406,13 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
       return (await response.json()) as { content: string };
     },
     onSuccess: async (data) => {
-      setContent(data.content);
+      if (prayer.kind === "request" && "prayerPoints" in data) {
+        setRequestPoints(data.prayerPoints);
+        setEditPoints(data.prayerPoints);
+        setEditPointsOriginal(JSON.stringify(data.prayerPoints));
+      } else if ("content" in data) {
+        setContent(data.content);
+      }
       setIsEditing(false);
       await queryClient.invalidateQueries({ queryKey: ["prayers"] });
     },
@@ -417,7 +529,10 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
     });
   };
 
-  const handleCommentSubmit = async (event: React.FormEvent) => {
+  const handleCommentSubmit = async (event?: React.FormEvent) => {
+    if (event) {
+      event.preventDefault();
+    }
     event.preventDefault();
 
     if (!session?.user?.id) {
@@ -458,18 +573,30 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
   };
 
   const handleEditStart = () => {
-    setEditText(content);
+    setEditError(null);
+    if (prayer.kind === "request") {
+      setEditPoints(requestPoints);
+      setEditPointsOriginal(JSON.stringify(requestPoints));
+    } else {
+      setEditText(content);
+    }
     setIsEditing(true);
     setShowMenu(false);
   };
 
   const handleEditCancel = () => {
     setIsEditing(false);
-    setEditText(content);
+    setEditError(null);
+    if (prayer.kind === "request") {
+      setEditPoints(requestPoints);
+      setEditPointsOriginal(JSON.stringify(requestPoints));
+    } else {
+      setEditText(content);
+    }
   };
 
   const handleEditSave = async () => {
-    if (!editText.trim()) return;
+    if (prayer.kind !== "request" && !editText.trim()) return;
     try {
       await editMutation.mutateAsync();
     } catch (error) {
@@ -569,11 +696,53 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
         </div>
         {isEditing ? (
           <div ref={editRef} className="mt-3 flex flex-col gap-2">
-            <textarea
-              className="soft-input min-h-[100px] text-sm"
-              value={editText}
-              onChange={(event) => setEditText(event.target.value)}
-            />
+            {prayer.kind === "request" ? (
+              <div className="flex flex-col gap-3">
+                {editPoints.map((point, index) => (
+                  <div key={`${point.title}-${index}`} className="flex flex-col gap-2">
+                    <input
+                      className="soft-input text-sm"
+                      placeholder="Prayer point (title)"
+                      value={point.title}
+                      onChange={(event) => {
+                        const next = [...editPoints];
+                        next[index] = { ...next[index], title: event.target.value };
+                        setEditPoints(next);
+                      }}
+                    />
+                    <textarea
+                      className="soft-input min-h-[80px] text-sm"
+                      placeholder="Prayer description..."
+                      value={point.description}
+                      onChange={(event) => {
+                        const next = [...editPoints];
+                        next[index] = { ...next[index], description: event.target.value };
+                        setEditPoints(next);
+                      }}
+                    />
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEditPoints((prev) => [...prev, { title: "", description: "" }])
+                  }
+                  className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
+                >
+                  <PlusCircle size={16} weight="regular" />
+                  Add prayer point
+                </button>
+              </div>
+            ) : (
+              <textarea
+                className="soft-input min-h-[100px] text-sm"
+                value={editText}
+                onChange={(event) => setEditText(event.target.value)}
+              />
+            )}
+            {editError && (
+              <p className="text-xs text-[color:var(--danger)]">{editError}</p>
+            )}
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -591,14 +760,14 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
               </button>
             </div>
           </div>
-        ) : prayer.kind === "request" && prayer.prayerPoints?.length ? (
+        ) : prayer.kind === "request" && requestPoints.length ? (
           <>
             <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-3 py-1 text-sm font-semibold text-[color:var(--accent)]">
               <NotePencil size={16} weight="regular" />
               Request
             </div>
             <div className="mt-4 space-y-3 border-l-2 border-[color:var(--accent)] pl-3">
-              {prayer.prayerPoints.map((point, index) => (
+              {requestPoints.map((point, index) => (
                 <div key={`${point.title}-${index}`}>
                   <p className="text-[13px] sm:text-sm font-semibold text-[color:var(--ink)]">
                     {point.title}
@@ -621,7 +790,7 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
             </p>
           </>
         )}
-        <div className="mt-3 flex items-center gap-3 text-xs">
+        <div className="mt-2 sm:mt-3 flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs">
           {isOwner ? (
             <span className="text-xs font-semibold text-[color:var(--subtle)]">
               Your prayer
@@ -705,6 +874,18 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
                   </button>
                 </div>
               </form>
+            )}
+            {commentError && (
+              <div className="mt-2 text-[11px] text-[color:var(--subtle)] flex items-center gap-2">
+                <span>{commentError}</span>
+                <button
+                  type="button"
+                  onClick={() => handleCommentSubmit()}
+                  className="text-[color:var(--accent)] hover:text-[color:var(--accent-strong)] text-xs font-semibold"
+                >
+                  Retry
+                </button>
+              </div>
             )}
 
             <div className="mt-3 flex flex-col gap-3 text-[13px] sm:text-sm">

@@ -250,6 +250,8 @@ const WordCard = ({ word }: WordCardProps) => {
     },
   });
 
+  const [commentError, setCommentError] = useState<string | null>(null);
+
   const commentMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch("/api/word-comments", {
@@ -263,16 +265,25 @@ const WordCard = ({ word }: WordCardProps) => {
         }
         throw new Error("Failed to post comment");
       }
+      return (await response.json()) as { _id: string; content: string; createdAt: string; userId?: CommentUser | null };
     },
-    onSuccess: async () => {
+    onSuccess: async (newComment) => {
+      setCommentError(null);
       setCommentText("");
       setCommentCount((prev) => prev + 1);
+      queryClient.setQueryData<Comment[]>(
+        ["word-comments", wordId],
+        (current = []) => [newComment as Comment, ...current]
+      );
       await queryClient.invalidateQueries({
         queryKey: ["word-comments", wordId],
       });
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("notifications:refresh"));
       }
+    },
+    onError: () => {
+      setCommentError("Couldn't post comment.");
     },
   });
 
@@ -286,13 +297,29 @@ const WordCard = ({ word }: WordCardProps) => {
       if (!response.ok) {
         throw new Error("Failed to update comment");
       }
+      return (await response.json()) as { content: string };
     },
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      setCommentError(null);
+      if (editingCommentId) {
+        queryClient.setQueryData<Comment[]>(
+          ["word-comments", wordId],
+          (current = []) =>
+            current.map((comment) =>
+              comment._id === editingCommentId
+                ? { ...comment, content: data.content }
+                : comment
+            )
+        );
+      }
       setEditingCommentId(null);
       setEditingCommentText("");
       await queryClient.invalidateQueries({
         queryKey: ["word-comments", wordId],
       });
+    },
+    onError: () => {
+      setCommentError("Couldn't update comment.");
     },
   });
 
@@ -307,12 +334,21 @@ const WordCard = ({ word }: WordCardProps) => {
         }
         throw new Error("Failed to delete comment");
       }
+      return id;
     },
-    onSuccess: async () => {
+    onSuccess: async (deletedId) => {
+      setCommentError(null);
+      queryClient.setQueryData<Comment[]>(
+        ["word-comments", wordId],
+        (current = []) => current.filter((comment) => comment._id !== deletedId)
+      );
       await queryClient.invalidateQueries({
         queryKey: ["word-comments", wordId],
       });
       setCommentCount((prev) => Math.max(0, prev - 1));
+    },
+    onError: () => {
+      setCommentError("Couldn't delete comment.");
     },
   });
 
@@ -409,8 +445,10 @@ const WordCard = ({ word }: WordCardProps) => {
     }
   }, [word.likedBy, session?.user?.id]);
 
-  const handleCommentSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleCommentSubmit = async (event?: React.FormEvent) => {
+    if (event) {
+      event.preventDefault();
+    }
 
     if (!session?.user?.id) {
       setShowSignIn(true);
@@ -559,7 +597,7 @@ const WordCard = ({ word }: WordCardProps) => {
             {content}
           </p>
         )}
-        <div className="mt-3 flex items-center gap-3 text-xs">
+        <div className="mt-2 sm:mt-3 flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs">
           <button
             type="button"
             onClick={handleLike}
@@ -632,6 +670,18 @@ const WordCard = ({ word }: WordCardProps) => {
                   </button>
                 </div>
               </form>
+            )}
+            {commentError && (
+              <div className="mt-2 text-[11px] text-[color:var(--subtle)] flex items-center gap-2">
+                <span>{commentError}</span>
+                <button
+                  type="button"
+                  onClick={() => handleCommentSubmit()}
+                  className="text-[color:var(--accent)] hover:text-[color:var(--accent-strong)] text-xs font-semibold"
+                >
+                  Retry
+                </button>
+              </div>
             )}
 
             <div className="mt-3 flex flex-col gap-3 text-[13px] sm:text-sm">
