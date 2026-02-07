@@ -20,35 +20,28 @@ export async function GET(req: Request) {
 
   await dbConnect();
 
-  const filter: Record<string, unknown> = userId ? { userId } : {};
-
-  if (cursor) {
-    const decoded = Buffer.from(cursor, "base64").toString("utf8");
-    const [createdAtRaw, idRaw] = decoded.split("|");
-    const createdAt = createdAtRaw ? new Date(createdAtRaw) : null;
-    const cursorId = idRaw && Types.ObjectId.isValid(idRaw) ? new Types.ObjectId(idRaw) : null;
-    if (createdAt && !Number.isNaN(createdAt.getTime())) {
-      filter.$or = [
-        { createdAt: { $lt: createdAt } },
-        ...(cursorId ? [{ createdAt, _id: { $lt: cursorId } }] : []),
-      ];
-    }
-  }
-
-  if (cursor) {
-    const decoded = Buffer.from(cursor, "base64").toString("utf8");
-    const [createdAtRaw, idRaw] = decoded.split("|");
-    const createdAt = createdAtRaw ? new Date(createdAtRaw) : null;
-    const cursorId = idRaw && Types.ObjectId.isValid(idRaw) ? new Types.ObjectId(idRaw) : null;
-    if (createdAt && !Number.isNaN(createdAt.getTime())) {
-      filter.$or = [
-        { createdAt: { $lt: createdAt } },
-        ...(cursorId ? [{ createdAt, _id: { $lt: cursorId } }] : []),
-      ];
-    }
-  }
-
   const loadWords = async (viewerId: string | null) => {
+    const isOwnerView = Boolean(viewerId && userId && viewerId === userId);
+    const conditions: Record<string, unknown>[] = [];
+    if (userId) {
+      conditions.push({ userId });
+    }
+
+    if (cursor) {
+      const decoded = Buffer.from(cursor, "base64").toString("utf8");
+      const [createdAtRaw, idRaw] = decoded.split("|");
+      const createdAt = createdAtRaw ? new Date(createdAtRaw) : null;
+      const cursorId = idRaw && Types.ObjectId.isValid(idRaw) ? new Types.ObjectId(idRaw) : null;
+      if (createdAt && !Number.isNaN(createdAt.getTime())) {
+        conditions.push({
+          $or: [
+            { createdAt: { $lt: createdAt } },
+            ...(cursorId ? [{ createdAt, _id: { $lt: cursorId } }] : []),
+          ],
+        });
+      }
+    }
+    const filter = conditions.length ? { $and: conditions } : {};
     const words = await WordModel.find(filter)
       .sort({ createdAt: -1, _id: -1 })
       .limit(limit + 1)

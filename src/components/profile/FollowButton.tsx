@@ -15,6 +15,7 @@ export default function FollowButton({
   const { data: session } = useSession();
   const [isFollowing, setIsFollowing] = useState(initialFollowing);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [followError, setFollowError] = useState<string | null>(null);
 
   const handleFollow = async () => {
     if (!session?.user?.id) {
@@ -24,6 +25,7 @@ export default function FollowButton({
     const previousFollowing = isFollowing;
     setIsUpdating(true);
     setIsFollowing((prev) => !prev);
+    setFollowError(null);
 
     try {
       const response = await fetch("/api/user/follow", {
@@ -45,6 +47,7 @@ export default function FollowButton({
           data?.error
         );
         setIsFollowing(previousFollowing);
+        setFollowError("Couldn't update follow.");
         return;
       }
 
@@ -58,10 +61,19 @@ export default function FollowButton({
         );
       }
       if (typeof window !== "undefined") {
+        void fetch("/api/analytics", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ event: "followed", entityId: targetUserId }),
+        });
+      }
+      if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("notifications:refresh"));
       }
     } catch (error) {
       console.error(error);
+      setIsFollowing(previousFollowing);
+      setFollowError("Couldn't update follow.");
     } finally {
       setIsUpdating(false);
     }
@@ -70,17 +82,31 @@ export default function FollowButton({
   if (!session?.user?.id) return null;
 
   return (
-    <button
-      type="button"
-      onClick={handleFollow}
-      disabled={isUpdating}
-      className={`post-button w-full sm:w-auto cursor-pointer ${
-        isFollowing
-          ? "bg-transparent border border-[color:var(--panel-border)] text-[color:var(--ink)]"
-          : "bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
-      }`}
-    >
-      {isFollowing ? "Following" : "Follow"}
-    </button>
+    <div className="flex flex-col gap-2">
+      <button
+        type="button"
+        onClick={handleFollow}
+        disabled={isUpdating}
+        className={`post-button w-full sm:w-auto cursor-pointer ${
+          isFollowing
+            ? "bg-transparent border border-[color:var(--panel-border)] text-[color:var(--ink)]"
+            : "bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
+        }`}
+      >
+        {isFollowing ? "Following" : "Follow"}
+      </button>
+      {followError && (
+        <div className="text-[11px] text-[color:var(--subtle)] flex items-center gap-2">
+          <span>{followError}</span>
+          <button
+            type="button"
+            onClick={handleFollow}
+            className="text-[color:var(--accent)] hover:text-[color:var(--accent-strong)] text-xs font-semibold"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

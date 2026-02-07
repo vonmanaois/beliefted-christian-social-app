@@ -1,7 +1,7 @@
 "use client";
 
 import { signIn, useSession } from "next-auth/react";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Avatar from "@/components/ui/Avatar";
 import {
@@ -74,7 +74,7 @@ const formatPostTime = (timestamp: string) => {
   return new Intl.DateTimeFormat("en-US", options).format(createdAt);
 };
 
-export default function PrayerCard({ prayer }: PrayerCardProps) {
+const PrayerCard = ({ prayer }: PrayerCardProps) => {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
   const normalizeId = (raw: Prayer["_id"]) => {
@@ -109,6 +109,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
   const [showEditConfirm, setShowEditConfirm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
+  const [prayError, setPrayError] = useState<string | null>(null);
   const [content, setContent] = useState(prayer.content);
   const [editText, setEditText] = useState(prayer.content);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -346,6 +347,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
       return (await response.json()) as { count: number };
     },
     onMutate: async () => {
+      setPrayError(null);
       if (hasPrayed) return { previousCount: count, previousHasPrayed: hasPrayed };
 
       setHasPrayed(true);
@@ -357,10 +359,19 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
         setHasPrayed(context.previousHasPrayed);
         setCount(context.previousCount);
       }
+      setPrayError("Couldn't record prayer.");
     },
     onSuccess: (data) => {
       setCount(data.count);
       setHasPrayed(true);
+      setPrayError(null);
+      if (typeof window !== "undefined") {
+        void fetch("/api/analytics", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ event: "prayed", entityId: prayerId }),
+        });
+      }
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("stats:refresh"));
         window.dispatchEvent(new Event("notifications:refresh"));
@@ -374,6 +385,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
       return;
     }
 
+    setPrayError(null);
     setIsPending(true);
 
     try {
@@ -461,7 +473,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
   };
 
   return (
-    <article className="wall-card flex gap-4 rounded-none">
+    <article className="wall-card flex gap-3 rounded-none">
       <div className="avatar-ring">
         {prayer.isAnonymous ? (
           <div className="avatar-core">
@@ -483,7 +495,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
         )}
       </div>
       <div className="flex-1">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             {prayer.isAnonymous ? (
               <p className="text-xs sm:text-sm font-semibold text-[color:var(--ink)]">
@@ -502,13 +514,13 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
                   {prayer.user?.name ?? "User"}
                 </a>
                 {prayer.user?.username && (
-                  <span className="text-[11px] sm:text-xs text-[color:var(--subtle)]">
+                  <span className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
                     @{prayer.user.username}
                   </span>
                 )}
               </div>
             )}
-            <p className="text-[11px] sm:text-xs text-[color:var(--subtle)]">
+            <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
               {formatPostTime(prayer.createdAt)}
             </p>
           </div>
@@ -549,7 +561,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
           </div>
         </div>
         {isEditing ? (
-          <div ref={editRef} className="mt-4 flex flex-col gap-3">
+          <div ref={editRef} className="mt-3 flex flex-col gap-2">
             <textarea
               className="soft-input min-h-[100px] text-sm"
               value={editText}
@@ -573,11 +585,11 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
             </div>
           </div>
         ) : (
-          <p className="mt-4 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)]">
+          <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)]">
             {content}
           </p>
         )}
-        <div className="mt-4 flex items-center gap-2">
+        <div className="mt-3 flex items-center gap-3 text-xs">
           {isOwner ? (
             <span className="text-xs font-semibold text-[color:var(--subtle)]">
               Your prayer
@@ -595,7 +607,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
               aria-label={hasPrayed ? "Prayed" : "Pray"}
             >
               <HandsClapping
-                size={24}
+                size={22}
                 weight={hasPrayed ? "fill" : "regular"}
                 className={hasPrayed ? "text-[color:var(--accent-strong)]" : undefined}
               />
@@ -607,11 +619,11 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
           <button
             type="button"
             onClick={toggleComments}
-            className="inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
+            className="inline-flex items-center justify-center gap-2 rounded-lg px-2 py-1.5 cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
             ref={commentButtonRef}
           >
             <span className="inline-flex items-center gap-2">
-              <ChatCircle size={24} weight="regular" />
+              <ChatCircle size={22} weight="regular" />
               {commentCount > 0 && (
                 <span className="text-xs font-semibold text-[color:var(--ink)]">
                   {commentCount}
@@ -620,7 +632,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
             </span>
           </button>
           {count > 0 && (
-            <div className="ml-auto text-[11px] sm:text-xs text-[color:var(--subtle)]">
+            <div className="ml-auto text-[10px] sm:text-xs text-[color:var(--subtle)]">
               <span className="font-semibold text-[color:var(--ink)]">
                 {count}
               </span>{" "}
@@ -628,13 +640,25 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
             </div>
           )}
         </div>
+        {prayError && !isOwner && (
+          <div className="mt-2 text-[11px] text-[color:var(--subtle)] flex items-center gap-2">
+            <span>{prayError}</span>
+            <button
+              type="button"
+              onClick={handlePray}
+              className="text-[color:var(--accent)] hover:text-[color:var(--accent-strong)] text-xs font-semibold"
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         {showComments && (
-          <div ref={commentFormRef} className="mt-5 border-t border-slate-100 pt-4">
+          <div ref={commentFormRef} className="mt-4 border-t border-slate-100 pt-3">
             {session?.user?.id && (
-              <form onSubmit={handleCommentSubmit} className="flex flex-col gap-3">
+              <form onSubmit={handleCommentSubmit} className="flex flex-col gap-2">
                 <textarea
-                  className="soft-input comment-input min-h-[60px] sm:min-h-[70px] text-sm"
+                  className="soft-input comment-input min-h-[56px] sm:min-h-[64px] text-sm"
                   placeholder="Write a comment..."
                   value={commentText}
                   ref={commentInputRef}
@@ -651,7 +675,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
               </form>
             )}
 
-            <div className="mt-4 flex flex-col gap-3 text-[13px] sm:text-sm">
+            <div className="mt-3 flex flex-col gap-3 text-[13px] sm:text-sm">
               {isLoadingComments ? (
                 <div className="flex flex-col gap-3">
                   {Array.from({ length: 2 }).map((_, index) => (
@@ -990,4 +1014,6 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
       </Modal>
     </article>
   );
-}
+};
+
+export default memo(PrayerCard);

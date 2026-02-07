@@ -43,7 +43,9 @@ export default function WhyLiftedPage() {
                 </p>
                 <div className="mt-4 flex flex-wrap items-center gap-3">
                   <a
-                    href="#"
+                    href="https://buy.stripe.com/test_28E28teaRgXcaIK72TfMA00"
+                    target="_blank"
+                    rel="noreferrer"
                     className="post-button inline-flex items-center justify-center bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
                   >
                     Support via Stripe

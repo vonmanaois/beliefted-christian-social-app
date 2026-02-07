@@ -93,27 +93,24 @@ export async function GET(req: Request) {
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
-    let prayersLiftedCount =
-      typeof user.prayersLiftedCount === "number" ? user.prayersLiftedCount : null;
+    const prayersLiftedCount =
+      typeof user.prayersLiftedCount === "number" ? user.prayersLiftedCount : 0;
 
-    if (user._id) {
-      const count = await PrayerModel.countDocuments({ prayedBy: user._id });
-      prayersLiftedCount = count;
-      if (user.prayersLiftedCount !== count) {
-        await db
-          .collection("users")
-          .updateOne({ _id: user._id }, { $set: { prayersLiftedCount: count } });
+    return NextResponse.json(
+      {
+        name: user.name ?? null,
+        username: user.username ?? null,
+        bio: user.bio ?? null,
+        followersCount: Array.isArray(user.followers) ? user.followers.length : 0,
+        followingCount: Array.isArray(user.following) ? user.following.length : 0,
+        prayersLiftedCount: typeof prayersLiftedCount === "number" ? prayersLiftedCount : 0,
+      },
+      {
+        headers: {
+          "Cache-Control": "private, max-age=30",
+        },
       }
-    }
-
-    return NextResponse.json({
-      name: user.name ?? null,
-      username: user.username ?? null,
-      bio: user.bio ?? null,
-      followersCount: Array.isArray(user.followers) ? user.followers.length : 0,
-      followingCount: Array.isArray(user.following) ? user.following.length : 0,
-      prayersLiftedCount: typeof prayersLiftedCount === "number" ? prayersLiftedCount : 0,
-    });
+    );
   }
 
   const session = await getServerSession(authOptions);
@@ -133,19 +130,8 @@ export async function GET(req: Request) {
         : { _id: session.user.id };
 
   const user = await db.collection("users").findOne(userFilter);
-  let prayersLiftedCount =
-    typeof user?.prayersLiftedCount === "number" ? user.prayersLiftedCount : null;
-
-  if (user?._id) {
-    const count = await PrayerModel.countDocuments({ prayedBy: user._id });
-    prayersLiftedCount = count;
-    if (user.prayersLiftedCount !== count) {
-      await db.collection("users").updateOne(
-        { _id: user._id },
-        { $set: { prayersLiftedCount: count } }
-      );
-    }
-  }
+  const prayersLiftedCount =
+    typeof user?.prayersLiftedCount === "number" ? user.prayersLiftedCount : 0;
 
   return NextResponse.json({
     name: user?.name ?? null,
@@ -154,5 +140,6 @@ export async function GET(req: Request) {
     followersCount: Array.isArray(user?.followers) ? user.followers.length : 0,
     followingCount: Array.isArray(user?.following) ? user.following.length : 0,
     prayersLiftedCount: typeof prayersLiftedCount === "number" ? prayersLiftedCount : 0,
+    onboardingComplete: Boolean(user?.onboardingComplete),
   });
 }

@@ -55,6 +55,8 @@ export default function PrayerFeed({ refreshKey, userId }: PrayerFeedProps) {
     initialPageParam: null,
     staleTime: 10000,
     refetchOnWindowFocus: true,
+    refetchInterval: 30000,
+    refetchIntervalInBackground: true,
   });
 
   const prayers = data?.pages.flatMap((page) => page.items) ?? [];

@@ -11,7 +11,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const base =
-  "inline-flex items-center justify-center font-semibold transition active:translate-y-[1px] disabled:opacity-60 disabled:cursor-not-allowed";
+  "inline-flex items-center justify-center font-semibold transition active:translate-y-[1px] disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--panel)]";
 
 const variants: Record<ButtonVariant, string> = {
   solid: "bg-[color:var(--accent)] text-[color:var(--accent-contrast)]",

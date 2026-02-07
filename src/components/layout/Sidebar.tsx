@@ -6,8 +6,10 @@ import { signIn, signOut, useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BellSimple,
+  ChartBar,
   GoogleLogo,
   House,
+  HandHeart,
   Info,
   MagnifyingGlass,
   Plus,
@@ -24,6 +26,8 @@ export default function Sidebar() {
   const [showPreferences, setShowPreferences] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
+  const [onboardingComplete, setOnboardingComplete] = useState(true);
+  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "von.manaois@gmail.com";
   const prefsButtonRef = useRef<HTMLButtonElement | null>(null);
   const mobilePrefsButtonRef = useRef<HTMLButtonElement | null>(null);
   const router = useRouter();
@@ -90,9 +94,15 @@ export default function Sidebar() {
       try {
         const response = await fetch("/api/user/profile", { cache: "no-store" });
         if (!response.ok) return;
-        const data = (await response.json()) as { username?: string | null };
+        const data = (await response.json()) as {
+          username?: string | null;
+          onboardingComplete?: boolean;
+        };
         if (typeof data.username === "string") {
           setProfileUsername(data.username);
+        }
+        if (typeof data.onboardingComplete === "boolean") {
+          setOnboardingComplete(data.onboardingComplete);
         }
       } catch (error) {
         console.error(error);
@@ -101,6 +111,13 @@ export default function Sidebar() {
 
     loadProfile();
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (onboardingComplete) return;
+    if (pathname === "/onboarding") return;
+    router.push("/onboarding");
+  }, [isAuthenticated, onboardingComplete, pathname, router]);
 
   useEffect(() => {
     const handleOpenSignIn = () => setShowSignIn(true);
@@ -130,15 +147,25 @@ export default function Sidebar() {
               Lifted
             </span>
           </button>
-          <button
-            type="button"
-            ref={mobilePrefsButtonRef}
-            onClick={() => setShowPreferences(true)}
-            className="h-10 w-10 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-            aria-label="Preferences"
-          >
-            <SlidersHorizontal size={22} weight="regular" />
-          </button>
+          {isAuthenticated ? (
+            <button
+              type="button"
+              ref={mobilePrefsButtonRef}
+              onClick={() => setShowPreferences(true)}
+              className="h-10 w-10 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+              aria-label="Preferences"
+            >
+              <SlidersHorizontal size={22} weight="regular" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowSignIn(true)}
+              className="h-10 px-3 rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] text-xs font-semibold text-[color:var(--ink)] hover:text-[color:var(--accent)] whitespace-nowrap"
+            >
+              Sign in
+            </button>
+          )}
         </div>
       </div>
       <aside className="hidden lg:flex p-5 flex-col gap-5 h-fit items-center text-center lg:items-start lg:text-left bg-transparent border-none shadow-none">
@@ -250,6 +277,29 @@ export default function Sidebar() {
           </span>
           <span className="hidden lg:inline">Why Lifted</span>
         </button>
+        <a
+          href="https://buy.stripe.com/test_28E28teaRgXcaIK72TfMA00"
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+        >
+          <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
+            <HandHeart size={22} weight="regular" />
+          </span>
+          <span className="hidden lg:inline">Donate</span>
+        </a>
+        {session?.user?.email === adminEmail && (
+          <button
+            type="button"
+            className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+            onClick={() => router.push("/analytics")}
+          >
+            <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
+              <ChartBar size={22} weight="regular" />
+            </span>
+            <span className="hidden lg:inline">Analytics</span>
+          </button>
+        )}
         <button
           type="button"
           ref={prefsButtonRef}

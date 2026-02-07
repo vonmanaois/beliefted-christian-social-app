@@ -41,20 +41,20 @@ export default function HomeTabs() {
   }, [router]);
 
   return (
-    <section className="flex flex-col gap-6">
-      <div className="hidden md:flex items-center justify-between">
+    <section className="flex flex-col gap-6 w-full">
+      <div className="hidden md:flex items-center justify-center gap-4 w-full">
         {!isAuthenticated ? (
           <button
             type="button"
             onClick={() => signIn("google")}
-            className="inline-flex items-center rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-4 py-2 text-sm font-semibold text-[color:var(--ink)] hover:text-[color:var(--accent)] cursor-pointer"
+            className="inline-flex items-center whitespace-nowrap rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-4 py-2 text-sm font-semibold text-[color:var(--ink)] hover:text-[color:var(--accent)] cursor-pointer"
           >
             Sign in
           </button>
         ) : (
-          <span />
+          <span className="w-20" />
         )}
-        <div className="inline-flex rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-1">
+        <div className="flex w-full max-w-2xl rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-1">
           {tabs.map((tab) => (
             <button
               key={tab}
@@ -62,7 +62,7 @@ export default function HomeTabs() {
               onClick={() => {
                 router.push(tab === "Prayer Wall" ? "/" : "/wordoftheday");
               }}
-              className={`px-4 py-2 text-sm font-semibold transition ${
+              className={`flex-1 px-4 py-2 text-sm font-semibold transition ${
                 activeTab === tab
                   ? "rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
                   : "rounded-lg text-[color:var(--ink)] hover:text-[color:var(--accent)]"
@@ -75,7 +75,7 @@ export default function HomeTabs() {
       </div>
 
       <div className="md:hidden w-full pt-2">
-        <div className="grid w-full grid-cols-2 rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-1">
+        <div className="grid w-full max-w-none grid-cols-2 rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-1">
           {tabs.map((tab) => (
             <button
               key={tab}

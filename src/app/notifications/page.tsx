@@ -3,6 +3,7 @@
  import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
  import { signIn, useSession } from "next-auth/react";
  import Sidebar from "@/components/layout/Sidebar";
+ import EmptyState from "@/components/ui/EmptyState";
 
  type NotificationActor = { name?: string | null; image?: string | null };
  type NotificationItem = {
@@ -92,11 +93,11 @@
                ))}
              </div>
            ) : notifications.length === 0 ? (
-             <div className="mt-6 panel p-4 text-sm text-[color:var(--subtle)]">
-               <p className="text-[color:var(--ink)] font-semibold">
-                 No notifications yet.
-               </p>
-               <p className="mt-1">When someone interacts, you’ll see it here.</p>
+             <div className="mt-6">
+               <EmptyState
+                 title="All caught up."
+                 description="When someone interacts, you’ll see it here."
+               />
              </div>
            ) : (
              <div className="mt-6 flex flex-col gap-3">

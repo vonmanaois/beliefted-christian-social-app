@@ -249,7 +249,7 @@ html[data-theme="banana"] .panel-glass {
   border-radius: 0;
   border: none;
   background: transparent;
-  padding: 20px;
+  padding: 16px;
   border-bottom: 1px solid var(--panel-border);
 }
 
@@ -274,7 +274,7 @@ html[data-theme="banana"] .panel-glass {
 .composer-trigger {
   width: 100%;
   text-align: left;
-  padding: 14px 16px;
+  padding: 12px 14px;
   border: none;
   border-radius: 8px;
   border-bottom: 1px solid var(--panel-border);
@@ -286,11 +286,11 @@ html[data-theme="banana"] .panel-glass {
 
 @media (max-width: 640px) {
   .wall-card {
-    padding: 14px;
+    padding: 12px;
   }
 
   .composer-trigger {
-    padding: 12px 14px;
+    padding: 10px 12px;
     font-size: 0.85rem;
   }
 

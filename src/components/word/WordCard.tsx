@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChatCircle, DotsThreeOutline, Heart } from "@phosphor-icons/react";
@@ -65,7 +65,7 @@ const formatPostTime = (timestamp: string) => {
   return new Intl.DateTimeFormat("en-US", options).format(createdAt);
 };
 
-export default function WordCard({ word }: WordCardProps) {
+const WordCard = ({ word }: WordCardProps) => {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
   const normalizeId = (raw: Word["_id"]) => {
@@ -106,6 +106,7 @@ export default function WordCard({ word }: WordCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [content, setContent] = useState(word.content);
   const [editText, setEditText] = useState(word.content);
+  const [likeError, setLikeError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const editRef = useRef<HTMLDivElement | null>(null);
   const isOwner =
@@ -213,6 +214,7 @@ export default function WordCard({ word }: WordCardProps) {
       return (await response.json()) as { count: number; liked?: boolean };
     },
     onMutate: async () => {
+      setLikeError(null);
       if (!session?.user?.id) return { previousCount: likeCount, previousLiked: hasLiked };
       const previousCount = likeCount;
       const previousLiked = hasLiked;
@@ -227,12 +229,21 @@ export default function WordCard({ word }: WordCardProps) {
         setHasLiked(context.previousLiked);
         setLikeCount(context.previousCount);
       }
+      setLikeError("Couldn't update like.");
     },
     onSuccess: (data) => {
       if (typeof data.liked === "boolean") {
         setHasLiked(data.liked);
       }
       setLikeCount(data.count ?? 0);
+      setLikeError(null);
+      if (typeof window !== "undefined") {
+        void fetch("/api/analytics", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ event: "word_liked", entityId: wordId }),
+        });
+      }
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("notifications:refresh"));
       }
@@ -380,6 +391,7 @@ export default function WordCard({ word }: WordCardProps) {
       return;
     }
 
+    setLikeError(null);
     setIsLiking(true);
     try {
       await likeMutation.mutateAsync();
@@ -458,7 +470,7 @@ export default function WordCard({ word }: WordCardProps) {
   };
 
   return (
-    <article className="wall-card flex gap-4 rounded-none">
+    <article className="wall-card flex gap-3 rounded-none">
       <div className="avatar-ring">
         <Avatar
           src={word.user?.image ?? null}
@@ -470,17 +482,17 @@ export default function WordCard({ word }: WordCardProps) {
         />
       </div>
       <div className="flex-1">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-xs sm:text-sm font-semibold text-[color:var(--ink)]">
               {word.user?.name ?? "User"}
             </p>
-            <p className="text-[11px] sm:text-xs text-[color:var(--subtle)]">
+            <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
               {word.user?.username ? `@${word.user.username}` : ""}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <p className="text-[11px] sm:text-xs text-[color:var(--subtle)]">
+            <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
               {formatPostTime(word.createdAt)}
             </p>
             {isOwner && (
@@ -519,7 +531,7 @@ export default function WordCard({ word }: WordCardProps) {
           </div>
         </div>
         {isEditing ? (
-          <div ref={editRef} className="mt-4 flex flex-col gap-3">
+          <div ref={editRef} className="mt-3 flex flex-col gap-2">
             <textarea
               className="soft-input min-h-[100px] text-sm"
               value={editText}
@@ -543,11 +555,11 @@ export default function WordCard({ word }: WordCardProps) {
             </div>
           </div>
         ) : (
-          <p className="mt-4 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)]">
+          <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)]">
             {content}
           </p>
         )}
-        <div className="mt-4 flex items-center gap-3">
+        <div className="mt-3 flex items-center gap-3 text-xs">
           <button
             type="button"
             onClick={handleLike}
@@ -587,13 +599,25 @@ export default function WordCard({ word }: WordCardProps) {
             </span>
           </button>
         </div>
+        {likeError && (
+          <div className="mt-2 text-[11px] text-[color:var(--subtle)] flex items-center gap-2">
+            <span>{likeError}</span>
+            <button
+              type="button"
+              onClick={handleLike}
+              className="text-[color:var(--accent)] hover:text-[color:var(--accent-strong)] text-xs font-semibold"
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         {showComments && (
-          <div className="mt-5 border-t border-slate-100 pt-4" ref={commentFormRef}>
+          <div className="mt-4 border-t border-slate-100 pt-3" ref={commentFormRef}>
             {session?.user?.id && (
-              <form onSubmit={handleCommentSubmit} className="flex flex-col gap-3">
+              <form onSubmit={handleCommentSubmit} className="flex flex-col gap-2">
                 <textarea
-                  className="soft-input comment-input min-h-[60px] sm:min-h-[70px] text-sm"
+                  className="soft-input comment-input min-h-[56px] sm:min-h-[64px] text-sm"
                   placeholder="Write a comment..."
                   value={commentText}
                   ref={commentInputRef}
@@ -610,7 +634,7 @@ export default function WordCard({ word }: WordCardProps) {
               </form>
             )}
 
-            <div className="mt-4 flex flex-col gap-3 text-[13px] sm:text-sm">
+            <div className="mt-3 flex flex-col gap-3 text-[13px] sm:text-sm">
               {isLoadingComments ? (
                 <div className="flex flex-col gap-3">
                   {Array.from({ length: 2 }).map((_, index) => (
@@ -949,4 +973,6 @@ export default function WordCard({ word }: WordCardProps) {
       </Modal>
     </article>
   );
-}
+};
+
+export default memo(WordCard);

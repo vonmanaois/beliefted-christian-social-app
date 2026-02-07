@@ -61,6 +61,8 @@ export default function WordFeed({ refreshKey, userId }: WordFeedProps) {
     initialPageParam: null,
     staleTime: 10000,
     refetchOnWindowFocus: true,
+    refetchInterval: 30000,
+    refetchIntervalInBackground: true,
   });
 
   const words = data?.pages.flatMap((page) => page.items) ?? [];

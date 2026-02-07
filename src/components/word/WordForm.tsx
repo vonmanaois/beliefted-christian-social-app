@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { signIn, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 
 type WordFormProps = {
   onPosted?: () => void;
@@ -33,7 +33,9 @@ export default function WordForm({
     event.preventDefault();
 
     if (!session?.user) {
-      signIn("google");
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("open-signin"));
+      }
       return;
     }
 
@@ -54,6 +56,13 @@ export default function WordForm({
 
       setContent("");
       onPosted?.();
+      if (typeof window !== "undefined") {
+        void fetch("/api/analytics", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ event: "word_posted" }),
+        });
+      }
     } catch (error) {
       console.error(error);
     } finally {
