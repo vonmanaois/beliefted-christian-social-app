@@ -232,6 +232,7 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
       await queryClient.invalidateQueries({
         queryKey: ["prayer-comments", prayerId],
       });
+      queryClient.invalidateQueries({ queryKey: ["prayers"] });
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("notifications:refresh"));
       }
@@ -255,6 +256,7 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
       await queryClient.invalidateQueries({
         queryKey: ["prayer-comments", prayerId],
       });
+      queryClient.invalidateQueries({ queryKey: ["prayers"] });
     },
   });
 
@@ -272,6 +274,7 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
         queryKey: ["prayer-comments", prayerId],
       });
       setCommentCount((prev) => Math.max(0, prev - 1));
+      queryClient.invalidateQueries({ queryKey: ["prayers"] });
     },
   });
 
@@ -372,6 +375,7 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
           body: JSON.stringify({ event: "prayed", entityId: prayerId }),
         });
       }
+      queryClient.invalidateQueries({ queryKey: ["prayers"] });
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("stats:refresh"));
         window.dispatchEvent(new Event("notifications:refresh"));

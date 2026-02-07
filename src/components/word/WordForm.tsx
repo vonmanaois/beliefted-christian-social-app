@@ -57,6 +57,9 @@ export default function WordForm({
       setContent("");
       onPosted?.();
       if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("feed:refresh"));
+      }
+      if (typeof window !== "undefined") {
         void fetch("/api/analytics", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -82,7 +85,7 @@ export default function WordForm({
       {!compact && (
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--subtle)]">
-            Word of the Day
+            Faith Share
           </p>
         </div>
       )}

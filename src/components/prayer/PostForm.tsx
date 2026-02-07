@@ -61,6 +61,9 @@ export default function PostForm({
       setExpiresInDays(7);
       onPosted?.();
       if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("feed:refresh"));
+      }
+      if (typeof window !== "undefined") {
         void fetch("/api/analytics", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

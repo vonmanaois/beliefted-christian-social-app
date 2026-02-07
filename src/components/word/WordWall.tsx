@@ -51,7 +51,7 @@ export default function WordWall() {
               (session?.user?.name?.[0] ?? "U").toUpperCase()
             )}
           </span>
-          {isAuthenticated ? "Share God&apos;s word today" : "Sign in to post a word"}
+          {isAuthenticated ? "Share your faith" : "Sign in to post a word"}
         </span>
       </button>
       <WordFeed refreshKey={refreshKey} />

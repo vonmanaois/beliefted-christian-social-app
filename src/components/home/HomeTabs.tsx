@@ -3,11 +3,10 @@
 import { useEffect, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
-import { ArrowRight, ArrowLeft } from "@phosphor-icons/react";
 import PrayerWall from "@/components/prayer/PrayerWall";
 import WordWall from "@/components/word/WordWall";
 
-const tabs = ["Prayer Wall", "Word of the Day"] as const;
+const tabs = ["Faith Share", "Prayer Wall"] as const;
 
 type Tab = (typeof tabs)[number];
 
@@ -18,15 +17,15 @@ export default function HomeTabs() {
   const pathname = usePathname();
 
   const activeTab = useMemo<Tab>(() => {
-    if (pathname === "/wordoftheday" || pathname === "/word") {
-      return "Word of the Day";
+    if (pathname === "/prayerwall") {
+      return "Prayer Wall";
     }
-    return "Prayer Wall";
+    return "Faith Share";
   }, [pathname]);
 
   useEffect(() => {
     const handleOpenPrayer = () => {
-      router.push("/");
+      router.push("/prayerwall");
     };
     window.addEventListener("open-prayer-composer", handleOpenPrayer);
     return () => window.removeEventListener("open-prayer-composer", handleOpenPrayer);
@@ -34,7 +33,7 @@ export default function HomeTabs() {
 
   useEffect(() => {
     const handleOpenWord = () => {
-      router.push("/wordoftheday");
+      router.push("/");
     };
     window.addEventListener("open-word-composer", handleOpenWord);
     return () => window.removeEventListener("open-word-composer", handleOpenWord);
@@ -60,7 +59,7 @@ export default function HomeTabs() {
               key={tab}
               type="button"
               onClick={() => {
-                router.push(tab === "Prayer Wall" ? "/" : "/wordoftheday");
+      router.push(tab === "Prayer Wall" ? "/prayerwall" : "/");
               }}
               className={`flex-1 px-4 py-2 text-sm font-semibold transition ${
                 activeTab === tab
@@ -81,7 +80,7 @@ export default function HomeTabs() {
               key={tab}
               type="button"
               onClick={() => {
-                router.push(tab === "Prayer Wall" ? "/" : "/wordoftheday");
+                router.push(tab === "Prayer Wall" ? "/prayerwall" : "/");
               }}
               className={`w-full rounded-lg px-3 py-2 text-xs font-semibold transition ${
                 activeTab === tab

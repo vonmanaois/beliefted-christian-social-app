@@ -244,6 +244,7 @@ const WordCard = ({ word }: WordCardProps) => {
           body: JSON.stringify({ event: "word_liked", entityId: wordId }),
         });
       }
+      queryClient.invalidateQueries({ queryKey: ["words"] });
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("notifications:refresh"));
       }
@@ -270,6 +271,7 @@ const WordCard = ({ word }: WordCardProps) => {
       await queryClient.invalidateQueries({
         queryKey: ["word-comments", wordId],
       });
+      queryClient.invalidateQueries({ queryKey: ["words"] });
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("notifications:refresh"));
       }
@@ -293,6 +295,7 @@ const WordCard = ({ word }: WordCardProps) => {
       await queryClient.invalidateQueries({
         queryKey: ["word-comments", wordId],
       });
+      queryClient.invalidateQueries({ queryKey: ["words"] });
     },
   });
 
@@ -313,6 +316,7 @@ const WordCard = ({ word }: WordCardProps) => {
         queryKey: ["word-comments", wordId],
       });
       setCommentCount((prev) => Math.max(0, prev - 1));
+      queryClient.invalidateQueries({ queryKey: ["words"] });
     },
   });
 

@@ -8,7 +8,7 @@ import PostForm from "@/components/prayer/PostForm";
 import WordForm from "@/components/word/WordForm";
 import Modal from "@/components/layout/Modal";
 
-const tabs = ["Prayers", "Words"] as const;
+const tabs = ["Faith Share", "Prayers"] as const;
 
 type Tab = (typeof tabs)[number];
 
@@ -18,7 +18,7 @@ type ProfileTabsProps = {
 };
 
 export default function ProfileTabs({ userId, showComposer = true }: ProfileTabsProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("Prayers");
+  const [activeTab, setActiveTab] = useState<Tab>("Faith Share");
   const [refreshKey, setRefreshKey] = useState(0);
   const [showPrayerComposer, setShowPrayerComposer] = useState(false);
   const [showWordComposer, setShowWordComposer] = useState(false);
@@ -31,6 +31,15 @@ export default function ProfileTabs({ userId, showComposer = true }: ProfileTabs
     };
     window.addEventListener("open-prayer-composer", handleOpenPrayer);
     return () => window.removeEventListener("open-prayer-composer", handleOpenPrayer);
+  }, []);
+
+  useEffect(() => {
+    const handleOpenWord = () => {
+      setActiveTab("Faith Share");
+      setShowWordComposer(true);
+    };
+    window.addEventListener("open-word-composer", handleOpenWord);
+    return () => window.removeEventListener("open-word-composer", handleOpenWord);
   }, []);
 
   return (
@@ -54,7 +63,34 @@ export default function ProfileTabs({ userId, showComposer = true }: ProfileTabs
         </div>
       </div>
 
-      {activeTab === "Prayers" ? (
+      {activeTab === "Faith Share" ? (
+        <>
+          {showComposer && (
+            <button
+              type="button"
+              onClick={() => setShowWordComposer(true)}
+              className="composer-trigger cursor-pointer"
+            >
+              <span className="inline-flex items-center gap-2">
+                <span className="h-7 w-7 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center text-[10px] font-semibold text-slate-600">
+                  {session?.user?.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={session.user.image}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    (session?.user?.name?.[0] ?? "U").toUpperCase()
+                  )}
+                </span>
+                Share your faith
+              </span>
+            </button>
+          )}
+          <WordFeed refreshKey={refreshKey} userId={userId} />
+        </>
+      ) : (
         <>
           {showComposer && (
             <button
@@ -80,33 +116,6 @@ export default function ProfileTabs({ userId, showComposer = true }: ProfileTabs
             </button>
           )}
           <PrayerFeed refreshKey={refreshKey} userId={userId} />
-        </>
-      ) : (
-        <>
-          {showComposer && (
-            <button
-              type="button"
-              onClick={() => setShowWordComposer(true)}
-              className="composer-trigger cursor-pointer"
-            >
-              <span className="inline-flex items-center gap-2">
-                <span className="h-7 w-7 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center text-[10px] font-semibold text-slate-600">
-                  {session?.user?.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={session.user.image}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    (session?.user?.name?.[0] ?? "U").toUpperCase()
-                  )}
-                </span>
-                Share God&apos;s word today
-              </span>
-            </button>
-          )}
-          <WordFeed refreshKey={refreshKey} userId={userId} />
         </>
       )}
 

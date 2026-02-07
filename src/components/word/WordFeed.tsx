@@ -1,6 +1,7 @@
 "use client";
 
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import WordCard from "@/components/word/WordCard";
 import EmptyState from "@/components/ui/EmptyState";
 import FeedSkeleton from "@/components/ui/FeedSkeleton";
@@ -61,11 +62,22 @@ export default function WordFeed({ refreshKey, userId }: WordFeedProps) {
     initialPageParam: null,
     staleTime: 10000,
     refetchOnWindowFocus: true,
-    refetchInterval: 30000,
-    refetchIntervalInBackground: true,
   });
 
   const words = data?.pages.flatMap((page) => page.items) ?? [];
+
+  const pullStartRef = useRef<number | null>(null);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isPulling, setIsPulling] = useState(false);
+  const threshold = 60;
+
+  useEffect(() => {
+    const handler = () => {
+      refetch();
+    };
+    window.addEventListener("feed:refresh", handler);
+    return () => window.removeEventListener("feed:refresh", handler);
+  }, [refetch]);
 
   if (isLoading) {
     return <FeedSkeleton />;
@@ -97,7 +109,36 @@ export default function WordFeed({ refreshKey, userId }: WordFeedProps) {
   }
 
   return (
-    <div className="flex flex-col">
+    <div
+      className="flex flex-col"
+      onTouchStart={(event) => {
+        if (window.scrollY > 0) return;
+        pullStartRef.current = event.touches[0]?.clientY ?? null;
+        setIsPulling(true);
+      }}
+      onTouchMove={(event) => {
+        if (!isPulling || pullStartRef.current === null) return;
+        const currentY = event.touches[0]?.clientY ?? 0;
+        const delta = Math.max(0, currentY - pullStartRef.current);
+        setPullDistance(Math.min(delta, 90));
+      }}
+      onTouchEnd={() => {
+        if (pullDistance >= threshold) {
+          refetch();
+        }
+        setPullDistance(0);
+        setIsPulling(false);
+        pullStartRef.current = null;
+      }}
+    >
+      {pullDistance > 0 && (
+        <div
+          className="flex items-center justify-center text-[11px] text-[color:var(--subtle)]"
+          style={{ height: pullDistance }}
+        >
+          {pullDistance >= threshold ? "Release to refresh" : "Pull to refresh"}
+        </div>
+      )}
       {isFetching && (
         <div className="mb-3 h-1 w-full overflow-hidden rounded-full bg-[color:var(--surface-strong)]">
           <div className="h-full w-1/3 animate-pulse rounded-full bg-[color:var(--accent)]/70" />

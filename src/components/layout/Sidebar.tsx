@@ -240,7 +240,7 @@ export default function Sidebar() {
           }
           if (typeof window !== "undefined") {
             const eventName =
-              pathname === "/wordoftheday" || pathname === "/word"
+              pathname === "/" || pathname === "/word" || pathname === "/wordoftheday"
                 ? "open-word-composer"
                 : "open-prayer-composer";
             window.dispatchEvent(new CustomEvent(eventName));
@@ -410,7 +410,7 @@ export default function Sidebar() {
             onClick={() => {
               if (typeof window !== "undefined") {
                 const eventName =
-                  pathname === "/wordoftheday" || pathname === "/word"
+                  pathname === "/" || pathname === "/word" || pathname === "/wordoftheday"
                     ? "open-word-composer"
                     : "open-prayer-composer";
                 window.dispatchEvent(new CustomEvent(eventName));
