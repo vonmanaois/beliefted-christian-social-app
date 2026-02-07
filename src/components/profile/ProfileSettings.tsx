@@ -34,6 +34,9 @@ export default function ProfileSettings({
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "ok" | "taken">(
+    "idle"
+  );
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -55,6 +58,29 @@ export default function ProfileSettings({
 
     loadProfile();
   }, []);
+
+  useEffect(() => {
+    const trimmed = username.trim();
+    if (!trimmed) {
+      setUsernameStatus("idle");
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setUsernameStatus("checking");
+      try {
+        const response = await fetch(`/api/user/username?username=${trimmed}`);
+        if (!response.ok) {
+          setUsernameStatus("idle");
+          return;
+        }
+        const data = (await response.json()) as { available?: boolean };
+        setUsernameStatus(data.available ? "ok" : "taken");
+      } catch {
+        setUsernameStatus("idle");
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [username]);
 
   const handleSave = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -142,6 +168,17 @@ export default function ProfileSettings({
       <div className="flex items-center justify-between">
         <span className="text-xs text-[color:var(--subtle)]">
           @{username || "username"}
+        </span>
+        <span className="text-xs">
+          {usernameStatus === "checking" && (
+            <span className="text-[color:var(--subtle)]">Checking...</span>
+          )}
+          {usernameStatus === "ok" && (
+            <span className="text-green-600">Available</span>
+          )}
+          {usernameStatus === "taken" && (
+            <span className="text-[color:var(--danger)]">Taken</span>
+          )}
         </span>
         <button
           type="submit"
