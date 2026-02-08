@@ -50,10 +50,12 @@ export default function HomeTabs() {
           >
             Sign in
           </button>
-        ) : (
-          <span className="w-20" />
-        )}
-        <div className="flex w-full max-w-2xl rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-1">
+        ) : null}
+        <div
+          className={`flex w-full rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-1 ${
+            isAuthenticated ? "max-w-none" : "max-w-2xl"
+          }`}
+        >
           {tabs.map((tab) => (
             <button
               key={tab}

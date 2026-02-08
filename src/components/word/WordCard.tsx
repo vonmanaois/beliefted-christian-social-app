@@ -535,7 +535,7 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
   };
 
   return (
-    <article className="wall-card flex gap-3 rounded-none" onClick={handleCardClick}>
+    <article className="wall-card flex gap-3 rounded-none cursor-pointer" onClick={handleCardClick}>
       <div className="avatar-ring">
         <Avatar
           src={word.user?.image ?? null}
@@ -549,9 +549,14 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
       <div className="flex-1">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="text-xs sm:text-sm font-semibold text-[color:var(--ink)]">
-              {word.user?.name ?? "User"}
-            </p>
+              <a
+                href={
+                  word.user?.username ? `/profile/${word.user.username}` : "/profile"
+                }
+                className="text-xs sm:text-sm font-semibold text-[color:var(--ink)] hover:underline"
+              >
+                {word.user?.name ?? "User"}
+              </a>
             <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
               {word.user?.username ? `@${word.user.username}` : ""}
             </p>

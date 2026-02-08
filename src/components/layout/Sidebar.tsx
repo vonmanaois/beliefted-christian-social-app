@@ -41,6 +41,13 @@ export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
+  const handleWhyClick = () => {
+    if (pathname === "/why-beliefted") {
+      router.back();
+      return;
+    }
+    router.push("/why-beliefted");
+  };
 
   const { data: notificationsCount = 0 } = useQuery({
     queryKey: ["notifications", "count"],
@@ -153,7 +160,7 @@ export default function Sidebar() {
         <div className="flex items-center justify-between px-4 py-3 h-12">
           <button
             type="button"
-            onClick={() => router.push("/why-beliefted")}
+            onClick={handleWhyClick}
             className="h-10 w-10 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
             aria-label="Why Beliefted"
           >
@@ -292,7 +299,7 @@ export default function Sidebar() {
         <button
           type="button"
           className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-          onClick={() => router.push("/why-beliefted")}
+          onClick={handleWhyClick}
         >
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
             <Info size={22} weight="regular" />

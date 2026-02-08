@@ -12,7 +12,7 @@ import ProfileStats from "@/components/profile/ProfileStats";
 
 export const dynamic = "force-dynamic";
 
-export default async function PublicProfilePage({
+export default async function PublicProfilePrayersPage({
   params,
 }: {
   params: Promise<{ username: string }>;
@@ -96,7 +96,7 @@ export default async function PublicProfilePage({
           <ProfileTabs
             userId={user._id.toString()}
             showComposer={isSelf}
-            initialTab="Faith Share"
+            initialTab="Prayers"
             basePath={`/profile/${user.username}`}
           />
         </div>

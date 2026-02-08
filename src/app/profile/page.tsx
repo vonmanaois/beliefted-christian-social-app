@@ -34,45 +34,47 @@ export default async function ProfilePage() {
     <main className="container">
       <div className="page-grid">
         <Sidebar />
-        <div className="panel p-8 rounded-none">
-          {!user?.username && (
-            <div className="mb-6">
-              <ProfileSettings required currentName={user?.name ?? null} />
+        <div className="panel rounded-none p-0 sm:p-8">
+          <div className="px-4 pt-6 sm:px-0 sm:pt-0">
+            {!user?.username && (
+              <div className="mb-6">
+                <ProfileSettings required currentName={user?.name ?? null} />
+              </div>
+            )}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <ProfileHeader
+                initialName={user?.name ?? session.user.name ?? "Your Name"}
+                initialUsername={user?.username ?? "username"}
+                initialBio={user?.bio ?? null}
+              />
+              <div className="h-16 w-16 self-end sm:self-auto rounded-full overflow-hidden border border-slate-200 bg-slate-200">
+                {user?.image || session.user.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={user?.image ?? session.user.image ?? ""}
+                    alt="Profile"
+                    className="h-full w-full object-cover"
+                  />
+                ) : null}
+              </div>
             </div>
-          )}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <ProfileHeader
-              initialName={user?.name ?? session.user.name ?? "Your Name"}
-              initialUsername={user?.username ?? "username"}
-              initialBio={user?.bio ?? null}
+
+            <ProfileStats
+              initialPrayedCount={prayedCount}
+              initialFollowersCount={user?.followers?.length ?? 0}
+              initialFollowingCount={user?.following?.length ?? 0}
             />
-            <div className="h-16 w-16 self-end sm:self-auto rounded-full overflow-hidden border border-slate-200 bg-slate-200">
-              {user?.image || session.user.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={user?.image ?? session.user.image ?? ""}
-                  alt="Profile"
-                  className="h-full w-full object-cover"
-                />
-              ) : null}
+
+            <div className="my-6 border-t border-[color:var(--panel-border)]" />
+
+            <div className="mt-6">
+              <ProfileUpdateModal
+                currentUsername={user?.username ?? null}
+                currentName={user?.name ?? null}
+                currentBio={user?.bio ?? null}
+                onUpdated={() => {}}
+              />
             </div>
-          </div>
-
-          <ProfileStats
-            initialPrayedCount={prayedCount}
-            initialFollowersCount={user?.followers?.length ?? 0}
-            initialFollowingCount={user?.following?.length ?? 0}
-          />
-
-          <div className="my-6 border-t border-[color:var(--panel-border)]" />
-
-          <div className="mt-6">
-          <ProfileUpdateModal
-            currentUsername={user?.username ?? null}
-            currentName={user?.name ?? null}
-            currentBio={user?.bio ?? null}
-            onUpdated={() => {}}
-          />
           </div>
 
           <ProfileTabs userId={session.user.id} />

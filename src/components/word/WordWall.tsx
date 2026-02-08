@@ -6,6 +6,7 @@ import WordForm from "@/components/word/WordForm";
 import WordFeed from "@/components/word/WordFeed";
 import Modal from "@/components/layout/Modal";
 import { useUIStore } from "@/lib/uiStore";
+import { UserCircle } from "@phosphor-icons/react";
 
 export default function WordWall() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -42,7 +43,7 @@ export default function WordWall() {
         className="composer-trigger cursor-pointer"
       >
         <span className="inline-flex items-center gap-2">
-          <span className="h-7 w-7 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center text-[10px] font-semibold text-slate-600">
+          <span className="h-7 w-7 rounded-full bg-[color:var(--surface-strong)] overflow-hidden flex items-center justify-center text-[10px] font-semibold text-[color:var(--subtle)]">
             {session?.user?.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -51,7 +52,7 @@ export default function WordWall() {
                 className="h-full w-full object-cover"
               />
             ) : (
-              (session?.user?.name?.[0] ?? "U").toUpperCase()
+              <UserCircle size={20} weight="regular" className="text-[color:var(--subtle)]" />
             )}
           </span>
           {isAuthenticated ? "Share your faith" : "Sign in to post a word"}

@@ -633,7 +633,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
   };
 
   return (
-    <article className="wall-card flex gap-3 rounded-none" onClick={handleCardClick}>
+    <article className="wall-card flex gap-3 rounded-none cursor-pointer" onClick={handleCardClick}>
       <div className="avatar-ring">
         {prayer.isAnonymous ? (
           <div className="avatar-core">
@@ -792,12 +792,12 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
           <>
             <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-3 py-1 text-sm font-semibold text-[color:var(--accent)]">
               <NotePencil size={16} weight="regular" />
-              Request
+              Prayer Request
             </div>
             <div className="mt-4 space-y-3">
               {requestPoints.map((point, index) => (
                 <div key={`${point.title}-${index}`}>
-                  <p className="text-[13px] sm:text-sm font-semibold text-[color:var(--ink)] border-b border-[color:var(--accent)]/40 pb-2">
+                  <p className="text-[13px] sm:text-sm font-semibold text-[color:var(--ink)]">
                     {point.title}
                   </p>
                   <p className="mt-2 text-[13px] sm:text-sm leading-relaxed text-[color:var(--subtle)]">
@@ -809,8 +809,8 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
           </>
         ) : (
           <>
-            <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--surface)] px-3 py-1 text-sm font-semibold text-[color:var(--subtle)]">
-              <BookOpenText size={16} weight="regular" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--surface-strong)] px-3 py-1 text-sm font-semibold text-[color:var(--subtle)]">
+              <BookOpenText size={16} weight="regular" className="text-[color:var(--accent)]" />
               Prayer
             </div>
             <p className="mt-4 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)]">
