@@ -1,6 +1,6 @@
-# Lifted — Christian Prayer Wall & Social Journal
+# Beliefted — Christian Prayer Wall & Social Journal
 
-Lifted is a community-first web app for sharing prayer requests and daily words of encouragement. It blends a Threads/X-inspired feed with a gentle spiritual focus, plus profiles, comments, notifications, and theming.
+Beliefted is a community-first web app for sharing prayer requests and daily words of encouragement. It blends a Threads/X-inspired feed with a gentle spiritual focus, plus profiles, comments, notifications, and theming.
 
 ## Features
 - Prayer wall feed with anonymous posting

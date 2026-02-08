@@ -1,11 +1,12 @@
 "use client";
 
-import { signIn, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { memo, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Avatar from "@/components/ui/Avatar";
 import Modal from "@/components/layout/Modal";
+import { useUIStore } from "@/lib/uiStore";
 import {
   BookOpenText,
   ChatCircle,
@@ -116,7 +117,6 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
   const [showEditConfirm, setShowEditConfirm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
-  const [showSignIn, setShowSignIn] = useState(false);
   const [prayError, setPrayError] = useState<string | null>(null);
   const [commentError, setCommentError] = useState<string | null>(null);
   const [editText, setEditText] = useState(prayer.content);
@@ -128,6 +128,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
   );
   const menuRef = useRef<HTMLDivElement | null>(null);
   const editRef = useRef<HTMLDivElement | null>(null);
+  const { openSignIn } = useUIStore();
   const isOwner =
     prayer.isOwner ??
     Boolean(
@@ -271,7 +272,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
       });
       if (!response.ok) {
         if (response.status === 401) {
-          setShowSignIn(true);
+          openSignIn();
         }
         throw new Error("Failed to post comment");
       }
@@ -444,7 +445,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
           // ignore JSON parse errors
         }
         if (response.status === 401) {
-          setShowSignIn(true);
+          openSignIn();
         }
         throw new Error(message);
       }
@@ -469,7 +470,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
           // ignore JSON parse errors
         }
         if (response.status === 401) {
-          setShowSignIn(true);
+          openSignIn();
         }
         throw new Error(message);
       }
@@ -513,7 +514,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
 
   const handlePray = async () => {
     if (!session?.user?.id) {
-      setShowSignIn(true);
+      openSignIn();
       return;
     }
 
@@ -563,7 +564,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     event.preventDefault();
 
     if (!session?.user?.id) {
-      setShowSignIn(true);
+      openSignIn();
       return;
     }
 
@@ -1236,22 +1237,6 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
         </div>
       </Modal>
 
-      <Modal
-        title="Sign in"
-        isOpen={showSignIn}
-        onClose={() => setShowSignIn(false)}
-      >
-        <p className="text-sm text-[color:var(--subtle)]">
-          Sign in with Google to interact with prayers.
-        </p>
-        <button
-          type="button"
-          onClick={() => signIn("google")}
-          className="mt-4 pill-button bg-slate-900 text-white cursor-pointer inline-flex items-center gap-2"
-        >
-          Continue with Google
-        </button>
-      </Modal>
     </article>
   );
 };

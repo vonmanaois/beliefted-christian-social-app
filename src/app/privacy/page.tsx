@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Privacy Policy | Lifted",
+  title: "Privacy Policy | Beliefted",
 };
 
 export default function PrivacyPage() {
@@ -15,7 +15,7 @@ export default function PrivacyPage() {
 
         <div className="mt-6 space-y-4 text-sm text-[color:var(--ink)]">
           <p>
-            This Privacy Policy explains how Lifted collects, uses, and protects
+            This Privacy Policy explains how Beliefted collects, uses, and protects
             your information.
           </p>
 
@@ -54,7 +54,7 @@ export default function PrivacyPage() {
           <h2 className="text-base font-semibold">6. Contact</h2>
           <p>
             For privacy questions, contact us at:
-            <span className="ml-1 font-semibold">support@lifted.app</span>
+            <span className="ml-1 font-semibold">support@beliefted.app</span>
           </p>
         </div>
       </div>

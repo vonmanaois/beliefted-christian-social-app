@@ -19,12 +19,20 @@ import {
 import Modal from "@/components/layout/Modal";
 import ThemeToggle from "@/components/layout/ThemeToggle";
 import UserSearch from "@/components/layout/UserSearch";
+import { useUIStore } from "@/lib/uiStore";
 
 export default function Sidebar() {
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
-  const [showPreferences, setShowPreferences] = useState(false);
-  const [showSignIn, setShowSignIn] = useState(false);
+  const {
+    signInOpen,
+    preferencesOpen,
+    openSignIn,
+    closeSignIn,
+    openPreferences,
+    closePreferences,
+    togglePreferences,
+  } = useUIStore();
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
   const [onboardingComplete, setOnboardingComplete] = useState(true);
   const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "von.manaois@gmail.com";
@@ -96,7 +104,7 @@ export default function Sidebar() {
 
   const openNotifications = () => {
     if (!isAuthenticated) {
-      setShowSignIn(true);
+      openSignIn();
       return;
     }
     router.push("/notifications");
@@ -134,10 +142,10 @@ export default function Sidebar() {
   }, [isAuthenticated, onboardingComplete, pathname, router]);
 
   useEffect(() => {
-    const handleOpenSignIn = () => setShowSignIn(true);
+    const handleOpenSignIn = () => openSignIn();
     window.addEventListener("open-signin", handleOpenSignIn);
     return () => window.removeEventListener("open-signin", handleOpenSignIn);
-  }, []);
+  }, [openSignIn]);
 
   return (
     <>
@@ -145,9 +153,9 @@ export default function Sidebar() {
         <div className="flex items-center justify-between px-4 py-3 h-12">
           <button
             type="button"
-            onClick={() => router.push("/why-lifted")}
+            onClick={() => router.push("/why-beliefted")}
             className="h-10 w-10 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-            aria-label="Why Lifted"
+            aria-label="Why Beliefted"
           >
             <Info size={22} weight="regular" />
           </button>
@@ -158,14 +166,14 @@ export default function Sidebar() {
           >
             <div className="h-9 w-9 rounded-full bg-gradient-to-br from-[#2d6cdf] to-[#9b6cff]" />
             <span className="hidden sm:inline text-sm font-semibold text-[color:var(--ink)] whitespace-nowrap">
-              Lifted
+              Beliefted
             </span>
           </button>
           {isAuthenticated ? (
             <button
               type="button"
               ref={mobilePrefsButtonRef}
-              onClick={() => setShowPreferences(true)}
+              onClick={() => openPreferences()}
               className="h-10 w-10 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
               aria-label="Preferences"
             >
@@ -174,7 +182,7 @@ export default function Sidebar() {
           ) : (
             <button
               type="button"
-              onClick={() => setShowSignIn(true)}
+              onClick={() => openSignIn()}
               className="h-10 px-3 rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] text-xs font-semibold text-[color:var(--ink)] hover:text-[color:var(--accent)] whitespace-nowrap"
             >
               Sign in
@@ -190,7 +198,7 @@ export default function Sidebar() {
       >
         <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#2d6cdf] to-[#9b6cff]" />
         <div className="hidden md:block">
-          <p className="text-sm font-semibold text-[color:var(--ink)]">Lifted</p>
+          <p className="text-sm font-semibold text-[color:var(--ink)]">Beliefted</p>
           <p className="text-xs text-[color:var(--subtle)]">Prayer Wall</p>
         </div>
       </button>
@@ -236,7 +244,7 @@ export default function Sidebar() {
                 router.push("/profile");
               }
             } else {
-              setShowSignIn(true);
+              openSignIn();
             }
           }}
         >
@@ -249,7 +257,7 @@ export default function Sidebar() {
         type="button"
         onClick={() => {
           if (!isAuthenticated) {
-            setShowSignIn(true);
+            openSignIn();
             return;
           }
           if (typeof window !== "undefined") {
@@ -284,12 +292,12 @@ export default function Sidebar() {
         <button
           type="button"
           className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-          onClick={() => router.push("/why-lifted")}
+          onClick={() => router.push("/why-beliefted")}
         >
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
             <Info size={22} weight="regular" />
           </span>
-          <span className="hidden lg:inline">Why Lifted</span>
+          <span className="hidden lg:inline">Why Beliefted</span>
         </button>
         <a
           href="https://buy.stripe.com/test_28E28teaRgXcaIK72TfMA00"
@@ -319,7 +327,7 @@ export default function Sidebar() {
           ref={prefsButtonRef}
           className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
           onClick={() => {
-            setShowPreferences(true);
+            togglePreferences();
           }}
         >
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
@@ -333,8 +341,8 @@ export default function Sidebar() {
 
       <Modal
         title="Sign in"
-        isOpen={showSignIn}
-        onClose={() => setShowSignIn(false)}
+        isOpen={signInOpen}
+        onClose={closeSignIn}
       >
         <p className="text-sm text-[color:var(--subtle)]">
           Sign in with Google to create a profile and post prayers.
@@ -351,8 +359,8 @@ export default function Sidebar() {
 
       <Modal
         title="Preferences"
-        isOpen={showPreferences}
-        onClose={() => setShowPreferences(false)}
+        isOpen={preferencesOpen}
+        onClose={closePreferences}
       >
         <div className="flex flex-col gap-4">
           <ThemeToggle />
@@ -413,7 +421,7 @@ export default function Sidebar() {
                   router.push("/profile");
                 }
               } else {
-                setShowSignIn(true);
+                openSignIn();
               }
             }}
           >

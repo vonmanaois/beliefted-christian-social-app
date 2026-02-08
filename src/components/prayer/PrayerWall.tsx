@@ -1,31 +1,32 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { signIn, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import PostForm from "@/components/prayer/PostForm";
 import PrayerFeed from "@/components/prayer/PrayerFeed";
 import Modal from "@/components/layout/Modal";
+import { useUIStore } from "@/lib/uiStore";
 
 export default function PrayerWall() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [showComposer, setShowComposer] = useState(false);
-  const [showSignIn, setShowSignIn] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [isPrayerDirty, setIsPrayerDirty] = useState(false);
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
+  const { openSignIn } = useUIStore();
 
   useEffect(() => {
     const handleOpenPrayer = () => {
       if (!isAuthenticated) {
-        setShowSignIn(true);
+        openSignIn();
         return;
       }
       setShowComposer(true);
     };
     window.addEventListener("open-prayer-composer", handleOpenPrayer);
     return () => window.removeEventListener("open-prayer-composer", handleOpenPrayer);
-  }, [isAuthenticated]);
+  }, [isAuthenticated, openSignIn]);
 
   return (
     <section className="feed-surface">
@@ -33,7 +34,7 @@ export default function PrayerWall() {
         type="button"
         onClick={() => {
           if (!isAuthenticated) {
-            setShowSignIn(true);
+            openSignIn();
             return;
           }
           setShowComposer(true);
@@ -109,22 +110,6 @@ export default function PrayerWall() {
         </div>
       </Modal>
 
-      <Modal
-        title="Sign in"
-        isOpen={showSignIn}
-        onClose={() => setShowSignIn(false)}
-      >
-        <p className="text-sm text-[color:var(--subtle)]">
-          Sign in with Google to post a prayer.
-        </p>
-        <button
-          type="button"
-          onClick={() => signIn("google")}
-          className="mt-4 pill-button bg-slate-900 text-white cursor-pointer inline-flex items-center gap-2"
-        >
-          Continue with Google
-        </button>
-      </Modal>
     </section>
   );
 }

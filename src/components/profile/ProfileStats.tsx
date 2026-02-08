@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Modal from "@/components/layout/Modal";
 import Avatar from "@/components/ui/Avatar";
 
@@ -30,95 +31,95 @@ export default function ProfileStats({
   initialFollowingCount,
   usernameParam,
 }: ProfileStatsProps) {
-  const [followersCount, setFollowersCount] = useState(initialFollowersCount);
-  const [followingCount, setFollowingCount] = useState(initialFollowingCount);
-  const [prayersLiftedCount, setPrayersLiftedCount] = useState(initialPrayedCount);
-  const [isLoading, setIsLoading] = useState(false);
   const [showFollowers, setShowFollowers] = useState(false);
   const [showFollowing, setShowFollowing] = useState(false);
-  const [connections, setConnections] = useState<ConnectionUser[]>([]);
-  const [connectionsLoading, setConnectionsLoading] = useState(false);
-  const [connectionsLabel, setConnectionsLabel] = useState("Followers");
+  const queryClient = useQueryClient();
+
+  const profileKey = useMemo(
+    () => ["profile-stats", usernameParam ?? "me"],
+    [usernameParam]
+  );
+
+  const { data: profile, isLoading } = useQuery({
+    queryKey: profileKey,
+    queryFn: async () => {
+      const query = usernameParam ? `?username=${usernameParam}` : "";
+      const response = await fetch(`/api/user/profile${query}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to load profile stats");
+      }
+      return (await response.json()) as ProfilePayload;
+    },
+    initialData: {
+      followersCount: initialFollowersCount,
+      followingCount: initialFollowingCount,
+      prayersLiftedCount: initialPrayedCount,
+    },
+    staleTime: 30000,
+  });
+
+  const connectionType = showFollowers ? "followers" : showFollowing ? "following" : null;
+  const connectionsLabelText = showFollowers ? "Followers" : "Following";
+
+  const {
+    data: connections = [],
+    isLoading: connectionsLoading,
+  } = useQuery({
+    queryKey: ["profile-connections", usernameParam ?? "me", connectionType],
+    queryFn: async () => {
+      if (!connectionType) return [];
+      const params = new URLSearchParams({ type: connectionType });
+      if (usernameParam) params.set("username", usernameParam);
+      const response = await fetch(`/api/user/connections?${params.toString()}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to load connections");
+      }
+      return (await response.json()) as ConnectionUser[];
+    },
+    enabled: Boolean(connectionType),
+  });
 
   useEffect(() => {
-    const loadStats = async () => {
-      setIsLoading(true);
-      try {
-        const query = usernameParam ? `?username=${usernameParam}` : "";
-        const response = await fetch(`/api/user/profile${query}`, {
-          cache: "no-store",
-        });
-        if (!response.ok) return;
-        const data = (await response.json()) as ProfilePayload;
-        if (typeof data.followersCount === "number") {
-          setFollowersCount(data.followersCount);
-        }
-        if (typeof data.followingCount === "number") {
-          setFollowingCount(data.followingCount);
-        }
-        if (typeof data.prayersLiftedCount === "number") {
-          setPrayersLiftedCount(data.prayersLiftedCount);
-        }
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     const listener = (event: Event) => {
       const detail = (event as CustomEvent<{ followersCount?: number }>).detail;
       if (typeof detail?.followersCount === "number") {
-        setFollowersCount(detail.followersCount);
+        queryClient.setQueryData<ProfilePayload>(profileKey, (current) => ({
+          ...(current ?? {}),
+          followersCount: detail.followersCount,
+        }));
       }
     };
 
     const refreshListener = () => {
-      loadStats();
+      queryClient.invalidateQueries({ queryKey: profileKey });
     };
 
     window.addEventListener("follow:updated", listener);
     window.addEventListener("stats:refresh", refreshListener);
-    loadStats();
 
     return () => {
       window.removeEventListener("follow:updated", listener);
       window.removeEventListener("stats:refresh", refreshListener);
     };
-  }, [usernameParam]);
-
-  const loadConnections = async (type: "followers" | "following") => {
-    setConnectionsLoading(true);
-    try {
-      const params = new URLSearchParams({ type });
-      if (usernameParam) params.set("username", usernameParam);
-      const response = await fetch(`/api/user/connections?${params.toString()}`, {
-        cache: "no-store",
-      });
-      if (!response.ok) return;
-      const data = (await response.json()) as ConnectionUser[];
-      setConnections(data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setConnectionsLoading(false);
-    }
-  };
+  }, [profileKey, queryClient]);
 
   return (
     <div className="mt-6 flex flex-wrap gap-6 text-sm text-[color:var(--subtle)]">
       <div className="flex flex-col">
         <span>Prayers lifted</span>
         <span className="text-lg font-semibold text-[color:var(--ink)]">
-          {prayersLiftedCount}
+          {profile?.prayersLiftedCount ?? 0}
         </span>
       </div>
       <button
         type="button"
         onClick={() => {
-          setConnectionsLabel("Followers");
           setShowFollowers(true);
-          loadConnections("followers");
+          setShowFollowing(false);
         }}
         className="flex flex-col text-left cursor-pointer hover:text-[color:var(--accent)]"
       >
@@ -127,16 +128,15 @@ export default function ProfileStats({
           <span className="mt-2 h-4 w-10 bg-slate-200 rounded-full animate-pulse" />
         ) : (
           <span className="text-lg font-semibold text-[color:var(--ink)]">
-            {followersCount}
+            {profile?.followersCount ?? 0}
           </span>
         )}
       </button>
       <button
         type="button"
         onClick={() => {
-          setConnectionsLabel("Following");
           setShowFollowing(true);
-          loadConnections("following");
+          setShowFollowers(false);
         }}
         className="flex flex-col text-left cursor-pointer hover:text-[color:var(--accent)]"
       >
@@ -145,13 +145,13 @@ export default function ProfileStats({
           <span className="mt-2 h-4 w-10 bg-slate-200 rounded-full animate-pulse" />
         ) : (
           <span className="text-lg font-semibold text-[color:var(--ink)]">
-            {followingCount}
+            {profile?.followingCount ?? 0}
           </span>
         )}
       </button>
 
       <Modal
-        title={connectionsLabel}
+        title={connectionsLabelText}
         isOpen={showFollowers || showFollowing}
         onClose={() => {
           setShowFollowers(false);
@@ -172,7 +172,7 @@ export default function ProfileStats({
           </div>
         ) : connections.length === 0 ? (
           <p className="text-sm text-[color:var(--subtle)]">
-            No {connectionsLabel.toLowerCase()} yet.
+            No {connectionsLabelText.toLowerCase()} yet.
           </p>
         ) : (
           <div className="flex flex-col gap-3">

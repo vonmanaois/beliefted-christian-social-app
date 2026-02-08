@@ -16,7 +16,7 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Lifted",
+  title: "Beliefted",
   description: "A Christian prayer wall and social journal.",
 };
 

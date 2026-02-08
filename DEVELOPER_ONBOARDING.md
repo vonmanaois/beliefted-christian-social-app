@@ -1,4 +1,4 @@
-# Developer Onboarding — Lifted
+# Developer Onboarding — Beliefted
 
 Welcome! This guide explains how the project is structured, how data flows, and how to safely extend features without breaking existing behavior.
 

@@ -11,7 +11,7 @@ export default function Navbar() {
       <div className="flex items-center gap-3">
         <div className="h-9 w-9 rounded-full bg-gradient-to-br from-[#2d6cdf] to-[#9b6cff]" />
         <div>
-          <p className="text-sm font-semibold text-[color:var(--ink)]">Lifted</p>
+          <p className="text-sm font-semibold text-[color:var(--ink)]">Beliefted</p>
           <p className="text-xs text-[color:var(--subtle)]">Prayer Wall</p>
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 import Sidebar from "@/components/layout/Sidebar";
 
-export default function WhyLiftedPage() {
+export default function WhyBelieftedPage() {
   return (
     <main className="container">
       <div className="page-grid">
@@ -10,7 +10,7 @@ export default function WhyLiftedPage() {
         <div className="panel p-8 rounded-none">
           <div className="max-w-3xl">
             <h1 className="text-2xl font-semibold text-[color:var(--ink)]">
-              Why Lifted
+              Why Beliefted
             </h1>
             <p className="mt-3 text-sm text-[color:var(--subtle)]">
               A calmer, purpose‑driven space to pray for one another and share
@@ -19,7 +19,7 @@ export default function WhyLiftedPage() {
 
             <div className="mt-6 space-y-4 text-sm text-[color:var(--ink)] leading-relaxed">
               <p>
-                Lifted was created to help people step away from the noise of
+                Beliefted was created to help people step away from the noise of
                 traditional social media and focus on what matters most:
                 encouragement, prayer, and Scripture. It’s still a social space,
                 but one with a different pace and purpose.
@@ -34,10 +34,10 @@ export default function WhyLiftedPage() {
             <div className="mt-10 grid gap-6">
               <section className="rounded-2xl bg-[color:var(--panel)] p-6">
                 <h2 className="text-lg font-semibold text-[color:var(--ink)]">
-                  Keep Lifted Free
+                  Keep Beliefted Free
                 </h2>
                 <p className="mt-2 text-sm text-[color:var(--subtle)] leading-relaxed">
-                  Lifted is free to use, and donations are never required. If
+                  Beliefted is free to use, and donations are never required. If
                   this project blesses you and you want to help keep it running,
                   your support makes a real difference.
                 </p>
@@ -51,7 +51,7 @@ export default function WhyLiftedPage() {
                     Support via Stripe
                   </a>
                   <span className="text-xs text-[color:var(--subtle)]">
-                    Donations are optional and not required to use Lifted.
+                    Donations are optional and not required to use Beliefted.
                   </span>
                 </div>
               </section>
@@ -61,7 +61,7 @@ export default function WhyLiftedPage() {
                   Partnerships & Sponsorships
                 </h2>
                 <p className="mt-2 text-sm text-[color:var(--subtle)] leading-relaxed">
-                  I’m open to partnerships or sponsorships to keep Lifted growing
+                  I’m open to partnerships or sponsorships to keep Beliefted growing
                   and available to more people. If you’d like to connect, please
                   reach out.
                 </p>
@@ -79,7 +79,7 @@ export default function WhyLiftedPage() {
                 </h2>
                 <p className="mt-2 text-sm text-[color:var(--subtle)] leading-relaxed">
                   Hi, I’m Von—a software developer based in Toronto, originally
-                  from the Philippines. I built Lifted to serve a global
+                  from the Philippines. I built Beliefted to serve a global
                   community of believers who want a more thoughtful,
                   prayer‑focused space.
                 </p>

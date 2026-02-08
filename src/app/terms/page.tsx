@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Terms of Service | Lifted",
+  title: "Terms of Service | Beliefted",
 };
 
 export default function TermsPage() {
@@ -15,14 +15,14 @@ export default function TermsPage() {
 
         <div className="mt-6 space-y-4 text-sm text-[color:var(--ink)]">
           <p>
-            Lifted is a community-first prayer wall and social journal. By using
+            Beliefted is a community-first prayer wall and social journal. By using
             the app, you agree to follow these terms.
           </p>
 
           <h2 className="text-base font-semibold">1. Eligibility</h2>
           <p>
-            You must be at least 13 years old to use Lifted. If you are using
-            Lifted on behalf of a group or organization, you confirm you have
+            You must be at least 13 years old to use Beliefted. If you are using
+            Beliefted on behalf of a group or organization, you confirm you have
             the authority to do so.
           </p>
 
@@ -35,7 +35,7 @@ export default function TermsPage() {
 
           <h2 className="text-base font-semibold">3. Your Content</h2>
           <p>
-            You retain ownership of your content. By posting on Lifted, you
+            You retain ownership of your content. By posting on Beliefted, you
             grant us permission to display and share your content inside the app.
           </p>
 
@@ -61,7 +61,7 @@ export default function TermsPage() {
           <h2 className="text-base font-semibold">7. Contact</h2>
           <p>
             For questions about these terms, contact us at:
-            <span className="ml-1 font-semibold">support@lifted.app</span>
+            <span className="ml-1 font-semibold">support@beliefted.app</span>
           </p>
         </div>
       </div>

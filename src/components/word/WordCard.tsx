@@ -1,12 +1,13 @@
 "use client";
 
 import { memo, useEffect, useRef, useState } from "react";
-import { signIn, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChatCircle, DotsThreeOutline, Heart } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import Avatar from "@/components/ui/Avatar";
 import Modal from "@/components/layout/Modal";
+import { useUIStore } from "@/lib/uiStore";
 
 type WordUser = {
   name?: string | null;
@@ -103,13 +104,13 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
-  const [showSignIn, setShowSignIn] = useState(false);
   const [showCommentConfirm, setShowCommentConfirm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(word.content);
   const [likeError, setLikeError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const editRef = useRef<HTMLDivElement | null>(null);
+  const { openSignIn } = useUIStore();
   const isOwner =
     word.isOwner ??
     Boolean(
@@ -228,7 +229,7 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
           // ignore JSON parse errors
         }
         if (response.status === 401) {
-          setShowSignIn(true);
+          openSignIn();
         }
         throw new Error(message);
       }
@@ -287,7 +288,7 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
       });
       if (!response.ok) {
         if (response.status === 401) {
-          setShowSignIn(true);
+          openSignIn();
         }
         throw new Error("Failed to post comment");
       }
@@ -353,7 +354,7 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
       });
       if (!response.ok) {
         if (response.status === 401) {
-          setShowSignIn(true);
+          openSignIn();
         }
         throw new Error("Failed to delete comment");
       }
@@ -391,7 +392,7 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
           // ignore JSON parse errors
         }
         if (response.status === 401) {
-          setShowSignIn(true);
+          openSignIn();
         }
         throw new Error(message);
       }
@@ -420,7 +421,7 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
           // ignore JSON parse errors
         }
         if (response.status === 401) {
-          setShowSignIn(true);
+          openSignIn();
         }
         throw new Error(message);
       }
@@ -448,7 +449,7 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
 
   const handleLike = async () => {
     if (!session?.user?.id) {
-      setShowSignIn(true);
+      openSignIn();
       return;
     }
 
@@ -463,20 +464,13 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
     }
   };
 
-  useEffect(() => {
-    if (!session?.user?.id) return;
-    if (word.likedBy?.includes(String(session.user.id))) {
-      setHasLiked(true);
-    }
-  }, [word.likedBy, session?.user?.id]);
-
   const handleCommentSubmit = async (event?: React.FormEvent) => {
     if (event) {
       event.preventDefault();
     }
 
     if (!session?.user?.id) {
-      setShowSignIn(true);
+      openSignIn();
       return;
     }
 
@@ -976,22 +970,6 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
         </div>
       </Modal>
 
-      <Modal
-        title="Sign in"
-        isOpen={showSignIn}
-        onClose={() => setShowSignIn(false)}
-      >
-        <p className="text-sm text-[color:var(--subtle)]">
-          Sign in with Google to interact with words.
-        </p>
-        <button
-          type="button"
-          onClick={() => signIn("google")}
-          className="mt-4 pill-button bg-slate-900 text-white cursor-pointer inline-flex items-center gap-2"
-        >
-          Continue with Google
-        </button>
-      </Modal>
 
       <Modal
         title="Delete comment?"
