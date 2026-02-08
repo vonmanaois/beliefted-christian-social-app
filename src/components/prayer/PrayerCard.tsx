@@ -797,10 +797,10 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
             <div className="mt-4 space-y-3">
               {requestPoints.map((point, index) => (
                 <div key={`${point.title}-${index}`}>
-                  <p className="text-[13px] sm:text-sm font-semibold text-[color:var(--ink)]">
+                  <p className="text-[13px] sm:text-sm font-semibold text-[color:var(--ink)] border-b border-[color:var(--accent)]/40 pb-2">
                     {point.title}
                   </p>
-                  <p className="mt-1 pl-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)]">
+                  <p className="mt-2 text-[13px] sm:text-sm leading-relaxed text-[color:var(--subtle)]">
                     {point.description}
                   </p>
                 </div>
