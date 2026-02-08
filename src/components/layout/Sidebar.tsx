@@ -41,9 +41,17 @@ export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
+  const triggerPanelClose = (target: "why" | "notifications" | "search") => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("panel:close", { detail: { target } }));
+    }
+    setTimeout(() => {
+      router.back();
+    }, 220);
+  };
   const handleWhyClick = () => {
     if (pathname === "/why-beliefted") {
-      router.back();
+      triggerPanelClose("why");
       return;
     }
     router.push("/why-beliefted");
@@ -112,6 +120,10 @@ export default function Sidebar() {
   const openNotifications = () => {
     if (!isAuthenticated) {
       openSignIn();
+      return;
+    }
+    if (pathname === "/notifications") {
+      triggerPanelClose("notifications");
       return;
     }
     router.push("/notifications");
@@ -216,7 +228,13 @@ export default function Sidebar() {
 
       <button
         type="button"
-        onClick={() => router.push("/search")}
+        onClick={() => {
+          if (pathname === "/search") {
+            triggerPanelClose("search");
+            return;
+          }
+          router.push("/search");
+        }}
         className="lg:hidden h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center text-[color:var(--ink)] hover:text-[color:var(--accent)] cursor-pointer"
         aria-label="Search people"
       >
@@ -465,7 +483,13 @@ export default function Sidebar() {
           <button
             type="button"
             className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-            onClick={() => router.push("/search")}
+            onClick={() => {
+              if (pathname === "/search") {
+                triggerPanelClose("search");
+                return;
+              }
+              router.push("/search");
+            }}
             aria-label="Search people"
           >
             <MagnifyingGlass size={24} weight="regular" />

@@ -1,5 +1,6 @@
  "use client";
 
+ import { useEffect, useState } from "react";
  import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
  import { signIn, useSession } from "next-auth/react";
  import Sidebar from "@/components/layout/Sidebar";
@@ -15,10 +16,34 @@
    wordId?: { content?: string } | null;
  };
 
- export default function NotificationsPage() {
+export default function NotificationsPage() {
+   const [entered, setEntered] = useState(false);
+   const [closing, setClosing] = useState(false);
    const { status } = useSession();
    const isAuthenticated = status === "authenticated";
    const queryClient = useQueryClient();
+
+   useEffect(() => {
+     const id = requestAnimationFrame(() => setEntered(true));
+     return () => cancelAnimationFrame(id);
+   }, []);
+
+   useEffect(() => {
+     const handler = (event: Event) => {
+       const detail = (event as CustomEvent<{ target?: string }>).detail;
+       if (detail?.target === "notifications") {
+         setClosing(true);
+       }
+     };
+     window.addEventListener("panel:close", handler);
+     return () => window.removeEventListener("panel:close", handler);
+   }, []);
+
+   const panelState = closing
+     ? "panel-slide-up-exit"
+     : entered
+       ? "panel-slide-up-entered"
+       : "panel-slide-up-enter";
 
    const { data: notifications = [], isLoading } = useQuery({
      queryKey: ["notifications"],
@@ -49,7 +74,7 @@
      <main className="container">
        <div className="page-grid">
          <Sidebar />
-         <div className="panel p-8 rounded-none">
+         <div className={`panel p-8 rounded-none ${panelState}`}>
            <div className="flex flex-wrap items-center justify-between gap-3">
              <div>
                <h1 className="text-xl font-semibold text-[color:var(--ink)]">

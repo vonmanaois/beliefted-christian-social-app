@@ -1,13 +1,39 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 
 export default function WhyBelieftedPage() {
+  const [entered, setEntered] = useState(false);
+  const [closing, setClosing] = useState(false);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setEntered(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ target?: string }>).detail;
+      if (detail?.target === "why") {
+        setClosing(true);
+      }
+    };
+    window.addEventListener("panel:close", handler);
+    return () => window.removeEventListener("panel:close", handler);
+  }, []);
+
+  const panelState = closing
+    ? "panel-slide-left-exit"
+    : entered
+      ? "panel-slide-left-entered"
+      : "panel-slide-left-enter";
+
   return (
     <main className="container">
       <div className="page-grid">
         <Sidebar />
-        <div className="panel p-8 rounded-none">
+        <div className={`panel p-8 rounded-none ${panelState}`}>
           <div className="max-w-3xl">
             <h1 className="text-2xl font-semibold text-[color:var(--ink)]">
               Why Beliefted

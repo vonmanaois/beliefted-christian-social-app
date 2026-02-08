@@ -135,6 +135,54 @@ h3 {
   grid-template-columns: minmax(0, 1fr);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .panel-slide-left-enter,
+  .panel-slide-left-entered,
+  .panel-slide-left-exit,
+  .panel-slide-up-enter,
+  .panel-slide-up-entered,
+  .panel-slide-up-exit {
+    transition: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .panel-slide-left-enter {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+
+  .panel-slide-left-entered {
+    opacity: 1;
+    transform: translateX(0);
+    transition: transform 240ms ease-out, opacity 240ms ease-out;
+  }
+
+  .panel-slide-left-exit {
+    opacity: 0;
+    transform: translateX(-12px);
+    transition: transform 200ms ease-in, opacity 200ms ease-in;
+  }
+
+  .panel-slide-up-enter {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  .panel-slide-up-entered {
+    opacity: 1;
+    transform: translateY(0);
+    transition: transform 240ms ease-out, opacity 240ms ease-out;
+  }
+
+  .panel-slide-up-exit {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: transform 200ms ease-in, opacity 200ms ease-in;
+  }
+}
+
+
 @media (max-width: 767px) {
   .container {
     padding: 0 0 96px;
@@ -326,6 +374,38 @@ button:not(:disabled):hover svg,
 [role="button"]:not([aria-disabled="true"]):hover svg,
 a:hover svg {
   color: var(--hover);
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0.6;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0.6;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 767px) {
+  .mobile-slide-left {
+    animation: slide-in-left 220ms ease-out;
+  }
+
+  .mobile-slide-right {
+    animation: slide-in-right 220ms ease-out;
+  }
 }
 
 .modal-form {
