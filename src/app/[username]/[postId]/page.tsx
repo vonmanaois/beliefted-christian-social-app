@@ -52,6 +52,7 @@ export default async function PostDetailPage({ params }: PageProps) {
                   ...prayer,
                   _id: prayer._id.toString(),
                   userId: prayer.userId?.toString(),
+                  heading: prayer.heading ?? undefined,
                   isOwner: Boolean(
                     session?.user?.id && String(prayer.userId) === String(session.user.id)
                   ),
