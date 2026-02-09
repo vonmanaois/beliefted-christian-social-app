@@ -35,7 +35,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Comment not found" }, { status: 404 });
   }
 
-  if (comment.userId.toString() !== session.user.id) {
+  if (!comment.userId || comment.userId.toString() !== session.user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -67,7 +67,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Comment not found" }, { status: 404 });
   }
 
-  if (comment.userId.toString() !== session.user.id) {
+  if (!comment.userId || comment.userId.toString() !== session.user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

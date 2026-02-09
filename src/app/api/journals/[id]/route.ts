@@ -41,7 +41,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Journal not found" }, { status: 404 });
   }
 
-  if (journal.userId.toString() !== session.user.id) {
+  if (!journal.userId || journal.userId.toString() !== session.user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -75,7 +75,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Journal not found" }, { status: 404 });
   }
 
-  if (journal.userId.toString() !== session.user.id) {
+  if (!journal.userId || journal.userId.toString() !== session.user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

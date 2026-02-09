@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import clientPromise from "@/lib/mongodb";
+import type { Db } from "mongodb";
 
 const COOKIE_NAME = "next-auth.session-token";
 const PRIMARY_EMAIL = "e2e.primary@test.local";
@@ -19,9 +20,7 @@ const ensureAllowed = (request: Request) => {
 const normalizeUsername = (value: string) =>
   value.toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
 
-type MongoDb = Awaited<ReturnType<typeof clientPromise>>["db"];
-
-const ensureUniqueUsername = async (db: MongoDb, base: string) => {
+const ensureUniqueUsername = async (db: Db, base: string) => {
   let candidate = base;
   let suffix = 0;
   while (await db.collection("users").findOne({ username: candidate })) {

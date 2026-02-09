@@ -55,7 +55,7 @@ export async function POST(
     $inc: { prayersLiftedCount: 1 },
   });
 
-  if (!alreadyPrayed && prayer.userId?.toString() !== userId) {
+  if (!alreadyPrayed && prayer.userId && prayer.userId.toString() !== userId) {
     await NotificationModel.create({
       userId: prayer.userId,
       actorId: userId,

@@ -40,7 +40,7 @@ export async function PUT(
     return NextResponse.json({ error: "Story not found" }, { status: 404 });
   }
 
-  if (story.userId.toString() !== session.user.id) {
+  if (!story.userId || story.userId.toString() !== session.user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -72,7 +72,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Story not found" }, { status: 404 });
   }
 
-  if (story.userId.toString() !== session.user.id) {
+  if (!story.userId || story.userId.toString() !== session.user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

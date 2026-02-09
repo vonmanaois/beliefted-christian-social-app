@@ -24,7 +24,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Prayer not found" }, { status: 404 });
   }
 
-  if (prayer.userId.toString() !== session.user.id) {
+  if (!prayer.userId || prayer.userId.toString() !== session.user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -55,7 +55,7 @@ export async function PUT(
     return NextResponse.json({ error: "Prayer not found" }, { status: 404 });
   }
 
-  if (prayer.userId.toString() !== session.user.id) {
+  if (!prayer.userId || prayer.userId.toString() !== session.user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
