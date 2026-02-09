@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { DotsThreeOutline } from "@phosphor-icons/react";
+import dynamic from "next/dynamic";
 import Modal from "@/components/layout/Modal";
-import JournalForm from "@/components/journal/JournalForm";
 import PostBackHeader from "@/components/ui/PostBackHeader";
+import Spinner from "@/components/ui/Spinner";
 
 type JournalDetailProps = {
   journal: {
@@ -16,6 +17,16 @@ type JournalDetailProps = {
     createdAt: string;
   };
 };
+
+const JournalForm = dynamic(() => import("@/components/journal/JournalForm"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center gap-2 text-xs text-[color:var(--subtle)]">
+      <Spinner size={14} />
+      Loading...
+    </div>
+  ),
+});
 
 const formatFullDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", {

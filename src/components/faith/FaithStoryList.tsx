@@ -5,10 +5,21 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import EmptyState from "@/components/ui/EmptyState";
 import Avatar from "@/components/ui/Avatar";
 import Modal from "@/components/layout/Modal";
-import FaithStoryForm from "@/components/faith/FaithStoryForm";
+import Spinner from "@/components/ui/Spinner";
+
+const FaithStoryForm = dynamic(() => import("@/components/faith/FaithStoryForm"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center gap-2 text-xs text-[color:var(--subtle)]">
+      <Spinner size={14} />
+      Loading...
+    </div>
+  ),
+});
 
 type FaithStory = {
   _id: string;

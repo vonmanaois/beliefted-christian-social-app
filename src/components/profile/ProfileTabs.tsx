@@ -4,15 +4,35 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import PrayerFeed from "@/components/prayer/PrayerFeed";
 import WordFeed from "@/components/word/WordFeed";
-import PostForm from "@/components/prayer/PostForm";
-import WordForm from "@/components/word/WordForm";
 import Modal from "@/components/layout/Modal";
 import { UserCircle } from "@phosphor-icons/react";
 import { cloudinaryTransform } from "@/lib/cloudinary";
+import Spinner from "@/components/ui/Spinner";
 
 const tabs = ["Faith Share", "Prayers"] as const;
+
+const PostForm = dynamic(() => import("@/components/prayer/PostForm"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center gap-2 text-xs text-[color:var(--subtle)]">
+      <Spinner size={14} />
+      Loading...
+    </div>
+  ),
+});
+
+const WordForm = dynamic(() => import("@/components/word/WordForm"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center gap-2 text-xs text-[color:var(--subtle)]">
+      <Spinner size={14} />
+      Loading...
+    </div>
+  ),
+});
 
 type Tab = (typeof tabs)[number];
 

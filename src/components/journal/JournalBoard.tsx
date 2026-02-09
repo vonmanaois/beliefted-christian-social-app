@@ -4,9 +4,20 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DotsThreeOutline, Plus } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import Modal from "@/components/layout/Modal";
 import EmptyState from "@/components/ui/EmptyState";
-import JournalForm from "@/components/journal/JournalForm";
+import Spinner from "@/components/ui/Spinner";
+
+const JournalForm = dynamic(() => import("@/components/journal/JournalForm"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center gap-2 text-xs text-[color:var(--subtle)]">
+      <Spinner size={14} />
+      Loading...
+    </div>
+  ),
+});
 
 type Journal = {
   _id: string;

@@ -1,6 +1,8 @@
 import Sidebar from "@/components/layout/Sidebar";
 import FaithStoryList from "@/components/faith/FaithStoryList";
 
+export const revalidate = 60;
+
 export default function FaithStoriesPage() {
   return (
     <main className="container">

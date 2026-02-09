@@ -3,11 +3,22 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
-import WordForm from "@/components/word/WordForm";
+import dynamic from "next/dynamic";
 import WordFeed from "@/components/word/WordFeed";
 import Modal from "@/components/layout/Modal";
 import { useUIStore } from "@/lib/uiStore";
 import { UserCircle } from "@phosphor-icons/react";
+import Spinner from "@/components/ui/Spinner";
+
+const WordForm = dynamic(() => import("@/components/word/WordForm"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center gap-2 text-xs text-[color:var(--subtle)]">
+      <Spinner size={14} />
+      Loading...
+    </div>
+  ),
+});
 
 export default function WordWall() {
   const [refreshKey, setRefreshKey] = useState(0);

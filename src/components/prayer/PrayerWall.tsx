@@ -3,11 +3,22 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
-import PostForm from "@/components/prayer/PostForm";
+import dynamic from "next/dynamic";
 import PrayerFeed from "@/components/prayer/PrayerFeed";
 import Modal from "@/components/layout/Modal";
 import { useUIStore } from "@/lib/uiStore";
 import { UserCircle } from "@phosphor-icons/react";
+import Spinner from "@/components/ui/Spinner";
+
+const PostForm = dynamic(() => import("@/components/prayer/PostForm"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center gap-2 text-xs text-[color:var(--subtle)]">
+      <Spinner size={14} />
+      Loading...
+    </div>
+  ),
+});
 
 export default function PrayerWall() {
   const [refreshKey, setRefreshKey] = useState(0);
