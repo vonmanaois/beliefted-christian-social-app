@@ -6,14 +6,13 @@ import { signIn, signOut, useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BellSimple,
+  BookOpenText,
   ChartBar,
   GoogleLogo,
   House,
-  HandHeart,
   Info,
   Notebook,
   MagnifyingGlass,
-  Plus,
   SlidersHorizontal,
   User,
 } from "@phosphor-icons/react";
@@ -293,28 +292,6 @@ export default function Sidebar() {
             <span className="hidden lg:inline">Journal</span>
           </button>
         )}
-      <button
-        type="button"
-        onClick={() => {
-          if (!isAuthenticated) {
-            openSignIn();
-            return;
-          }
-          if (typeof window !== "undefined") {
-            const eventName =
-              pathname === "/" || pathname === "/word" || pathname === "/wordoftheday"
-                ? "open-word-composer"
-                : "open-prayer-composer";
-            window.dispatchEvent(new CustomEvent(eventName));
-          }
-        }}
-        className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-      >
-          <span className="h-10 w-10 rounded-2xl bg-[color:var(--accent)] text-[color:var(--accent-contrast)] flex items-center justify-center">
-            <Plus size={22} weight="regular" />
-          </span>
-          <span className="hidden lg:inline">Add</span>
-        </button>
         <button
           type="button"
           className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
@@ -332,6 +309,16 @@ export default function Sidebar() {
         <button
           type="button"
           className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+          onClick={() => router.push("/faith-stories")}
+        >
+          <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
+            <BookOpenText size={22} weight="regular" />
+          </span>
+          <span className="hidden lg:inline">Faith Story</span>
+        </button>
+        <button
+          type="button"
+          className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
           onClick={handleWhyClick}
         >
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
@@ -339,17 +326,6 @@ export default function Sidebar() {
           </span>
           <span className="hidden lg:inline">Why Beliefted</span>
         </button>
-        <a
-          href="https://buy.stripe.com/test_28E28teaRgXcaIK72TfMA00"
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-        >
-          <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
-            <HandHeart size={22} weight="regular" />
-          </span>
-          <span className="hidden lg:inline">Donate</span>
-        </a>
         {session?.user?.email === adminEmail && (
           <button
             type="button"
@@ -479,22 +455,6 @@ export default function Sidebar() {
           )}
           <button
             type="button"
-            onClick={() => {
-              if (typeof window !== "undefined") {
-                const eventName =
-                  pathname === "/" || pathname === "/word" || pathname === "/wordoftheday"
-                    ? "open-word-composer"
-                    : "open-prayer-composer";
-                window.dispatchEvent(new CustomEvent(eventName));
-              }
-            }}
-            className="flex flex-col items-center gap-1 text-[color:var(--accent)]"
-            aria-label="Add a prayer"
-          >
-            <Plus size={24} weight="regular" />
-          </button>
-          <button
-            type="button"
             className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
             onClick={openNotifications}
           >
@@ -504,6 +464,14 @@ export default function Sidebar() {
                 <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-[color:var(--accent)]" />
               )}
             </span>
+          </button>
+          <button
+            type="button"
+            className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+            onClick={() => router.push("/faith-stories")}
+            aria-label="Faith Stories"
+          >
+            <BookOpenText size={24} weight="regular" />
           </button>
           <button
             type="button"
