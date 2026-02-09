@@ -163,6 +163,6 @@ export async function POST(req: Request) {
     authorImage: author?.image ?? null,
   });
 
-  revalidateTag("words-feed");
+  revalidateTag("words-feed", "layout");
   return NextResponse.json(word, { status: 201 });
 }

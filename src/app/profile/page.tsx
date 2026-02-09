@@ -45,15 +45,15 @@ export default async function ProfilePage() {
             )}
             <div className="flex items-center justify-between gap-4">
               <ProfileHeader
-                initialName={user?.name ?? session.user.name ?? "Your Name"}
+                initialName={user?.name ?? session?.user?.name ?? "Your Name"}
                 initialUsername={user?.username ?? "username"}
                 initialBio={user?.bio ?? null}
               />
               <div className="h-20 w-20 rounded-full overflow-hidden border border-slate-200 bg-slate-200">
-                {user?.image || session.user.image ? (
+                {user?.image || session?.user?.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={cloudinaryTransform(user?.image ?? session.user.image ?? "", {
+                    src={cloudinaryTransform(user?.image ?? session?.user?.image ?? "", {
                       width: 160,
                       height: 160,
                     })}
@@ -87,7 +87,7 @@ export default async function ProfilePage() {
             <div className="my-6 border-t border-[color:var(--panel-border)]" />
           </div>
 
-          <ProfileTabs userId={session.user.id} />
+          <ProfileTabs userId={session?.user?.id ?? ""} />
         </div>
       </div>
     </main>

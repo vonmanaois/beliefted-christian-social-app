@@ -216,6 +216,6 @@ export async function POST(req: Request) {
     expiresAt,
   });
 
-  revalidateTag("prayers-feed");
+  revalidateTag("prayers-feed", "layout");
   return NextResponse.json(prayer, { status: 201 });
 }

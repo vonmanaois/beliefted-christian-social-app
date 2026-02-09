@@ -31,7 +31,7 @@ export async function DELETE(
   await CommentModel.deleteMany({ prayerId: prayer._id });
   await PrayerModel.deleteOne({ _id: prayer._id });
 
-  revalidateTag("prayers-feed");
+  revalidateTag("prayers-feed", "layout");
   return NextResponse.json({ ok: true });
 }
 
@@ -62,12 +62,12 @@ export async function PUT(
   if (prayer.kind === "request") {
     const rawPoints = Array.isArray(body.prayerPoints) ? body.prayerPoints : [];
     const cleanedPoints = rawPoints
-      .map((point) => ({
+      .map((point: { title?: unknown; description?: unknown } | null) => ({
         title: typeof point?.title === "string" ? point.title.trim() : "",
         description:
           typeof point?.description === "string" ? point.description.trim() : "",
       }))
-      .filter((point) => point.title && point.description)
+      .filter((point: { title: string; description: string }) => point.title && point.description)
       .slice(0, 8);
 
     if (cleanedPoints.length === 0) {
@@ -81,7 +81,7 @@ export async function PUT(
     prayer.content = "";
     await prayer.save();
 
-    revalidateTag("prayers-feed");
+    revalidateTag("prayers-feed", "layout");
     return NextResponse.json({ ok: true, prayerPoints: prayer.prayerPoints });
   }
 
@@ -93,6 +93,6 @@ export async function PUT(
   prayer.content = content;
   await prayer.save();
 
-  revalidateTag("prayers-feed");
+  revalidateTag("prayers-feed", "layout");
   return NextResponse.json({ ok: true, content: prayer.content });
 }

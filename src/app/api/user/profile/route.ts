@@ -71,12 +71,15 @@ export async function PATCH(req: Request) {
   const userObjectId = ObjectId.isValid(session.user.id)
     ? new ObjectId(session.user.id)
     : null;
-  const userFilter =
-    session.user.email && session.user.email.length > 0
-      ? { email: session.user.email }
-      : userObjectId
-        ? { _id: userObjectId }
-        : { _id: session.user.id };
+  const userFilter = session.user.email && session.user.email.length > 0
+    ? { email: session.user.email }
+    : userObjectId
+      ? { _id: userObjectId }
+      : null;
+
+  if (!userFilter) {
+    return NextResponse.json({ error: "Invalid user" }, { status: 400 });
+  }
 
   const exists = await db.collection("users").findOne({
     username,
@@ -153,12 +156,15 @@ export async function GET(req: Request) {
   const userId = ObjectId.isValid(session.user.id)
     ? new ObjectId(session.user.id)
     : null;
-  const userFilter =
-    session.user.email && session.user.email.length > 0
-      ? { email: session.user.email }
-      : userId
-        ? { _id: userId }
-        : { _id: session.user.id };
+  const userFilter = session.user.email && session.user.email.length > 0
+    ? { email: session.user.email }
+    : userId
+      ? { _id: userId }
+      : null;
+
+  if (!userFilter) {
+    return NextResponse.json({ error: "Invalid user" }, { status: 400 });
+  }
 
   const user = await db.collection("users").findOne(userFilter);
   const prayersLiftedCount =

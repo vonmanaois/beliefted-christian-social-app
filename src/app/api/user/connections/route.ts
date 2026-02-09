@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
-import { ObjectId } from "mongodb";
+import { ObjectId, type WithId, type Document } from "mongodb";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -16,11 +16,11 @@ export async function GET(req: Request) {
   const client = await clientPromise;
   const db = client.db();
 
-  let user: { _id?: ObjectId; followers?: ObjectId[]; following?: ObjectId[] } | null =
+  let user: (WithId<Document> & { followers?: ObjectId[]; following?: ObjectId[] }) | null =
     null;
 
   if (username) {
-    user = (await db.collection("users").findOne({ username })) as typeof user;
+    user = await db.collection("users").findOne({ username });
   } else {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -32,7 +32,7 @@ export async function GET(req: Request) {
     if (!userId) {
       return NextResponse.json({ error: "Invalid user" }, { status: 400 });
     }
-    user = (await db.collection("users").findOne({ _id: userId })) as typeof user;
+    user = await db.collection("users").findOne({ _id: userId });
   }
 
   if (!user?._id) {

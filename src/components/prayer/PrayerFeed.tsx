@@ -49,7 +49,7 @@ export default function PrayerFeed({ refreshKey, userId }: PrayerFeedProps) {
         prayedBy: Array.isArray(prayer.prayedBy)
           ? prayer.prayedBy.map((id) => String(id))
           : [],
-        userId: prayer.userId ? String(prayer.userId) : null,
+        userId: prayer.userId ? String(prayer.userId) : undefined,
       }));
       return { items, nextCursor: data.nextCursor ?? null };
     },

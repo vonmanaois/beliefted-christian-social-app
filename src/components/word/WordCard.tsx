@@ -26,16 +26,18 @@ type Word = {
   isOwner?: boolean;
 };
 
-type WordComment = {
+type WordCommentData = {
   _id: string;
   content: string;
   createdAt: string;
-  userId?: {
-    _id?: string | null;
-    name?: string | null;
-    image?: string | null;
-    username?: string | null;
-  } | null;
+  userId?: CommentUser | null;
+};
+
+type CommentUser = {
+  _id?: string | null;
+  name?: string | null;
+  image?: string | null;
+  username?: string | null;
 };
 
 type WordCardProps = {
@@ -146,7 +148,7 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
       if (!response.ok) {
         throw new Error("Failed to load comments");
       }
-      return (await response.json()) as WordComment[];
+      return (await response.json()) as WordCommentData[];
     },
     enabled: showComments,
   });
@@ -302,9 +304,9 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
         ...item,
         commentCount: (item.commentCount ?? 0) + 1,
       }));
-      queryClient.setQueryData<Comment[]>(
+      queryClient.setQueryData<WordCommentData[]>(
         ["word-comments", wordId],
-        (current = []) => [newComment as Comment, ...current]
+        (current = []) => [newComment as WordCommentData, ...current]
       );
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("notifications:refresh"));
@@ -330,7 +332,7 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
     onSuccess: async (data) => {
       setCommentError(null);
       if (editingCommentId) {
-        queryClient.setQueryData<Comment[]>(
+        queryClient.setQueryData<WordCommentData[]>(
           ["word-comments", wordId],
           (current = []) =>
             current.map((comment) =>
@@ -363,7 +365,7 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
     },
     onSuccess: async (deletedId) => {
       setCommentError(null);
-      queryClient.setQueryData<Comment[]>(
+      queryClient.setQueryData<WordCommentData[]>(
         ["word-comments", wordId],
         (current = []) => current.filter((comment) => comment._id !== deletedId)
       );
@@ -564,7 +566,11 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
           </div>
           <div className="flex items-center gap-2">
             <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
-              {formatPostTime(word.createdAt)}
+              {formatPostTime(
+                word.createdAt instanceof Date
+                  ? word.createdAt.toISOString()
+                  : word.createdAt
+              )}
             </p>
             {isOwner && (
               <div className="relative" ref={menuRef}>

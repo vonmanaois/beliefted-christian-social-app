@@ -561,7 +561,6 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     if (event) {
       event.preventDefault();
     }
-    event.preventDefault();
 
     if (!session?.user?.id) {
       openSignIn();
@@ -685,7 +684,11 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
           </div>
           <div className="flex items-center gap-2">
             <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
-              {formatPostTime(prayer.createdAt)}
+              {formatPostTime(
+                prayer.createdAt instanceof Date
+                  ? prayer.createdAt.toISOString()
+                  : prayer.createdAt
+              )}
             </p>
             {isOwner && (
               <div className="relative" ref={menuRef}>
