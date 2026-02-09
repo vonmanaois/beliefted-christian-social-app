@@ -642,7 +642,8 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
           <Avatar
             src={prayer.user?.image ?? null}
             alt={prayer.user?.name ?? "User"}
-            size={32}
+            size={64}
+            sizes="(min-width: 640px) 48px, 32px"
             href={
               prayer.user?.username
                 ? `/profile/${prayer.user.username}`

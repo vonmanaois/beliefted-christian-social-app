@@ -8,8 +8,8 @@ export default function Navbar() {
   const isAuthenticated = status === "authenticated";
 
   return (
-    <nav className="panel px-6 py-4 flex items-center justify-between">
-      <div className="flex items-center gap-3">
+    <nav className="panel px-6 py-4 flex items-center justify-center lg:justify-between relative">
+      <div className="flex items-center gap-3 absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0">
         <Image
           src="/images/beliefted-logo.svg"
           alt="Beliefted"
@@ -17,12 +17,12 @@ export default function Navbar() {
           height={36}
           className="h-9 w-9 rounded-full"
         />
-        <div>
+        <div className="text-center sm:text-left">
           <p className="text-sm font-semibold text-[color:var(--ink)]">Beliefted</p>
           <p className="text-xs text-[color:var(--subtle)]">Prayer Wall</p>
         </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 absolute right-6 lg:static">
         {isAuthenticated ? (
           <div className="flex items-center gap-3">
             <div className="text-right">

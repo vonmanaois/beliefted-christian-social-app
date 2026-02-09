@@ -543,7 +543,8 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
         <Avatar
           src={word.user?.image ?? null}
           alt={word.user?.name ?? "User"}
-          size={32}
+          size={64}
+          sizes="(min-width: 640px) 48px, 32px"
           href={word.user?.username ? `/profile/${word.user.username}` : "/profile"}
           fallback={(word.user?.name?.[0] ?? "W").toUpperCase()}
           className="avatar-core cursor-pointer h-8 w-8 sm:h-12 sm:w-12"

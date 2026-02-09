@@ -170,8 +170,8 @@ export default function Sidebar() {
   return (
     <>
       <div className="lg:hidden sticky top-0 z-40 bg-[color:var(--panel)]/95 backdrop-blur">
-        <div className="flex items-center justify-between px-4 py-3 h-12">
-          <div className="flex items-center gap-2">
+        <div className="relative flex items-center justify-center px-4 py-3 h-12">
+          <div className="absolute left-4 flex items-center gap-2">
             <button
               type="button"
               onClick={() => router.push("/")}
@@ -192,7 +192,7 @@ export default function Sidebar() {
           <button
             type="button"
             onClick={() => router.push("/")}
-            className="flex items-center gap-2 cursor-pointer min-w-0"
+            className="flex items-center gap-2 cursor-pointer min-w-0 absolute left-1/2 -translate-x-1/2"
           >
             <Image
               src="/images/beliefted-logo.svg"
@@ -205,25 +205,27 @@ export default function Sidebar() {
               Beliefted
             </span>
           </button>
-          {isAuthenticated ? (
-            <button
-              type="button"
-              ref={mobilePrefsButtonRef}
-              onClick={() => openPreferences()}
-              className="h-10 w-10 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-              aria-label="Preferences"
-            >
-              <SlidersHorizontal size={22} weight="regular" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => openSignIn()}
-              className="h-10 px-3 rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] text-xs font-semibold text-[color:var(--ink)] hover:text-[color:var(--accent)] whitespace-nowrap"
-            >
-              Sign in
-            </button>
-          )}
+          <div className="absolute right-4">
+            {isAuthenticated ? (
+              <button
+                type="button"
+                ref={mobilePrefsButtonRef}
+                onClick={() => openPreferences()}
+                className="h-10 w-10 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+                aria-label="Preferences"
+              >
+                <SlidersHorizontal size={22} weight="regular" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => openSignIn()}
+                className="h-10 px-3 rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] text-xs font-semibold text-[color:var(--ink)] hover:text-[color:var(--accent)] whitespace-nowrap"
+              >
+                Sign in
+              </button>
+            )}
+          </div>
         </div>
       </div>
       <aside className="hidden lg:flex p-5 flex-col gap-5 h-fit items-center text-center lg:items-start lg:text-left bg-transparent border-none shadow-none">

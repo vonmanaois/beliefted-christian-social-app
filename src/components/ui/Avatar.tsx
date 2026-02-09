@@ -9,6 +9,7 @@ type AvatarProps = {
   src?: string | null;
   alt: string;
   size: number;
+  sizes?: string;
   href?: string;
   fallback: string;
   className?: string;
@@ -18,13 +19,17 @@ export default function Avatar({
   src,
   alt,
   size,
+  sizes,
   href,
   fallback,
   className,
 }: AvatarProps) {
   const isDataUrl = Boolean(src && src.startsWith("data:image/"));
+  const requestSize = Math.round(size * 2);
   const resolvedSrc =
-    src && !isDataUrl ? cloudinaryTransform(src, { width: size, height: size }) : src;
+    src && !isDataUrl
+      ? cloudinaryTransform(src, { width: requestSize, height: requestSize })
+      : src;
   const content = src ? (
     isDataUrl ? (
       // eslint-disable-next-line @next/next/no-img-element
@@ -39,7 +44,7 @@ export default function Avatar({
         alt={alt}
         width={size}
         height={size}
-        sizes={`${size}px`}
+        sizes={sizes ?? `${size}px`}
         className="h-full w-full object-cover rounded-full"
       />
     )

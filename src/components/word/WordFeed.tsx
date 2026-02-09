@@ -10,9 +10,9 @@ import FeedSkeleton from "@/components/ui/FeedSkeleton";
 type Word = {
   _id: string;
   content: string;
-  createdAt: string;
-  user?: { name?: string | null; username?: string | null } | null;
-  userId?: string | null;
+  createdAt: string | Date;
+  user?: { name?: string | null; username?: string | null; image?: string | null } | null;
+  userId?: string;
   isOwner?: boolean;
 };
 
@@ -55,7 +55,7 @@ export default function WordFeed({ refreshKey, userId }: WordFeedProps) {
           typeof word._id === "string"
             ? word._id
             : String((word._id as { $oid?: string })?.$oid ?? word._id),
-        userId: word.userId ? String(word.userId) : null,
+        userId: word.userId ? String(word.userId) : undefined,
       }));
       return { items, nextCursor: data.nextCursor ?? null };
     },
