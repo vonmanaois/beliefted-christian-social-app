@@ -491,7 +491,10 @@ export default function Sidebar() {
         </div>
       </Modal>
 
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-[color:var(--panel-border)] bg-[color:var(--panel)]/95 backdrop-blur">
+      <nav
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-[color:var(--panel-border)] bg-[color:var(--panel)]/95 backdrop-blur"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
         <div className="flex items-center justify-around px-5 py-3 text-[color:var(--ink)]">
           <button
             type="button"

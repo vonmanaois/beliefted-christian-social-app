@@ -800,7 +800,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
           </div>
         ) : prayer.kind === "request" && requestPoints.length ? (
           <>
-            <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-3 py-1 text-sm font-semibold text-[color:var(--accent)]">
+            <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-3 py-1 text-sm font-semibold text-[color:var(--accent)]">
               <NotePencil size={16} weight="regular" />
               Prayer Request
             </div>
@@ -819,7 +819,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
           </>
         ) : (
           <>
-            <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--surface-strong)] px-3 py-1 text-sm font-semibold text-[color:var(--subtle)]">
+            <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--surface-strong)] px-3 py-1 text-sm font-semibold text-[color:var(--subtle)]">
               <BookOpenText size={16} weight="regular" className="text-[color:var(--accent)]" />
               Prayer
             </div>
