@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 type ProfileHeaderProps = {
   initialName: string;
@@ -21,43 +22,57 @@ export default function ProfileHeader({
   initialBio,
   usernameParam,
 }: ProfileHeaderProps) {
-  const [name, setName] = useState(initialName);
-  const [username, setUsername] = useState(initialUsername);
-  const [bio, setBio] = useState(initialBio ?? "");
+  const queryClient = useQueryClient();
+  const profileKey = useMemo(
+    () =>
+      usernameParam
+        ? (["profile", "summary", usernameParam] as const)
+        : (["profile", "summary"] as const),
+    [usernameParam]
+  );
+
+  const { data: profile } = useQuery({
+    queryKey: profileKey,
+    queryFn: async () => {
+      const query = usernameParam ? `?username=${usernameParam}` : "";
+      const response = await fetch(`/api/user/profile${query}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to load profile");
+      }
+      return (await response.json()) as ProfilePayload;
+    },
+    initialData: {
+      name: initialName,
+      username: initialUsername,
+      bio: initialBio ?? "",
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
 
   useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        const query = usernameParam ? `?username=${usernameParam}` : "";
-        const response = await fetch(`/api/user/profile${query}`, {
-          cache: "no-store",
-        });
-        if (!response.ok) return;
-        const data = (await response.json()) as ProfilePayload;
-        if (data.name) setName(data.name);
-        if (data.username) setUsername(data.username);
-        if (typeof data.bio === "string") setBio(data.bio);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
     const listener = () => {
-      loadProfile();
+      queryClient.invalidateQueries({ queryKey: profileKey });
     };
 
     window.addEventListener("profile:updated", listener);
-    loadProfile();
 
     return () => window.removeEventListener("profile:updated", listener);
-  }, [usernameParam]);
+  }, [profileKey, queryClient]);
 
   return (
     <div>
-      <p className="text-2xl font-semibold text-[color:var(--ink)]">{name}</p>
-      <p className="mt-2 text-sm text-[color:var(--subtle)]">@{username}</p>
-      {bio ? (
-        <p className="mt-2 text-sm text-[color:var(--ink)]">{bio}</p>
+      <p className="text-2xl font-semibold text-[color:var(--ink)]">
+        {profile?.name ?? initialName}
+      </p>
+      <p className="mt-2 text-sm text-[color:var(--subtle)]">
+        @{profile?.username ?? initialUsername}
+      </p>
+      {profile?.bio ? (
+        <p className="mt-2 text-sm text-[color:var(--ink)]">{profile.bio}</p>
       ) : null}
     </div>
   );

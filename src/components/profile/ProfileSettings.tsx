@@ -90,28 +90,7 @@ export default function ProfileSettings({
     "idle"
   );
 
-  useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        const response = await fetch("/api/user/profile", { cache: "no-store" });
-        if (!response.ok) return;
-        const data = (await response.json()) as {
-          name?: string | null;
-          username?: string | null;
-          bio?: string | null;
-          image?: string | null;
-        };
-        if (typeof data.name === "string") setName(data.name);
-        if (typeof data.username === "string") setUsername(data.username);
-        if (typeof data.bio === "string") setBio(data.bio);
-        if (typeof data.image === "string") setImage(data.image);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-    loadProfile();
-  }, []);
+  // Initial values come from props; updates are applied on save.
 
   useEffect(() => {
     const trimmed = username.trim();
