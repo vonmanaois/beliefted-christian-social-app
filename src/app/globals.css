@@ -302,7 +302,7 @@ html[data-theme="banana"] .panel-glass {
   border-radius: 0;
   border: none;
   background: transparent;
-  padding: 14px;
+  padding: 12px;
   border-bottom: 1px solid var(--panel-border);
   cursor: pointer;
 }
@@ -340,7 +340,7 @@ html[data-theme="banana"] .panel-glass {
 
 @media (max-width: 640px) {
   .wall-card {
-    padding: 10px;
+    padding: 8px;
   }
 
   .composer-trigger {
@@ -362,18 +362,27 @@ button:not(:disabled),
 [role="button"]:not([aria-disabled="true"]),
 a {
   cursor: pointer;
+  transition: color 0.15s ease, opacity 0.15s ease;
 }
 
 button:not(:disabled):hover,
 [role="button"]:not([aria-disabled="true"]):hover,
 a:hover {
   color: var(--hover);
+  opacity: 0.85;
 }
 
 button:not(:disabled):hover svg,
 [role="button"]:not([aria-disabled="true"]):hover svg,
 a:hover svg {
   color: var(--hover);
+}
+
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 @keyframes slide-in-left {

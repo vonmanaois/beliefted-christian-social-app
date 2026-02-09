@@ -96,6 +96,7 @@ export default async function PublicProfilePrayersPage({
                 />
               </div>
             )}
+            <div className="my-6 border-t border-[color:var(--panel-border)]" />
           </div>
 
           <ProfileTabs

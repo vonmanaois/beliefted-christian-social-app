@@ -5,6 +5,7 @@
  import { signIn, useSession } from "next-auth/react";
  import Sidebar from "@/components/layout/Sidebar";
  import EmptyState from "@/components/ui/EmptyState";
+ import { BellSimple } from "@phosphor-icons/react";
 
  type NotificationActor = { name?: string | null; image?: string | null };
  type NotificationItem = {
@@ -122,6 +123,7 @@ export default function NotificationsPage() {
                <EmptyState
                  title="All caught up."
                  description="When someone interacts, you’ll see it here."
+                 icon={<BellSimple size={18} weight="regular" />}
                />
              </div>
            ) : (

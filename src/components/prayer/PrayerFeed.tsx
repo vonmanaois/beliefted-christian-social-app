@@ -4,6 +4,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import PrayerCard, { type Prayer } from "@/components/prayer/PrayerCard";
 import EmptyState from "@/components/ui/EmptyState";
+import { HandsClapping } from "@phosphor-icons/react";
 import FeedSkeleton from "@/components/ui/FeedSkeleton";
 
 type PrayerFeedProps = {
@@ -116,6 +117,7 @@ export default function PrayerFeed({ refreshKey, userId }: PrayerFeedProps) {
       <EmptyState
         title="No prayers yet."
         description="Be the first to share something uplifting."
+        icon={<HandsClapping size={18} weight="regular" />}
       />
     );
   }

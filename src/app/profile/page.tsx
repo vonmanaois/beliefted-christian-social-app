@@ -81,6 +81,7 @@ export default async function ProfilePage() {
                 onUpdated={() => {}}
               />
             </div>
+            <div className="my-6 border-t border-[color:var(--panel-border)]" />
           </div>
 
           <ProfileTabs userId={session.user.id} />

@@ -535,7 +535,7 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
   };
 
   return (
-    <article className="wall-card flex gap-3 rounded-none cursor-pointer" onClick={handleCardClick}>
+    <article className="wall-card flex gap-2 sm:gap-3 rounded-none cursor-pointer" onClick={handleCardClick}>
       <div className="avatar-ring">
         <Avatar
           src={word.user?.image ?? null}
@@ -683,7 +683,7 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
         )}
 
         {showComments && (
-          <div className="mt-4 border-t border-slate-100 pt-3" ref={commentFormRef}>
+          <div className="mt-3 border-t border-slate-100 pt-3" ref={commentFormRef}>
             {session?.user?.id && (
               <form onSubmit={handleCommentSubmit} className="flex flex-col gap-2">
                 <textarea
@@ -694,10 +694,7 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
                   onChange={(event) => setCommentText(event.target.value)}
                 />
                 <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--accent)] text-[color:var(--accent-contrast)] cursor-pointer"
-                  >
+                  <button type="submit" className="post-button">
                     Post comment
                   </button>
                 </div>

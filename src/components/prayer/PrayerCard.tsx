@@ -633,7 +633,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
   };
 
   return (
-    <article className="wall-card flex gap-3 rounded-none cursor-pointer" onClick={handleCardClick}>
+    <article className="wall-card flex gap-2 sm:gap-3 rounded-none cursor-pointer" onClick={handleCardClick}>
       <div className="avatar-ring">
         {prayer.isAnonymous ? (
           <div className="avatar-core">
@@ -794,7 +794,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
               <NotePencil size={16} weight="regular" />
               Prayer Request
             </div>
-            <div className="mt-4 space-y-3">
+            <div className="mt-3 space-y-3">
               {requestPoints.map((point, index) => (
                 <div key={`${point.title}-${index}`}>
                   <p className="text-[13px] sm:text-sm font-semibold text-[color:var(--ink)]">
@@ -813,12 +813,12 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
               <BookOpenText size={16} weight="regular" className="text-[color:var(--accent)]" />
               Prayer
             </div>
-            <p className="mt-4 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)]">
+            <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)]">
               {prayer.content}
             </p>
           </>
         )}
-        <div className="mt-2 sm:mt-3 flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs">
+        <div className="mt-2 sm:mt-3 flex items-center gap-1.5 sm:gap-3 text-[11px] sm:text-xs">
           {isOwner ? (
             <span className="text-xs font-semibold text-[color:var(--subtle)]">
               Your prayer
@@ -883,7 +883,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
         )}
 
         {showComments && (
-          <div ref={commentFormRef} className="mt-4 border-t border-slate-100 pt-3">
+          <div ref={commentFormRef} className="mt-3 border-t border-slate-100 pt-3">
             {session?.user?.id && (
               <form onSubmit={handleCommentSubmit} className="flex flex-col gap-2">
                 <textarea
@@ -894,10 +894,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
                   onChange={(event) => setCommentText(event.target.value)}
                 />
                 <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--accent)] text-[color:var(--accent-contrast)] cursor-pointer"
-                  >
+                  <button type="submit" className="post-button">
                     Post comment
                   </button>
                 </div>

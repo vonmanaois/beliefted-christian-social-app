@@ -68,7 +68,7 @@ export default function WhyBelieftedPage() {
               </p>
             </div>
 
-            <section className="mt-10">
+            <section className="mt-10 border-t border-[color:var(--panel-border)] pt-8">
               <h2 className="text-lg font-semibold text-[color:var(--ink)]">
                 Keep Beliefted Free
               </h2>
@@ -90,7 +90,7 @@ export default function WhyBelieftedPage() {
               </p>
             </section>
 
-            <section className="mt-10">
+            <section className="mt-10 border-t border-[color:var(--panel-border)] pt-8">
               <h2 className="text-lg font-semibold text-[color:var(--ink)]">
                 Partnerships & Sponsorships
               </h2>
@@ -107,7 +107,7 @@ export default function WhyBelieftedPage() {
               </p>
             </section>
 
-            <section className="mt-10">
+            <section className="mt-10 border-t border-[color:var(--panel-border)] pt-8">
               <h2 className="text-lg font-semibold text-[color:var(--ink)]">
                 About the Creator
               </h2>
