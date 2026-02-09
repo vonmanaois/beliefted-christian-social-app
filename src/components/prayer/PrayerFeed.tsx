@@ -10,9 +10,10 @@ import FeedSkeleton from "@/components/ui/FeedSkeleton";
 type PrayerFeedProps = {
   refreshKey: number;
   userId?: string;
+  followingOnly?: boolean;
 };
 
-export default function PrayerFeed({ refreshKey, userId }: PrayerFeedProps) {
+export default function PrayerFeed({ refreshKey, userId, followingOnly }: PrayerFeedProps) {
   const {
     data,
     isLoading,
@@ -23,12 +24,13 @@ export default function PrayerFeed({ refreshKey, userId }: PrayerFeedProps) {
     isError,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ["prayers", userId, refreshKey],
+    queryKey: ["prayers", userId, refreshKey, followingOnly ? "following" : "all"],
     queryFn: async ({ pageParam }: { pageParam?: string | null }) => {
       const params = new URLSearchParams();
       if (userId) params.set("userId", userId);
       if (pageParam) params.set("cursor", pageParam);
-      params.set("limit", "20");
+      params.set("limit", "6");
+      if (followingOnly) params.set("following", "true");
 
       const response = await fetch(`/api/prayers?${params.toString()}`, {
         cache: "no-store",

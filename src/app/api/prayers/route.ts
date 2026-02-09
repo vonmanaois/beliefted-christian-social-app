@@ -15,10 +15,25 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get("userId");
   const cursor = searchParams.get("cursor");
-  const limitParam = Number(searchParams.get("limit") ?? 20);
-  const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 50) : 20;
+  const followingOnly = searchParams.get("following") === "true";
+  const limitParam = Number(searchParams.get("limit") ?? 6);
+  const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 50) : 6;
 
   await dbConnect();
+
+  let followingIds: Types.ObjectId[] = [];
+  if (followingOnly) {
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const currentUser = await UserModel.findById(session.user.id)
+      .select("following")
+      .lean();
+    const rawFollowing = Array.isArray(currentUser?.following) ? currentUser.following : [];
+    followingIds = rawFollowing
+      .map((id) => (typeof id === "string" ? new Types.ObjectId(id) : id))
+      .filter(Boolean);
+  }
 
   const loadPrayers = async (viewerId: string | null) => {
     const isOwnerView = Boolean(viewerId && userId && viewerId === userId);
@@ -29,6 +44,9 @@ export async function GET(req: Request) {
       if (!isOwnerView) {
         conditions.push({ isAnonymous: false });
       }
+    }
+    if (followingOnly) {
+      conditions.push({ userId: { $in: followingIds } });
     }
 
     if (cursor) {
@@ -122,7 +140,7 @@ export async function GET(req: Request) {
     return { items: sanitized, nextCursor };
   };
 
-  if (!session?.user?.id && !userId) {
+  if (!session?.user?.id && !userId && !followingOnly) {
     const cached = unstable_cache(
       () => loadPrayers(null),
       ["prayers-feed", cursor ?? "start", String(limit)],

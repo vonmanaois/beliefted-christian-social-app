@@ -6,8 +6,9 @@ import { signIn, useSession } from "next-auth/react";
 import { useQueryClient } from "@tanstack/react-query";
 import PrayerWall from "@/components/prayer/PrayerWall";
 import WordWall from "@/components/word/WordWall";
+import FollowingWall from "@/components/home/FollowingWall";
 
-const tabs = ["Faith Share", "Prayer Wall"] as const;
+const tabs = ["Faith Share", "Prayer Wall", "Following"] as const;
 
 type Tab = (typeof tabs)[number];
 
@@ -22,6 +23,9 @@ export default function HomeTabs() {
     if (pathname === "/prayerwall") {
       return "Prayer Wall";
     }
+    if (pathname === "/following") {
+      return "Following";
+    }
     return "Faith Share";
   }, [pathname]);
 
@@ -35,7 +39,7 @@ export default function HomeTabs() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (pathname !== "/" && pathname !== "/prayerwall") {
+    if (pathname !== "/" && pathname !== "/prayerwall" && pathname !== "/following") {
       return;
     }
     let source: EventSource | null = null;
@@ -108,7 +112,7 @@ export default function HomeTabs() {
         queryFn: async ({ pageParam }: { pageParam?: string | null }) => {
           const params = new URLSearchParams();
           if (pageParam) params.set("cursor", pageParam);
-          params.set("limit", "20");
+          params.set("limit", "6");
           const response = await fetch(`/api/words?${params.toString()}`, {
             cache: "no-store",
           });
@@ -126,7 +130,7 @@ export default function HomeTabs() {
         queryFn: async ({ pageParam }: { pageParam?: string | null }) => {
           const params = new URLSearchParams();
           if (pageParam) params.set("cursor", pageParam);
-          params.set("limit", "20");
+          params.set("limit", "6");
           const response = await fetch(`/api/prayers?${params.toString()}`, {
             cache: "no-store",
           });
@@ -139,7 +143,7 @@ export default function HomeTabs() {
 
     if (activeTab === "Prayer Wall") {
       void prefetchWords();
-    } else {
+    } else if (activeTab === "Faith Share") {
       void prefetchPrayers();
     }
   }, [activeTab, queryClient]);
@@ -166,7 +170,13 @@ export default function HomeTabs() {
               key={tab}
               type="button"
               onClick={() => {
-      router.push(tab === "Prayer Wall" ? "/prayerwall" : "/");
+                router.push(
+                  tab === "Prayer Wall"
+                    ? "/prayerwall"
+                    : tab === "Following"
+                      ? "/following"
+                      : "/"
+                );
               }}
               className={`flex-1 px-4 py-2 text-sm font-semibold transition ${
                 activeTab === tab
@@ -181,13 +191,19 @@ export default function HomeTabs() {
       </div>
 
       <div className="md:hidden w-full pt-2">
-        <div className="grid w-full max-w-none grid-cols-2 rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-1">
+        <div className="grid w-full max-w-none grid-cols-3 rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-1">
           {tabs.map((tab) => (
             <button
               key={tab}
               type="button"
               onClick={() => {
-                router.push(tab === "Prayer Wall" ? "/prayerwall" : "/");
+                router.push(
+                  tab === "Prayer Wall"
+                    ? "/prayerwall"
+                    : tab === "Following"
+                      ? "/following"
+                      : "/"
+                );
               }}
               className={`w-full rounded-lg px-3 py-2 text-xs font-semibold transition ${
                 activeTab === tab
@@ -201,7 +217,13 @@ export default function HomeTabs() {
         </div>
       </div>
 
-      {activeTab === "Prayer Wall" ? <PrayerWall /> : <WordWall />}
+      {activeTab === "Prayer Wall" ? (
+        <PrayerWall />
+      ) : activeTab === "Following" ? (
+        <FollowingWall />
+      ) : (
+        <WordWall />
+      )}
     </section>
   );
 }

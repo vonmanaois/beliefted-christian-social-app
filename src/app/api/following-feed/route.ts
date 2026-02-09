@@ -1,0 +1,166 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import dbConnect from "@/lib/db";
+import UserModel from "@/models/User";
+import PrayerModel from "@/models/Prayer";
+import WordModel from "@/models/Word";
+import CommentModel from "@/models/Comment";
+import WordCommentModel from "@/models/WordComment";
+import { Types } from "mongoose";
+
+type FollowingItem =
+  | { type: "word"; word: Record<string, unknown> }
+  | { type: "prayer"; prayer: Record<string, unknown> };
+
+export async function GET(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const cursor = searchParams.get("cursor");
+  const limitParam = Number(searchParams.get("limit") ?? 6);
+  const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 50) : 6;
+
+  await dbConnect();
+
+  const currentUser = await UserModel.findById(session.user.id)
+    .select("following")
+    .lean();
+  const rawFollowing = Array.isArray(currentUser?.following) ? currentUser.following : [];
+  const followingIds = rawFollowing
+    .map((id) => (typeof id === "string" ? new Types.ObjectId(id) : id))
+    .filter(Boolean);
+
+  if (followingIds.length === 0) {
+    return NextResponse.json({ items: [], nextCursor: null });
+  }
+
+  let cursorDate: Date | null = null;
+  let cursorId: Types.ObjectId | null = null;
+  if (cursor) {
+    const decoded = Buffer.from(cursor, "base64").toString("utf8");
+    const [createdAtRaw, idRaw] = decoded.split("|");
+    const createdAt = createdAtRaw ? new Date(createdAtRaw) : null;
+    const parsedId = idRaw && Types.ObjectId.isValid(idRaw) ? new Types.ObjectId(idRaw) : null;
+    if (createdAt && !Number.isNaN(createdAt.getTime())) {
+      cursorDate = createdAt;
+      cursorId = parsedId;
+    }
+  }
+
+  const buildCursorFilter = () => {
+    if (!cursorDate) return {};
+    return {
+      $or: [
+        { createdAt: { $lt: cursorDate } },
+        ...(cursorId ? [{ createdAt: cursorDate, _id: { $lt: cursorId } }] : []),
+      ],
+    };
+  };
+
+  const cursorFilter = buildCursorFilter();
+
+  const [words, prayers] = await Promise.all([
+    WordModel.find({
+      userId: { $in: followingIds },
+      ...cursorFilter,
+    })
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(limit + 1)
+      .lean(),
+    PrayerModel.find({
+      userId: { $in: followingIds },
+      ...cursorFilter,
+      isAnonymous: false,
+    })
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(limit + 1)
+      .lean(),
+  ]);
+
+  const combined = [
+    ...words.map((word) => ({ type: "word" as const, data: word })),
+    ...prayers.map((prayer) => ({ type: "prayer" as const, data: prayer })),
+  ].sort((a, b) => {
+    const aDate = new Date(a.data.createdAt as Date).getTime();
+    const bDate = new Date(b.data.createdAt as Date).getTime();
+    if (aDate !== bDate) return bDate - aDate;
+    return String(b.data._id).localeCompare(String(a.data._id));
+  });
+
+  const sliced = combined.slice(0, limit + 1);
+  const pageItems = sliced.slice(0, limit);
+
+  const userIds = pageItems
+    .map((item) => String(item.data.userId))
+    .filter(Boolean);
+  const uniqueUserIds = Array.from(new Set(userIds));
+  const users = uniqueUserIds.length
+    ? await UserModel.find({ _id: { $in: uniqueUserIds } })
+        .select("name image username")
+        .lean()
+    : [];
+  const userMap = new Map(
+    users.map((user) => [String(user._id), { name: user.name, image: user.image, username: user.username }])
+  );
+
+  const items: FollowingItem[] = await Promise.all(
+    pageItems.map(async (item) => {
+      if (item.type === "word") {
+        const word = item.data;
+        const user = userMap.get(String(word.userId)) ?? {
+          name: word.authorName,
+          image: word.authorImage,
+          username: word.authorUsername,
+        };
+        const commentCount = await WordCommentModel.countDocuments({ wordId: word._id });
+        return {
+          type: "word",
+          word: {
+            ...word,
+            _id: word._id.toString(),
+            user,
+            commentCount,
+            userId: String(word.userId),
+          },
+        };
+      }
+
+      const prayer = item.data;
+      const user = userMap.get(String(prayer.userId)) ?? {
+        name: prayer.authorName,
+        image: prayer.authorImage,
+        username: prayer.authorUsername,
+      };
+      const commentCount = await CommentModel.countDocuments({ prayerId: prayer._id });
+      const prayedBy = Array.isArray(prayer.prayedBy)
+        ? prayer.prayedBy.map((id: unknown) => String(id))
+        : [];
+      return {
+        type: "prayer",
+        prayer: {
+          ...prayer,
+          _id: prayer._id.toString(),
+          user,
+          commentCount,
+          userId: String(prayer.userId),
+          prayedBy,
+          isAnonymous: false,
+        },
+      };
+    })
+  );
+
+  const last = pageItems[pageItems.length - 1];
+  const nextCursor =
+    sliced.length > limit && last
+      ? Buffer.from(`${new Date(last.data.createdAt as Date).toISOString()}|${String(last.data._id)}`).toString(
+          "base64"
+        )
+      : null;
+
+  return NextResponse.json({ items, nextCursor });
+}

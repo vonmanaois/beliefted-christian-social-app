@@ -19,9 +19,10 @@ type Word = {
 type WordFeedProps = {
   refreshKey: number;
   userId?: string;
+  followingOnly?: boolean;
 };
 
-export default function WordFeed({ refreshKey, userId }: WordFeedProps) {
+export default function WordFeed({ refreshKey, userId, followingOnly }: WordFeedProps) {
   const {
     data,
     isLoading,
@@ -32,12 +33,13 @@ export default function WordFeed({ refreshKey, userId }: WordFeedProps) {
     isError,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ["words", userId, refreshKey],
+    queryKey: ["words", userId, refreshKey, followingOnly ? "following" : "all"],
     queryFn: async ({ pageParam }: { pageParam?: string | null }) => {
       const params = new URLSearchParams();
       if (userId) params.set("userId", userId);
       if (pageParam) params.set("cursor", pageParam);
-      params.set("limit", "20");
+      params.set("limit", "6");
+      if (followingOnly) params.set("following", "true");
 
       const response = await fetch(`/api/words?${params.toString()}`, {
         cache: "no-store",

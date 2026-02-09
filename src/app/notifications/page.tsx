@@ -8,7 +8,12 @@
  import EmptyState from "@/components/ui/EmptyState";
  import { BellSimple, X } from "@phosphor-icons/react";
 
- type NotificationActor = { name?: string | null; image?: string | null; username?: string | null };
+ type NotificationActor = {
+   _id?: string | null;
+   name?: string | null;
+   image?: string | null;
+   username?: string | null;
+ };
  type NotificationRecipient = { username?: string | null };
  type NotificationItem = {
    _id: string;
@@ -26,6 +31,7 @@
    prayerId?: { _id?: string; content?: string; authorUsername?: string | null } | null;
    wordId?: { _id?: string; content?: string; authorUsername?: string | null } | null;
    faithStoryId?: { _id?: string; title?: string; authorUsername?: string | null } | null;
+   isFollowing?: boolean;
   };
 
 export default function NotificationsPage() {
@@ -92,6 +98,32 @@ export default function NotificationsPage() {
      onSuccess: () => {
        queryClient.invalidateQueries({ queryKey: ["notifications"] });
        queryClient.invalidateQueries({ queryKey: ["notifications", "count"] });
+     },
+   });
+
+   const followBackMutation = useMutation({
+     mutationFn: async (userId: string) => {
+       const response = await fetch("/api/user/follow", {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify({ userId }),
+       });
+       if (!response.ok) {
+         throw new Error("Failed to follow back");
+       }
+     },
+     onSuccess: (_data, userId) => {
+       queryClient.setQueryData<NotificationItem[]>(["notifications"], (current = []) =>
+         current.map((note) =>
+           note.type === "follow" && note.actorId?._id === userId
+             ? { ...note, isFollowing: true }
+             : note
+         )
+       );
+       queryClient.invalidateQueries({ queryKey: ["notifications", "count"] });
+       if (typeof window !== "undefined") {
+         window.dispatchEvent(new Event("notifications:refresh"));
+       }
      },
    });
 
@@ -226,14 +258,27 @@ export default function NotificationsPage() {
                          <div className="flex-1">{content}</div>
                        );
                      })()}
-                     <button
-                       type="button"
-                       onClick={() => deleteMutation.mutate(note._id)}
-                       className="h-8 w-8 rounded-full border border-[color:var(--panel-border)] text-[color:var(--subtle)] hover:text-[color:var(--ink)] flex items-center justify-center"
-                       aria-label="Dismiss notification"
-                     >
-                       <X size={14} weight="bold" />
-                     </button>
+                     <div className="flex flex-col items-end gap-2">
+                       {note.type === "follow" &&
+                         note.actorId?._id &&
+                         !note.isFollowing && (
+                           <button
+                             type="button"
+                             onClick={() => followBackMutation.mutate(note.actorId?._id ?? "")}
+                             className="rounded-lg px-3 py-1 text-xs font-semibold bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
+                           >
+                             Follow back
+                           </button>
+                         )}
+                       <button
+                         type="button"
+                         onClick={() => deleteMutation.mutate(note._id)}
+                         className="h-8 w-8 rounded-full border border-[color:var(--panel-border)] text-[color:var(--subtle)] hover:text-[color:var(--ink)] flex items-center justify-center"
+                         aria-label="Dismiss notification"
+                       >
+                         <X size={14} weight="bold" />
+                       </button>
+                     </div>
                    </div>
                  </div>
                ))}
