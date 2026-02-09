@@ -105,6 +105,10 @@ export default async function PostDetailPage({ params }: PageProps) {
                   ...word,
                   _id: word._id.toString(),
                   userId: word.userId?.toString() ?? null,
+                  createdAt:
+                    word.createdAt instanceof Date
+                      ? word.createdAt.toISOString()
+                      : (word.createdAt as unknown as string),
                   isOwner: Boolean(
                     session?.user?.id && String(word.userId) === String(session.user.id)
                   ),
