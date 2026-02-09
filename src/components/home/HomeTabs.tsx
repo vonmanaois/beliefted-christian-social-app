@@ -3,6 +3,7 @@
 import { useEffect, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
+import { useQueryClient } from "@tanstack/react-query";
 import PrayerWall from "@/components/prayer/PrayerWall";
 import WordWall from "@/components/word/WordWall";
 
@@ -15,6 +16,7 @@ export default function HomeTabs() {
   const isAuthenticated = status === "authenticated";
   const router = useRouter();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
 
   const activeTab = useMemo<Tab>(() => {
     if (pathname === "/prayerwall") {
@@ -38,6 +40,50 @@ export default function HomeTabs() {
     window.addEventListener("open-word-composer", handleOpenWord);
     return () => window.removeEventListener("open-word-composer", handleOpenWord);
   }, [router]);
+
+  useEffect(() => {
+    const prefetchWords = () =>
+      queryClient.prefetchInfiniteQuery({
+        queryKey: ["words", undefined, 0],
+        initialPageParam: null,
+        queryFn: async ({ pageParam }: { pageParam?: string | null }) => {
+          const params = new URLSearchParams();
+          if (pageParam) params.set("cursor", pageParam);
+          params.set("limit", "20");
+          const response = await fetch(`/api/words?${params.toString()}`, {
+            cache: "no-store",
+          });
+          if (!response.ok) {
+            throw new Error("Failed to prefetch words");
+          }
+          return response.json();
+        },
+      });
+
+    const prefetchPrayers = () =>
+      queryClient.prefetchInfiniteQuery({
+        queryKey: ["prayers", undefined, 0],
+        initialPageParam: null,
+        queryFn: async ({ pageParam }: { pageParam?: string | null }) => {
+          const params = new URLSearchParams();
+          if (pageParam) params.set("cursor", pageParam);
+          params.set("limit", "20");
+          const response = await fetch(`/api/prayers?${params.toString()}`, {
+            cache: "no-store",
+          });
+          if (!response.ok) {
+            throw new Error("Failed to prefetch prayers");
+          }
+          return response.json();
+        },
+      });
+
+    if (activeTab === "Prayer Wall") {
+      void prefetchWords();
+    } else {
+      void prefetchPrayers();
+    }
+  }, [activeTab, queryClient]);
 
   return (
     <section className="flex flex-col gap-6 w-full">

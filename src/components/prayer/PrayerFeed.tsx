@@ -1,6 +1,6 @@
 "use client";
 
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import PrayerCard, { type Prayer } from "@/components/prayer/PrayerCard";
 import EmptyState from "@/components/ui/EmptyState";
@@ -55,8 +55,9 @@ export default function PrayerFeed({ refreshKey, userId }: PrayerFeedProps) {
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     initialPageParam: null,
-    staleTime: 10000,
-    refetchOnWindowFocus: true,
+    staleTime: 60000,
+    placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false,
   });
 
   const pullStartRef = useRef<number | null>(null);

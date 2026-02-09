@@ -1,6 +1,6 @@
 "use client";
 
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import WordCard from "@/components/word/WordCard";
 import EmptyState from "@/components/ui/EmptyState";
@@ -61,8 +61,9 @@ export default function WordFeed({ refreshKey, userId }: WordFeedProps) {
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     initialPageParam: null,
-    staleTime: 10000,
-    refetchOnWindowFocus: true,
+    staleTime: 60000,
+    placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false,
   });
 
   const words = data?.pages.flatMap((page) => page.items) ?? [];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
@@ -40,8 +40,6 @@ export default function Sidebar() {
     closePreferences,
     togglePreferences,
   } = useUIStore();
-  const [profileUsername, setProfileUsername] = useState<string | null>(null);
-  const [onboardingComplete, setOnboardingComplete] = useState(true);
   const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "von.manaois@gmail.com";
   const prefsButtonRef = useRef<HTMLButtonElement | null>(null);
   const mobilePrefsButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -112,6 +110,7 @@ export default function Sidebar() {
     }
 
     const connect = () => {
+      if (document.visibilityState === "hidden") return;
       if (notificationStream) return;
       notificationStream = new EventSource("/api/notifications/stream");
 
@@ -141,9 +140,20 @@ export default function Sidebar() {
       };
     };
 
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        notificationStream?.close();
+        notificationStream = null;
+        return;
+      }
+      connect();
+    };
+
     connect();
+    document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
       notificationStreamUsers = Math.max(0, notificationStreamUsers - 1);
       if (notificationStreamUsers === 0) {
         notificationStreamCloseTimer = setTimeout(() => {
@@ -188,22 +198,19 @@ export default function Sidebar() {
     refetchOnWindowFocus: false,
   });
 
-  useEffect(() => {
-    if (!profileSummary) return;
-    if (typeof profileSummary.username === "string") {
-      setProfileUsername(profileSummary.username);
-    }
-    if (typeof profileSummary.onboardingComplete === "boolean") {
-      setOnboardingComplete(profileSummary.onboardingComplete);
-    }
-  }, [profileSummary]);
+  const resolvedUsername =
+    typeof profileSummary?.username === "string" ? profileSummary.username : null;
+  const resolvedOnboardingComplete =
+    typeof profileSummary?.onboardingComplete === "boolean"
+      ? profileSummary.onboardingComplete
+      : true;
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    if (onboardingComplete) return;
+    if (resolvedOnboardingComplete) return;
     if (pathname === "/onboarding") return;
     router.push("/onboarding");
-  }, [isAuthenticated, onboardingComplete, pathname, router]);
+  }, [isAuthenticated, resolvedOnboardingComplete, pathname, router]);
 
   useEffect(() => {
     const handleOpenSignIn = () => openSignIn();
@@ -334,8 +341,8 @@ export default function Sidebar() {
           className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
           onClick={() => {
             if (isAuthenticated) {
-              if (profileUsername) {
-                router.push(`/profile/${profileUsername}`);
+              if (resolvedUsername) {
+                router.push(`/profile/${resolvedUsername}`);
               } else {
                 router.push("/profile");
               }
@@ -489,8 +496,8 @@ export default function Sidebar() {
             className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
             onClick={() => {
               if (isAuthenticated) {
-                if (profileUsername) {
-                  router.push(`/profile/${profileUsername}`);
+                if (resolvedUsername) {
+                  router.push(`/profile/${resolvedUsername}`);
                 } else {
                   router.push("/profile");
                 }
