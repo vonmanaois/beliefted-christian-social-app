@@ -57,8 +57,8 @@ export default async function PostDetailPage({ params }: PageProps) {
                   ),
                   prayedBy: (prayer.prayedBy ?? []).map((id) => id.toString()),
                   prayerPoints: (prayer.prayerPoints ?? []).map((point) => ({
-                    title: point.title,
-                    description: point.description,
+                    title: point.title ?? "",
+                    description: point.description ?? "",
                   })),
                   commentCount,
                   user: prayer.isAnonymous
