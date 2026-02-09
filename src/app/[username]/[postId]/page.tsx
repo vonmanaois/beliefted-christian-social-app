@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Types } from "mongoose";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
@@ -28,8 +28,14 @@ export default async function PostDetailPage({ params }: PageProps) {
 
   const prayer = await PrayerModel.findById(postId).lean();
   if (prayer) {
-    if (!prayer.isAnonymous && prayer.authorUsername && prayer.authorUsername !== username) {
-      notFound();
+    if (!prayer.isAnonymous) {
+      const currentUser = await UserModel.findById(prayer.userId)
+        .select("username name image")
+        .lean();
+      const canonicalUsername = currentUser?.username ?? prayer.authorUsername ?? null;
+      if (canonicalUsername && canonicalUsername !== username) {
+        redirect(`/${canonicalUsername}/${postId}`);
+      }
     }
 
     const commentCount = await CommentModel.countDocuments({ prayerId: prayer._id });
@@ -86,8 +92,12 @@ export default async function PostDetailPage({ params }: PageProps) {
 
   const word = await WordModel.findById(postId).lean();
   if (word) {
-    if (word.authorUsername && word.authorUsername !== username) {
-      notFound();
+    const currentUser = await UserModel.findById(word.userId)
+      .select("username name image")
+      .lean();
+    const canonicalUsername = currentUser?.username ?? word.authorUsername ?? null;
+    if (canonicalUsername && canonicalUsername !== username) {
+      redirect(`/${canonicalUsername}/${postId}`);
     }
     const commentCount = await WordCommentModel.countDocuments({ wordId: word._id });
     const user = await UserModel.findById(word.userId)

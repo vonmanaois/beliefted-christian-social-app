@@ -439,6 +439,9 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
     onSuccess: async () => {
       setShowMenu(false);
       await queryClient.invalidateQueries({ queryKey: ["words"] });
+      if (defaultShowComments) {
+        router.back();
+      }
     },
   });
   const isDeleting = deleteMutation.isPending;

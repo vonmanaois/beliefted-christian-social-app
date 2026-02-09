@@ -467,6 +467,9 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     onSuccess: async () => {
       setShowMenu(false);
       await queryClient.invalidateQueries({ queryKey: ["prayers"] });
+      if (defaultShowComments) {
+        router.back();
+      }
     },
   });
   const isDeleting = deleteMutation.isPending;
