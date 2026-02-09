@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MagnifyingGlass, PlusCircle } from "@phosphor-icons/react";
+import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import EmptyState from "@/components/ui/EmptyState";
@@ -122,10 +122,10 @@ export default function FaithStoryList() {
             <button
               type="button"
               onClick={() => setShowCreate(true)}
-              className="h-10 w-10 rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-contrast)] inline-flex items-center justify-center"
+              className="text-[color:var(--ink)] hover:text-[color:var(--accent)] inline-flex items-center justify-center"
               aria-label="New story"
             >
-              <PlusCircle size={18} weight="fill" />
+              <Plus size={22} weight="regular" />
             </button>
           )}
         </div>

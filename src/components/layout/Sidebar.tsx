@@ -170,14 +170,24 @@ export default function Sidebar() {
     <>
       <div className="lg:hidden sticky top-0 z-40 bg-[color:var(--panel)]/95 backdrop-blur">
         <div className="flex items-center justify-between px-4 py-3 h-12">
-          <button
-            type="button"
-            onClick={handleWhyClick}
-            className="h-10 w-10 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-            aria-label="Why Beliefted"
-          >
-            <Info size={22} weight="regular" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => router.push("/")}
+              className="h-10 w-10 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+              aria-label="Home"
+            >
+              <House size={22} weight="regular" />
+            </button>
+            <button
+              type="button"
+              onClick={handleWhyClick}
+              className="h-10 w-10 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+              aria-label="Why Beliefted"
+            >
+              <Info size={22} weight="regular" />
+            </button>
+          </div>
           <button
             type="button"
             onClick={() => router.push("/")}
@@ -419,17 +429,6 @@ export default function Sidebar() {
             type="button"
             className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
             onClick={() => {
-              router.push("/");
-              queryClient.invalidateQueries({ queryKey: ["prayers"] });
-              queryClient.invalidateQueries({ queryKey: ["words"] });
-            }}
-          >
-            <House size={24} weight="regular" />
-          </button>
-          <button
-            type="button"
-            className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-            onClick={() => {
               if (isAuthenticated) {
                 if (profileUsername) {
                   router.push(`/profile/${profileUsername}`);
@@ -456,14 +455,16 @@ export default function Sidebar() {
           <button
             type="button"
             className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-            onClick={openNotifications}
+            onClick={() => {
+              if (pathname === "/search") {
+                triggerPanelClose("search");
+                return;
+              }
+              router.push("/search");
+            }}
+            aria-label="Search people"
           >
-            <span className="relative">
-              <BellSimple size={24} weight="regular" />
-              {isAuthenticated && notificationsCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-[color:var(--accent)]" />
-              )}
-            </span>
+            <MagnifyingGlass size={24} weight="regular" />
           </button>
           <button
             type="button"
@@ -476,16 +477,14 @@ export default function Sidebar() {
           <button
             type="button"
             className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-            onClick={() => {
-              if (pathname === "/search") {
-                triggerPanelClose("search");
-                return;
-              }
-              router.push("/search");
-            }}
-            aria-label="Search people"
+            onClick={openNotifications}
           >
-            <MagnifyingGlass size={24} weight="regular" />
+            <span className="relative">
+              <BellSimple size={24} weight="regular" />
+              {isAuthenticated && notificationsCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-[color:var(--accent)]" />
+              )}
+            </span>
           </button>
         </div>
       </nav>
