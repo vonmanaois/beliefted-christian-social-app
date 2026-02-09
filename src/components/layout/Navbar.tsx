@@ -1,6 +1,7 @@
 "use client";
 
 import { signIn, signOut, useSession } from "next-auth/react";
+import Image from "next/image";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
@@ -9,9 +10,11 @@ export default function Navbar() {
   return (
     <nav className="panel px-6 py-4 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <img
+        <Image
           src="/images/beliefted-logo.svg"
           alt="Beliefted"
+          width={36}
+          height={36}
           className="h-9 w-9 rounded-full"
         />
         <div>

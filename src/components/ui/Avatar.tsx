@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import UserIcon from "@/components/ui/UserIcon";
+import { cloudinaryTransform } from "@/lib/cloudinary";
 
 type AvatarProps = {
   src?: string | null;
@@ -22,6 +23,8 @@ export default function Avatar({
   className,
 }: AvatarProps) {
   const isDataUrl = Boolean(src && src.startsWith("data:image/"));
+  const resolvedSrc =
+    src && !isDataUrl ? cloudinaryTransform(src, { width: size, height: size }) : src;
   const content = src ? (
     isDataUrl ? (
       // eslint-disable-next-line @next/next/no-img-element
@@ -32,7 +35,7 @@ export default function Avatar({
       />
     ) : (
       <Image
-        src={src}
+        src={resolvedSrc ?? ""}
         alt={alt}
         width={size}
         height={size}
@@ -40,6 +43,8 @@ export default function Avatar({
         className="h-full w-full object-cover rounded-full"
       />
     )
+  ) : fallback ? (
+    <span className="text-[11px] font-semibold text-slate-500">{fallback}</span>
   ) : (
     <UserIcon size={Math.round(size * 0.95)} />
   );

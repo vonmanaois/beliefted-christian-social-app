@@ -91,7 +91,7 @@ test.describe("Authenticated flows", () => {
 
   test("follow and notification flow", async ({ page }) => {
     const primary = await loginAs(page, "primary");
-    const secondary = await loginAs(page, "secondary");
+    await loginAs(page, "secondary");
 
     await page.goto(`/profile/${primary.username}`);
     await page.getByRole("button", { name: /^Follow$/ }).click();

@@ -18,6 +18,15 @@ GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 ```
 
+For production (e.g., Vercel), set `NEXTAUTH_URL` to your live domain:
+```
+NEXTAUTH_URL=https://YOUR_DOMAIN
+```
+And add this Google OAuth redirect URI:
+```
+https://YOUR_DOMAIN/api/auth/callback/google
+```
+
 ## 2) Architecture Overview
 
 **Next.js App Router**

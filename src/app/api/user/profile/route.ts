@@ -35,12 +35,28 @@ export async function PATCH(req: Request) {
   const name = (body.data.name ?? "").trim();
   const bio = (body.data.bio ?? "").trim();
   const image = (body.data.image ?? "").trim();
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
 
-  if (image && (!image.startsWith("data:image/") || image.length > 1_000_000)) {
-    return NextResponse.json(
-      { error: "Invalid image data." },
-      { status: 400 }
-    );
+  if (image) {
+    let parsed: URL | null = null;
+    try {
+      parsed = new URL(image);
+    } catch {
+      return NextResponse.json({ error: "Invalid image URL." }, { status: 400 });
+    }
+
+    const isCloudinary =
+      cloudName &&
+      parsed.hostname === "res.cloudinary.com" &&
+      parsed.pathname.startsWith(`/${cloudName}/`);
+    const isGoogleAvatar = parsed.hostname === "lh3.googleusercontent.com";
+
+    if (!isCloudinary && !isGoogleAvatar) {
+      return NextResponse.json(
+        { error: "Image URL must be a Cloudinary or Google image." },
+        { status: 400 }
+      );
+    }
   }
 
   if (!usernameRegex.test(username)) {

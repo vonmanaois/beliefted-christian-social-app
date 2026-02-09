@@ -9,6 +9,7 @@ import PostForm from "@/components/prayer/PostForm";
 import WordForm from "@/components/word/WordForm";
 import Modal from "@/components/layout/Modal";
 import { UserCircle } from "@phosphor-icons/react";
+import { cloudinaryTransform } from "@/lib/cloudinary";
 
 const tabs = ["Faith Share", "Prayers"] as const;
 
@@ -101,7 +102,7 @@ export default function ProfileTabs({
                     {session?.user?.image ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={session.user.image}
+                        src={cloudinaryTransform(session.user.image, { width: 64, height: 64 })}
                         alt=""
                         className="h-full w-full object-cover"
                       />
@@ -128,7 +129,7 @@ export default function ProfileTabs({
                     {session?.user?.image ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={session.user.image}
+                        src={cloudinaryTransform(session.user.image, { width: 64, height: 64 })}
                         alt=""
                         className="h-full w-full object-cover"
                       />

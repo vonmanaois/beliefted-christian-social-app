@@ -42,6 +42,16 @@ npm run dev
 
 Open http://localhost:3000
 
+## Production
+When deploying (e.g., Vercel), set `NEXTAUTH_URL` to your live domain:
+```env
+NEXTAUTH_URL=https://YOUR_DOMAIN
+```
+Also add this redirect URI in Google OAuth:
+```
+https://YOUR_DOMAIN/api/auth/callback/google
+```
+
 ## Scripts
 - `npm run dev` — start dev server
 - `npm run build` — build for production

@@ -6,6 +6,7 @@ import { signOut } from "next-auth/react";
 import { UserSquare } from "@phosphor-icons/react";
 import Modal from "@/components/layout/Modal";
 import Button from "@/components/ui/Button";
+import { cloudinaryTransform } from "@/lib/cloudinary";
 
 type ProfileSettingsProps = {
   currentUsername?: string | null;
@@ -18,6 +19,49 @@ type ProfileSettingsProps = {
   submitDisabled?: boolean;
   submitDisabledMessage?: string | null;
 };
+
+const compressToSquare = (file: File, size: number, quality: number) =>
+  new Promise<Blob>((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      const minSide = Math.min(img.width, img.height);
+      const sx = (img.width - minSide) / 2;
+      const sy = (img.height - minSide) / 2;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error("Failed to process image."));
+        return;
+      }
+
+      ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+      canvas.toBlob(
+        (blob) => {
+          URL.revokeObjectURL(objectUrl);
+          if (!blob) {
+            reject(new Error("Failed to process image."));
+            return;
+          }
+          resolve(blob);
+        },
+        "image/jpeg",
+        quality
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Failed to load image."));
+    };
+
+    img.src = objectUrl;
+  });
 
 export default function ProfileSettings({
   currentUsername,
@@ -38,6 +82,7 @@ export default function ProfileSettings({
   const [imageError, setImageError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "ok" | "taken">(
@@ -94,6 +139,68 @@ export default function ProfileSettings({
     return () => clearTimeout(timer);
   }, [username, currentUsername]);
 
+  const uploadProfileImage = async (file: File) => {
+    setImageError(null);
+    setMessage(null);
+    setIsUploading(true);
+
+    try {
+      if (!file.type.startsWith("image/")) {
+        throw new Error("Please choose an image file.");
+      }
+
+      const preparedBlob = await compressToSquare(file, 512, 0.82);
+      const signResponse = await fetch("/api/cloudinary/sign", { method: "POST" });
+      if (!signResponse.ok) {
+        throw new Error("Failed to prepare upload.");
+      }
+      const signData = (await signResponse.json()) as {
+        cloudName: string;
+        apiKey: string;
+        timestamp: number;
+        folder: string;
+        publicId: string;
+        invalidate: string;
+        signature: string;
+      };
+
+      const formData = new FormData();
+      formData.append("file", preparedBlob, "profile.jpg");
+      formData.append("api_key", signData.apiKey);
+      formData.append("timestamp", String(signData.timestamp));
+      formData.append("signature", signData.signature);
+      formData.append("folder", signData.folder);
+      formData.append("public_id", signData.publicId);
+      formData.append("invalidate", signData.invalidate);
+
+      const uploadResponse = await fetch(
+        `https://api.cloudinary.com/v1_1/${signData.cloudName}/image/upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+      const uploadData = (await uploadResponse.json()) as {
+        secure_url?: string;
+        url?: string;
+        error?: { message?: string };
+      };
+      if (!uploadResponse.ok) {
+        throw new Error(uploadData.error?.message || "Upload failed.");
+      }
+
+      const uploadedUrl = uploadData.secure_url ?? uploadData.url;
+      if (!uploadedUrl) {
+        throw new Error("Upload failed.");
+      }
+      setImage(uploadedUrl);
+    } catch (error) {
+      setImageError(error instanceof Error ? error.message : "Upload failed.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSave = async (event: React.FormEvent) => {
     event.preventDefault();
     setMessage(null);
@@ -146,14 +253,18 @@ export default function ProfileSettings({
       <div>
         <p className="text-sm font-semibold text-[color:var(--ink)]">Photo</p>
         <p className="text-xs text-[color:var(--subtle)]">
-          Upload a square image (max 1 MB).
+          Upload a square image. We optimize it automatically.
         </p>
       </div>
       <div className="flex items-center gap-4">
         <div className="h-14 w-14 rounded-full bg-[color:var(--surface-strong)] flex items-center justify-center overflow-hidden">
           {image ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={image} alt="Profile" className="h-full w-full object-cover" />
+            <img
+              src={cloudinaryTransform(image, { width: 120, height: 120 })}
+              alt="Profile"
+              className="h-full w-full object-cover"
+            />
           ) : (
             <UserSquare size={28} weight="regular" className="text-[color:var(--subtle)]" />
           )}
@@ -167,21 +278,15 @@ export default function ProfileSettings({
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 if (!file) return;
-                if (file.size > 1_000_000) {
-                  setImageError("Image must be under 1 MB.");
+                if (file.size > 10_000_000) {
+                  setImageError("Image must be under 10 MB.");
                   return;
                 }
-                const reader = new FileReader();
-                reader.onload = () => {
-                  if (typeof reader.result === "string") {
-                    setImage(reader.result);
-                  }
-                };
-                reader.readAsDataURL(file);
+                void uploadProfileImage(file);
               }}
             />
             <span className="pill-button inline-flex items-center">
-              Upload image
+              {isUploading ? "Uploading..." : "Upload image"}
             </span>
           </label>
           {image && (
@@ -257,11 +362,11 @@ export default function ProfileSettings({
         </span>
         <Button
           type="submit"
-          disabled={isSaving || submitDisabled}
+          disabled={isSaving || isUploading || submitDisabled}
           variant="solid"
           size={required ? "sm" : "md"}
         >
-          {isSaving ? "Updating..." : "Update profile"}
+          {isSaving ? "Updating..." : isUploading ? "Uploading..." : "Update profile"}
         </Button>
       </div>
       {submitDisabled && submitDisabledMessage && (

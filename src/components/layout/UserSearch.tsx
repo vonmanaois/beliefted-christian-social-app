@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { cloudinaryTransform } from "@/lib/cloudinary";
 
 type UserResult = {
   id: string;
@@ -81,7 +82,11 @@ export default function UserSearch() {
                 <div className="h-7 w-7 rounded-full bg-slate-200 overflow-hidden">
                   {user.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={user.image} alt="" className="h-full w-full object-cover" />
+                    <img
+                      src={cloudinaryTransform(user.image, { width: 56, height: 56 })}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
                   ) : null}
                 </div>
                 <div className="text-sm leading-tight">

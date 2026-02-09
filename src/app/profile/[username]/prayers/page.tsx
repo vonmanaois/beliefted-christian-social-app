@@ -10,6 +10,7 @@ import ProfileHeader from "@/components/profile/ProfileHeader";
 import ProfileUpdateModal from "@/components/profile/ProfileUpdateModal";
 import ProfileStats from "@/components/profile/ProfileStats";
 import UserIcon from "@/components/ui/UserIcon";
+import { cloudinaryTransform } from "@/lib/cloudinary";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +57,7 @@ export default async function PublicProfilePrayersPage({
                 {user?.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={user.image}
+                    src={cloudinaryTransform(user.image, { width: 160, height: 160 })}
                     alt="Profile"
                     className="h-full w-full object-cover"
                   />

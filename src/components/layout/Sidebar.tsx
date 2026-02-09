@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   BellSimple,
   BookOpenText,
@@ -193,9 +194,11 @@ export default function Sidebar() {
             onClick={() => router.push("/")}
             className="flex items-center gap-2 cursor-pointer min-w-0"
           >
-            <img
+            <Image
               src="/images/beliefted-logo.svg"
               alt="Beliefted"
+              width={36}
+              height={36}
               className="h-9 w-9 rounded-full"
             />
             <span className="hidden sm:inline text-sm font-semibold text-[color:var(--ink)] whitespace-nowrap">
@@ -229,9 +232,11 @@ export default function Sidebar() {
         onClick={() => router.push("/")}
         className="flex items-center gap-3 text-left cursor-pointer"
       >
-        <img
+        <Image
           src="/images/beliefted-logo.svg"
           alt="Beliefted"
+          width={40}
+          height={40}
           className="h-10 w-10 rounded-full"
         />
         <div className="hidden md:block">
