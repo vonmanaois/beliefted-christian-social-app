@@ -19,7 +19,9 @@ const ensureAllowed = (request: Request) => {
 const normalizeUsername = (value: string) =>
   value.toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
 
-const ensureUniqueUsername = async (db: Awaited<ReturnType<typeof clientPromise>>["db"], base: string) => {
+type MongoDb = Awaited<ReturnType<typeof clientPromise>>["db"];
+
+const ensureUniqueUsername = async (db: MongoDb, base: string) => {
   let candidate = base;
   let suffix = 0;
   while (await db.collection("users").findOne({ username: candidate })) {
