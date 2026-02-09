@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import FaithStoryModel from "@/models/FaithStory";
+import NotificationModel from "@/models/Notification";
 import { Types } from "mongoose";
 import { rateLimit } from "@/lib/rateLimit";
 
@@ -45,6 +46,15 @@ export async function POST(
   });
 
   const count = updated?.likedBy?.length ?? story.likedBy?.length ?? 0;
+
+  if (!alreadyLiked && story.userId?.toString() !== userId) {
+    await NotificationModel.create({
+      userId: story.userId,
+      actorId: userId,
+      faithStoryId: story._id,
+      type: "faith_like",
+    });
+  }
 
   return NextResponse.json({ liked: !alreadyLiked, count });
 }

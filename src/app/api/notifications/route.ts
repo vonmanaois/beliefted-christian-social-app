@@ -5,6 +5,7 @@ import dbConnect from "@/lib/db";
 import NotificationModel from "@/models/Notification";
 import "@/models/Word";
 import "@/models/Prayer";
+import "@/models/FaithStory";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -20,9 +21,11 @@ export async function GET() {
   })
     .sort({ createdAt: -1 })
     .limit(50)
-    .populate("actorId", "name image")
-    .populate("prayerId", "content")
-    .populate("wordId", "content")
+    .populate("actorId", "name image username")
+    .populate("userId", "username")
+    .populate("prayerId", "content authorUsername")
+    .populate("wordId", "content authorUsername")
+    .populate("faithStoryId", "title authorUsername")
     .lean();
 
   return NextResponse.json(notifications);

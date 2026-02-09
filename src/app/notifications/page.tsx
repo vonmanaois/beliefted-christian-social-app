@@ -3,19 +3,30 @@
  import { useEffect, useState } from "react";
  import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
  import { signIn, useSession } from "next-auth/react";
+ import Link from "next/link";
  import Sidebar from "@/components/layout/Sidebar";
  import EmptyState from "@/components/ui/EmptyState";
- import { BellSimple } from "@phosphor-icons/react";
+ import { BellSimple, X } from "@phosphor-icons/react";
 
- type NotificationActor = { name?: string | null; image?: string | null };
+ type NotificationActor = { name?: string | null; image?: string | null; username?: string | null };
+ type NotificationRecipient = { username?: string | null };
  type NotificationItem = {
    _id: string;
-   type: "pray" | "comment" | "word_like" | "word_comment" | "follow";
+   type:
+     | "pray"
+     | "comment"
+     | "word_like"
+     | "word_comment"
+     | "follow"
+     | "faith_like"
+     | "faith_comment";
    createdAt: string;
    actorId?: NotificationActor | null;
-   prayerId?: { content?: string } | null;
-   wordId?: { content?: string } | null;
- };
+   userId?: NotificationRecipient | null;
+   prayerId?: { _id?: string; content?: string; authorUsername?: string | null } | null;
+   wordId?: { _id?: string; content?: string; authorUsername?: string | null } | null;
+   faithStoryId?: { _id?: string; title?: string; authorUsername?: string | null } | null;
+  };
 
 export default function NotificationsPage() {
    const [entered, setEntered] = useState(false);
@@ -70,6 +81,40 @@ export default function NotificationsPage() {
        queryClient.invalidateQueries({ queryKey: ["notifications", "count"] });
      },
    });
+
+   const deleteMutation = useMutation({
+     mutationFn: async (id: string) => {
+       const response = await fetch(`/api/notifications/${id}`, { method: "DELETE" });
+       if (!response.ok) {
+         throw new Error("Failed to delete notification");
+       }
+     },
+     onSuccess: () => {
+       queryClient.invalidateQueries({ queryKey: ["notifications"] });
+       queryClient.invalidateQueries({ queryKey: ["notifications", "count"] });
+     },
+   });
+
+   const getNotificationHref = (note: NotificationItem) => {
+     const recipient = note.userId?.username;
+     const actor = note.actorId?.username;
+     if (note.type === "follow") {
+       return actor ? `/profile/${actor}` : "/profile";
+     }
+     if (note.wordId?._id) {
+       const author = note.wordId.authorUsername ?? recipient;
+       return author ? `/${author}/${note.wordId._id}` : null;
+     }
+     if (note.prayerId?._id) {
+       const author = note.prayerId.authorUsername ?? recipient;
+       return author ? `/${author}/${note.prayerId._id}` : null;
+     }
+     if (note.faithStoryId?._id) {
+       const author = note.faithStoryId.authorUsername ?? recipient;
+       return author ? `/faith-story/${author}/${note.faithStoryId._id}` : null;
+     }
+     return null;
+   };
 
    return (
      <main className="container">
@@ -130,33 +175,66 @@ export default function NotificationsPage() {
              <div className="mt-6 flex flex-col gap-3">
                {notifications.map((note) => (
                  <div key={note._id} className="panel p-3">
-                   <p className="text-sm text-[color:var(--ink)]">
-                     <span className="font-semibold">
-                       {note.actorId?.name ?? "Someone"}
-                     </span>{" "}
-                     {note.type === "pray"
-                       ? "prayed for your prayer."
-                       : note.type === "comment"
-                         ? "commented on your prayer."
-                         : note.type === "word_like"
-                           ? "liked your word."
-                           : note.type === "word_comment"
-                             ? "commented on your word."
-                             : "followed you."}
-                   </p>
-                   {note.prayerId?.content && (
-                     <p className="mt-2 text-xs text-[color:var(--subtle)] line-clamp-2">
-                       “{note.prayerId.content}”
-                     </p>
-                   )}
-                   {note.wordId?.content && (
-                     <p className="mt-2 text-xs text-[color:var(--subtle)] line-clamp-2">
-                       “{note.wordId.content}”
-                     </p>
-                   )}
-                   <p className="mt-2 text-xs text-[color:var(--subtle)]">
-                     {new Date(note.createdAt).toLocaleString()}
-                   </p>
+                   <div className="flex items-start justify-between gap-3">
+                     {(() => {
+                       const href = getNotificationHref(note);
+                       const content = (
+                         <>
+                           <p className="text-sm text-[color:var(--ink)]">
+                             <span className="font-semibold">
+                               {note.actorId?.name ?? "Someone"}
+                             </span>{" "}
+                           {note.type === "pray"
+                              ? "prayed for your prayer."
+                              : note.type === "comment"
+                                ? "commented on your prayer."
+                                : note.type === "word_like"
+                                  ? "liked your word."
+                                  : note.type === "word_comment"
+                                    ? "commented on your word."
+                                    : note.type === "faith_like"
+                                      ? "liked your faith story."
+                                      : note.type === "faith_comment"
+                                        ? "commented on your faith story."
+                                     : "followed you."}
+                           </p>
+                           {note.prayerId?.content && (
+                             <p className="mt-2 text-xs text-[color:var(--subtle)] line-clamp-2 whitespace-pre-line">
+                               “{note.prayerId.content}”
+                             </p>
+                           )}
+                           {note.wordId?.content && (
+                             <p className="mt-2 text-xs text-[color:var(--subtle)] line-clamp-2 whitespace-pre-line">
+                               “{note.wordId.content}”
+                             </p>
+                           )}
+                           {note.faithStoryId?.title && (
+                             <p className="mt-2 text-xs text-[color:var(--subtle)] line-clamp-2 whitespace-pre-line">
+                               “{note.faithStoryId.title}”
+                             </p>
+                           )}
+                           <p className="mt-2 text-xs text-[color:var(--subtle)]">
+                             {new Date(note.createdAt).toLocaleString()}
+                           </p>
+                         </>
+                       );
+                       return href ? (
+                         <Link href={href} className="flex-1 cursor-pointer">
+                           {content}
+                         </Link>
+                       ) : (
+                         <div className="flex-1">{content}</div>
+                       );
+                     })()}
+                     <button
+                       type="button"
+                       onClick={() => deleteMutation.mutate(note._id)}
+                       className="h-8 w-8 rounded-full border border-[color:var(--panel-border)] text-[color:var(--subtle)] hover:text-[color:var(--ink)] flex items-center justify-center"
+                       aria-label="Dismiss notification"
+                     >
+                       <X size={14} weight="bold" />
+                     </button>
+                   </div>
                  </div>
                ))}
              </div>

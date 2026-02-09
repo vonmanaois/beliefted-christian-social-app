@@ -298,9 +298,21 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
         ...item,
         commentCount: (item.commentCount ?? 0) + 1,
       }));
+      const hydratedComment =
+        session?.user?.id && !newComment.userId
+          ? {
+              ...newComment,
+              userId: {
+                _id: session.user.id,
+                name: session.user.name ?? "User",
+                image: session.user.image ?? null,
+                username: session.user.username ?? null,
+              },
+            }
+          : newComment;
       queryClient.setQueryData<WordCommentData[]>(
         ["word-comments", wordId],
-        (current = []) => [newComment as WordCommentData, ...current]
+        (current = []) => [hydratedComment as WordCommentData, ...current]
       );
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("notifications:refresh"));

@@ -8,9 +8,18 @@ const NotificationSchema = new Schema(
     wordId: { type: Schema.Types.ObjectId, ref: "Word" },
     type: {
       type: String,
-      enum: ["pray", "comment", "word_like", "word_comment", "follow"],
+      enum: [
+        "pray",
+        "comment",
+        "word_like",
+        "word_comment",
+        "follow",
+        "faith_like",
+        "faith_comment",
+      ],
       required: true,
     },
+    faithStoryId: { type: Schema.Types.ObjectId, ref: "FaithStory" },
     readAt: { type: Date, default: null },
   },
   { timestamps: { createdAt: true, updatedAt: false } }

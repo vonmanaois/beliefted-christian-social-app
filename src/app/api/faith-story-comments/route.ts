@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import FaithStoryCommentModel from "@/models/FaithStoryComment";
+import FaithStoryModel from "@/models/FaithStory";
+import NotificationModel from "@/models/Notification";
 import { z } from "zod";
 import { rateLimit } from "@/lib/rateLimit";
 import { Types } from "mongoose";
@@ -46,6 +48,16 @@ export async function POST(req: Request) {
     userId: session.user.id,
     storyId: storyObjectId,
   });
+
+  const story = await FaithStoryModel.findById(storyObjectId).select("userId").lean();
+  if (story?.userId && story.userId.toString() !== session.user.id) {
+    await NotificationModel.create({
+      userId: story.userId,
+      actorId: session.user.id,
+      faithStoryId: storyObjectId,
+      type: "faith_comment",
+    });
+  }
 
   return NextResponse.json(comment, { status: 201 });
 }

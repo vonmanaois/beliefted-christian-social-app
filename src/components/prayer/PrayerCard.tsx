@@ -286,9 +286,21 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
         ...item,
         commentCount: (item.commentCount ?? 0) + 1,
       }));
+      const hydratedComment =
+        session?.user?.id && !newComment.userId
+          ? {
+              ...newComment,
+              userId: {
+                _id: session.user.id,
+                name: session.user.name ?? "User",
+                image: session.user.image ?? null,
+                username: session.user.username ?? null,
+              },
+            }
+          : newComment;
       queryClient.setQueryData<Comment[]>(
         ["prayer-comments", prayerId],
-        (current = []) => [newComment, ...current]
+        (current = []) => [hydratedComment as Comment, ...current]
       );
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("notifications:refresh"));
