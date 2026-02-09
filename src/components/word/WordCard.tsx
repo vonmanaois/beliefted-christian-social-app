@@ -11,6 +11,7 @@ import { useUIStore } from "@/lib/uiStore";
 
 type WordUser = {
   name?: string | null;
+  image?: string | null;
   username?: string | null;
 };
 
