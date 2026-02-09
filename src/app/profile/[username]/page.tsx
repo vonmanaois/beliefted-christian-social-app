@@ -13,6 +13,7 @@ import ProfileStats from "@/components/profile/ProfileStats";
 import UserIcon from "@/components/ui/UserIcon";
 import { cloudinaryTransform } from "@/lib/cloudinary";
 import ProfilePhotoUploader from "@/components/profile/ProfilePhotoUploader";
+import PanelMotion from "@/components/layout/PanelMotion";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,7 @@ export default async function PublicProfilePage({
     <main className="container">
       <div className="page-grid">
         <Sidebar />
-        <div className="panel rounded-none p-0 sm:p-8">
+        <PanelMotion className="panel rounded-none p-0 sm:p-8">
           <div className="px-4 pt-6 sm:px-0 sm:pt-0">
             <div className="flex items-center justify-between gap-4">
               <ProfileHeader
@@ -116,7 +117,7 @@ export default async function PublicProfilePage({
             initialTab="Faith Share"
             basePath={`/profile/${user.username}`}
           />
-        </div>
+        </PanelMotion>
       </div>
     </main>
   );

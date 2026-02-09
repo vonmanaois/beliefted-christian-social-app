@@ -1,5 +1,6 @@
 import Sidebar from "@/components/layout/Sidebar";
 import FaithStoryList from "@/components/faith/FaithStoryList";
+import PanelMotion from "@/components/layout/PanelMotion";
 
 export const revalidate = 60;
 export const metadata = {
@@ -13,9 +14,9 @@ export default function FaithStoriesPage() {
     <main className="container">
       <div className="page-grid">
         <Sidebar />
-        <div className="panel p-6 sm:p-8 rounded-none">
+        <PanelMotion className="panel p-6 sm:p-8 rounded-none">
           <FaithStoryList />
-        </div>
+        </PanelMotion>
       </div>
     </main>
   );

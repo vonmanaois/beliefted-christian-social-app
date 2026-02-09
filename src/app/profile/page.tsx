@@ -10,6 +10,7 @@ import ProfileHeader from "@/components/profile/ProfileHeader";
 import ProfileUpdateModal from "@/components/profile/ProfileUpdateModal";
 import ProfileStats from "@/components/profile/ProfileStats";
 import ProfilePhotoUploader from "@/components/profile/ProfilePhotoUploader";
+import PanelMotion from "@/components/layout/PanelMotion";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export default async function ProfilePage() {
     <main className="container">
       <div className="page-grid">
         <Sidebar />
-        <div className="panel rounded-none p-0 sm:p-8">
+        <PanelMotion className="panel rounded-none p-0 sm:p-8">
           <div className="px-4 pt-6 sm:px-0 sm:pt-0">
             {!user?.username && (
               <div className="mb-6">
@@ -77,7 +78,7 @@ export default async function ProfilePage() {
           </div>
 
           <ProfileTabs userId={session?.user?.id ?? ""} />
-        </div>
+        </PanelMotion>
       </div>
     </main>
   );

@@ -141,6 +141,9 @@ h3 {
   .panel-slide-left-enter,
   .panel-slide-left-entered,
   .panel-slide-left-exit,
+  .panel-slide-right-enter,
+  .panel-slide-right-entered,
+  .panel-slide-right-exit,
   .panel-slide-up-enter,
   .panel-slide-up-entered,
   .panel-slide-up-exit {
@@ -148,40 +151,55 @@ h3 {
   }
 }
 
-@media (max-width: 1024px) {
-  .panel-slide-left-enter {
-    opacity: 0;
-    transform: translateX(-12px);
-  }
+.panel-slide-left-enter {
+  opacity: 0;
+  transform: translateX(-12px);
+}
 
-  .panel-slide-left-entered {
-    opacity: 1;
-    transform: translateX(0);
-    transition: transform 240ms ease-out, opacity 240ms ease-out;
-  }
+.panel-slide-left-entered {
+  opacity: 1;
+  transform: translateX(0);
+  transition: transform 240ms ease-out, opacity 240ms ease-out;
+}
 
-  .panel-slide-left-exit {
-    opacity: 0;
-    transform: translateX(-12px);
-    transition: transform 200ms ease-in, opacity 200ms ease-in;
-  }
+.panel-slide-left-exit {
+  opacity: 0;
+  transform: translateX(-12px);
+  transition: transform 200ms ease-in, opacity 200ms ease-in;
+}
 
-  .panel-slide-up-enter {
-    opacity: 0;
-    transform: translateY(14px);
-  }
+.panel-slide-right-enter {
+  opacity: 0;
+  transform: translateX(12px);
+}
 
-  .panel-slide-up-entered {
-    opacity: 1;
-    transform: translateY(0);
-    transition: transform 240ms ease-out, opacity 240ms ease-out;
-  }
+.panel-slide-right-entered {
+  opacity: 1;
+  transform: translateX(0);
+  transition: transform 240ms ease-out, opacity 240ms ease-out;
+}
 
-  .panel-slide-up-exit {
-    opacity: 0;
-    transform: translateY(14px);
-    transition: transform 200ms ease-in, opacity 200ms ease-in;
-  }
+.panel-slide-right-exit {
+  opacity: 0;
+  transform: translateX(12px);
+  transition: transform 200ms ease-in, opacity 200ms ease-in;
+}
+
+.panel-slide-up-enter {
+  opacity: 0;
+  transform: translateY(14px);
+}
+
+.panel-slide-up-entered {
+  opacity: 1;
+  transform: translateY(0);
+  transition: transform 240ms ease-out, opacity 240ms ease-out;
+}
+
+.panel-slide-up-exit {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: transform 200ms ease-in, opacity 200ms ease-in;
 }
 
 
@@ -192,6 +210,14 @@ h3 {
 
   .page-grid {
     gap: 0;
+  }
+}
+
+@media (max-width: 1024px) {
+  .panel-scroll-mobile {
+    height: calc(100dvh - 120px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 }
 

@@ -11,6 +11,7 @@ import {
   GoogleLogo,
   House,
   Info,
+  Question,
   Notebook,
   MagnifyingGlass,
   SlidersHorizontal,
@@ -58,6 +59,13 @@ export default function Sidebar() {
       return;
     }
     router.push("/why-beliefted");
+  };
+  const handleHowClick = () => {
+    if (pathname === "/how-to-use") {
+      triggerPanelClose("how");
+      return;
+    }
+    router.push("/how-to-use");
   };
 
   const { data: notificationsCount = 0 } = useQuery({
@@ -254,26 +262,24 @@ export default function Sidebar() {
               Beliefted
             </span>
           </button>
-          <div className="absolute right-4">
-            {isAuthenticated ? (
-              <button
-                type="button"
-                ref={mobilePrefsButtonRef}
-                onClick={() => openPreferences()}
-                className="h-10 w-10 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-                aria-label="Preferences"
-              >
-                <SlidersHorizontal size={22} weight="regular" />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => openSignIn()}
-                className="h-10 px-3 rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] text-xs font-semibold text-[color:var(--ink)] hover:text-[color:var(--accent)] whitespace-nowrap"
-              >
-                Sign in
-              </button>
-            )}
+          <div className="absolute right-4 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleHowClick}
+              className="h-10 w-10 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+              aria-label="How To Use"
+            >
+              <Question size={22} weight="regular" />
+            </button>
+            <button
+              type="button"
+              ref={mobilePrefsButtonRef}
+              onClick={() => openPreferences()}
+              className="h-10 w-10 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+              aria-label="Preferences"
+            >
+              <SlidersHorizontal size={22} weight="regular" />
+            </button>
           </div>
         </div>
       </div>
@@ -399,6 +405,16 @@ export default function Sidebar() {
             <Info size={22} weight="regular" />
           </span>
           <span className="hidden lg:inline">Why Beliefted</span>
+        </button>
+        <button
+          type="button"
+          className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+          onClick={handleHowClick}
+        >
+          <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
+            <Question size={22} weight="regular" />
+          </span>
+          <span className="hidden lg:inline">How To Use</span>
         </button>
         <button
           type="button"
