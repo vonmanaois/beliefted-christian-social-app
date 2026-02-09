@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth/next";
+import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import UserModel from "@/models/User";

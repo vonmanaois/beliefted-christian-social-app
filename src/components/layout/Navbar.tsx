@@ -9,7 +9,11 @@ export default function Navbar() {
   return (
     <nav className="panel px-6 py-4 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-[#2d6cdf] to-[#9b6cff]" />
+        <img
+          src="/images/beliefted-logo.svg"
+          alt="Beliefted"
+          className="h-9 w-9 rounded-full"
+        />
         <div>
           <p className="text-sm font-semibold text-[color:var(--ink)]">Beliefted</p>
           <p className="text-xs text-[color:var(--subtle)]">Prayer Wall</p>

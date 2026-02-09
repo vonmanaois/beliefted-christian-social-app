@@ -18,6 +18,11 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   title: "Beliefted",
   description: "A Christian prayer wall and social journal.",
+  icons: {
+    icon: "/images/beliefted-logo.svg",
+    apple: "/images/beliefted-logo.svg",
+    shortcut: "/images/beliefted-logo.svg",
+  },
 };
 
 export default function RootLayout({

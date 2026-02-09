@@ -193,7 +193,11 @@ export default function Sidebar() {
             onClick={() => router.push("/")}
             className="flex items-center gap-2 cursor-pointer min-w-0"
           >
-            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-[#2d6cdf] to-[#9b6cff]" />
+            <img
+              src="/images/beliefted-logo.svg"
+              alt="Beliefted"
+              className="h-9 w-9 rounded-full"
+            />
             <span className="hidden sm:inline text-sm font-semibold text-[color:var(--ink)] whitespace-nowrap">
               Beliefted
             </span>
@@ -225,7 +229,11 @@ export default function Sidebar() {
         onClick={() => router.push("/")}
         className="flex items-center gap-3 text-left cursor-pointer"
       >
-        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#2d6cdf] to-[#9b6cff]" />
+        <img
+          src="/images/beliefted-logo.svg"
+          alt="Beliefted"
+          className="h-10 w-10 rounded-full"
+        />
         <div className="hidden md:block">
           <p className="text-sm font-semibold text-[color:var(--ink)]">Beliefted</p>
           <p className="text-xs text-[color:var(--subtle)]">
