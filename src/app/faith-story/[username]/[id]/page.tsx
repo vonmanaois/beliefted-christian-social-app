@@ -10,6 +10,62 @@ type PageProps = {
   params: Promise<{ username: string; id: string }>;
 };
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  process.env.NEXTAUTH_URL ||
+  "http://localhost:3000";
+
+const toSnippet = (text: string, max = 160) => {
+  if (!text) return "";
+  const cleaned = text.replace(/\s+/g, " ").trim();
+  if (cleaned.length <= max) return cleaned;
+  return `${cleaned.slice(0, max - 1)}…`;
+};
+
+export async function generateMetadata({ params }: PageProps) {
+  const { username, id } = await params;
+  if (!Types.ObjectId.isValid(id)) {
+    return {};
+  }
+
+  await dbConnect();
+  const story = await FaithStoryModel.findById(id).lean();
+  if (!story) {
+    return {};
+  }
+
+  const author =
+    story.userId
+      ? await UserModel.findById(story.userId).select("name image username").lean()
+      : null;
+  const authorUsername = author?.username ?? story.authorUsername ?? username ?? null;
+  const authorName = author?.name ?? story.authorName ?? "User";
+
+  const canonical = `${siteUrl}/faith-story/${authorUsername ?? username}/${id}`;
+  const description = toSnippet(story.content ?? "");
+
+  return {
+    title: `${story.title} · ${authorName} @${authorUsername ?? "user"}`,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      type: "article",
+      url: canonical,
+      title: story.title,
+      description,
+      siteName: "Beliefted",
+      authors: [authorName],
+      images: author?.image ? [{ url: author.image }] : undefined,
+    },
+    twitter: {
+      card: "summary",
+      title: story.title,
+      description,
+      images: author?.image ? [author.image] : undefined,
+    },
+  };
+}
+
 export default async function FaithStoryDetailPage({ params }: PageProps) {
   const { username, id } = await params;
   if (!Types.ObjectId.isValid(id)) {
@@ -30,11 +86,30 @@ export default async function FaithStoryDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  const canonical = `${siteUrl}/faith-story/${authorUsername ?? username}/${id}`;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: story.title,
+    datePublished: story.createdAt?.toISOString?.() ?? undefined,
+    author: {
+      "@type": "Person",
+      name: author?.name ?? story.authorName ?? "User",
+      url: authorUsername ? `${siteUrl}/profile/${authorUsername}` : undefined,
+    },
+    mainEntityOfPage: canonical,
+  };
+
   return (
     <main className="container">
       <div className="page-grid">
         <Sidebar />
         <div>
+          <script
+            type="application/ld+json"
+            // eslint-disable-next-line react/no-danger
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          />
           <FaithStoryDetail
             story={{
               _id: story._id.toString(),

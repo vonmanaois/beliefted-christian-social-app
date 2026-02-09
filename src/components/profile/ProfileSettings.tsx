@@ -15,6 +15,7 @@ type ProfileSettingsProps = {
   currentName?: string | null;
   currentBio?: string | null;
   currentImage?: string | null;
+  showPhoto?: boolean;
   onUpdated?: () => void;
   showDangerZone?: boolean;
   submitDisabled?: boolean;
@@ -23,7 +24,7 @@ type ProfileSettingsProps = {
 
 const compressToSquare = (file: File, size: number, quality: number) =>
   new Promise<Blob>((resolve, reject) => {
-    const img = new Image();
+    const img = new window.Image();
     const objectUrl = URL.createObjectURL(file);
 
     img.onload = () => {
@@ -70,6 +71,7 @@ export default function ProfileSettings({
   currentName,
   currentBio,
   currentImage,
+  showPhoto = false,
   onUpdated,
   showDangerZone = true,
   submitDisabled = false,
@@ -80,6 +82,7 @@ export default function ProfileSettings({
   const [username, setUsername] = useState(currentUsername ?? "");
   const [bio, setBio] = useState(currentBio ?? "");
   const [image, setImage] = useState(currentImage ?? "");
+  const [imageChanged, setImageChanged] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -174,6 +177,7 @@ export default function ProfileSettings({
         throw new Error("Upload failed.");
       }
       setImage(uploadedUrl);
+      setImageChanged(true);
     } catch (error) {
       setImageError(error instanceof Error ? error.message : "Upload failed.");
     } finally {
@@ -188,15 +192,24 @@ export default function ProfileSettings({
     setImageError(null);
 
     try {
+      const payload: {
+        username: string;
+        name: string;
+        bio: string;
+        image?: string | null;
+      } = {
+        username: username.trim(),
+        name: name.trim(),
+        bio: bio.trim(),
+      };
+      if (showPhoto && imageChanged) {
+        payload.image = image.trim() ? image.trim() : null;
+      }
+
       const response = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: username.trim(),
-          name: name.trim(),
-          bio: bio.trim(),
-          image: image.trim(),
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = (await response.json()) as {
@@ -217,6 +230,7 @@ export default function ProfileSettings({
       if (typeof data.image === "string" || data.image === null) {
         setImage(data.image ?? "");
       }
+      setImageChanged(false);
       setMessage("Profile updated successfully.");
       window.dispatchEvent(new Event("profile:updated"));
       onUpdated?.();
@@ -230,61 +244,68 @@ export default function ProfileSettings({
 
   return (
     <form onSubmit={handleSave} className="panel p-4 flex flex-col gap-3">
-      <div>
-        <p className="text-sm font-semibold text-[color:var(--ink)]">Photo</p>
-        <p className="text-xs text-[color:var(--subtle)]">
-          Upload a square image. We optimize it automatically.
-        </p>
-      </div>
-      <div className="flex items-center gap-4">
-        <div className="h-14 w-14 rounded-full bg-[color:var(--surface-strong)] flex items-center justify-center overflow-hidden">
-          {image ? (
-            <Image
-              src={cloudinaryTransform(image, { width: 120, height: 120 })}
-              alt="Profile"
-              width={120}
-              height={120}
-              sizes="56px"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <UserSquare size={28} weight="regular" className="text-[color:var(--subtle)]" />
-          )}
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold text-[color:var(--ink)] cursor-pointer">
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (!file) return;
-                if (file.size > 10_000_000) {
-                  setImageError("Image must be under 10 MB.");
-                  return;
-                }
-                void uploadProfileImage(file);
-              }}
-            />
-            <span className="pill-button inline-flex items-center">
-              {isUploading ? "Uploading..." : "Upload image"}
-            </span>
-          </label>
-          {image && (
-            <button
-              type="button"
-              className="text-xs text-[color:var(--subtle)] underline underline-offset-2"
-              onClick={() => setImage("")}
-            >
-              Remove photo
-            </button>
-          )}
-          {imageError && (
-            <p className="text-xs text-[color:var(--danger)]">{imageError}</p>
-          )}
-        </div>
-      </div>
+      {showPhoto && (
+        <>
+          <div>
+            <p className="text-sm font-semibold text-[color:var(--ink)]">Photo</p>
+            <p className="text-xs text-[color:var(--subtle)]">
+              Upload a square image. We optimize it automatically.
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="h-14 w-14 rounded-full bg-[color:var(--surface-strong)] flex items-center justify-center overflow-hidden">
+              {image ? (
+                <Image
+                  src={cloudinaryTransform(image, { width: 120, height: 120 })}
+                  alt="Profile"
+                  width={120}
+                  height={120}
+                  sizes="56px"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <UserSquare size={28} weight="regular" className="text-[color:var(--subtle)]" />
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-[color:var(--ink)] cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 10_000_000) {
+                      setImageError("Image must be under 10 MB.");
+                      return;
+                    }
+                    void uploadProfileImage(file);
+                  }}
+                />
+                <span className="pill-button inline-flex items-center">
+                  {isUploading ? "Uploading..." : "Upload image"}
+                </span>
+              </label>
+              {imageChanged && image && (
+                <button
+                  type="button"
+                  className="text-xs text-[color:var(--subtle)] underline underline-offset-2"
+                  onClick={() => {
+                    setImage("");
+                    setImageChanged(true);
+                  }}
+                >
+                  Remove photo
+                </button>
+              )}
+              {imageError && (
+                <p className="text-xs text-[color:var(--danger)]">{imageError}</p>
+              )}
+            </div>
+          </div>
+        </>
+      )}
       <div>
         <p className="text-sm font-semibold text-[color:var(--ink)]">Name</p>
         <p className="text-xs text-[color:var(--subtle)]">

@@ -19,25 +19,23 @@ export async function PATCH(req: Request) {
     username: z.string().trim().min(3).max(20),
     name: z.string().trim().max(100).optional().or(z.literal("")),
     bio: z.string().trim().max(280).optional().or(z.literal("")),
-    image: z
-      .string()
-      .trim()
-      .optional()
-      .or(z.literal("")),
+    image: z.string().trim().optional().or(z.literal("")),
   });
 
-  const body = ProfileSchema.safeParse(await req.json());
+  const raw = await req.json();
+  const body = ProfileSchema.safeParse(raw);
   if (!body.success) {
     return NextResponse.json({ error: "Invalid profile data" }, { status: 400 });
   }
+  const imageProvided = Object.prototype.hasOwnProperty.call(raw, "image");
 
   const username = body.data.username.trim();
   const name = (body.data.name ?? "").trim();
   const bio = (body.data.bio ?? "").trim();
-  const image = (body.data.image ?? "").trim();
+  const image = imageProvided ? (body.data.image ?? "").trim() : undefined;
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
 
-  if (image) {
+  if (imageProvided && image) {
     let parsed: URL | null = null;
     try {
       parsed = new URL(image);
@@ -90,15 +88,27 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Username already taken." }, { status: 409 });
   }
 
+  const updateFields: {
+    username: string;
+    name: string;
+    bio: string;
+    onboardingComplete: boolean;
+    image?: string | null;
+  } = {
+    username,
+    name,
+    bio: bio.slice(0, 280),
+    onboardingComplete: true,
+  };
+  if (imageProvided) {
+    updateFields.image = image || null;
+  }
+
   await db.collection("users").updateOne(
     userFilter,
     {
       $set: {
-        username,
-        name,
-        bio: bio.slice(0, 280),
-        image: image || null,
-        onboardingComplete: true,
+        ...updateFields,
       },
     }
   );
@@ -109,7 +119,7 @@ export async function PATCH(req: Request) {
     username: updated?.username ?? username,
     name: updated?.name ?? name,
     bio: updated?.bio ?? bio,
-    image: updated?.image ?? (image || null),
+    image: updated?.image ?? null,
   });
 }
 

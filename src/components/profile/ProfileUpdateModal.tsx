@@ -38,6 +38,7 @@ export default function ProfileUpdateModal({
           currentName={currentName}
           currentBio={currentBio}
           currentImage={currentImage}
+          showPhoto={false}
           onUpdated={() => {
             setIsOpen(false);
             onUpdated?.();

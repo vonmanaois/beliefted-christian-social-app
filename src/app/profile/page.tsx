@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth/next";
-import Image from "next/image";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import UserModel from "@/models/User";
@@ -10,8 +9,7 @@ import ProfileTabs from "@/components/profile/ProfileTabs";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import ProfileUpdateModal from "@/components/profile/ProfileUpdateModal";
 import ProfileStats from "@/components/profile/ProfileStats";
-import UserIcon from "@/components/ui/UserIcon";
-import { cloudinaryTransform } from "@/lib/cloudinary";
+import ProfilePhotoUploader from "@/components/profile/ProfilePhotoUploader";
 
 export const dynamic = "force-dynamic";
 
@@ -50,25 +48,13 @@ export default async function ProfilePage() {
                 initialUsername={user?.username ?? "username"}
                 initialBio={user?.bio ?? null}
               />
-              <div className="h-20 w-20 rounded-full overflow-hidden border border-slate-200 bg-slate-200">
-                {user?.image || session?.user?.image ? (
-                  <Image
-                    src={cloudinaryTransform(user?.image ?? session?.user?.image ?? "", {
-                      width: 160,
-                      height: 160,
-                    })}
-                    alt="Profile"
-                    width={160}
-                    height={160}
-                    sizes="80px"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="h-full w-full flex items-center justify-center text-[color:var(--subtle)]">
-                    <UserIcon size={44} />
-                  </div>
-                )}
-              </div>
+              <ProfilePhotoUploader
+                currentImage={user?.image ?? session?.user?.image ?? null}
+                currentName={user?.name ?? session?.user?.name ?? ""}
+                currentUsername={user?.username ?? ""}
+                currentBio={user?.bio ?? ""}
+                size={80}
+              />
             </div>
 
             <div className="mt-4">
