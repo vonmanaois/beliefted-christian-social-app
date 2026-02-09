@@ -11,6 +11,7 @@ import {
   House,
   HandHeart,
   Info,
+  Notebook,
   MagnifyingGlass,
   Plus,
   SlidersHorizontal,
@@ -280,6 +281,18 @@ export default function Sidebar() {
           </span>
           <span className="hidden lg:inline">Profile</span>
         </button>
+        {isAuthenticated && (
+          <button
+            type="button"
+            className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+            onClick={() => router.push("/journal")}
+          >
+            <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
+              <Notebook size={22} weight="regular" />
+            </span>
+            <span className="hidden lg:inline">Journal</span>
+          </button>
+        )}
       <button
         type="button"
         onClick={() => {
@@ -454,6 +467,16 @@ export default function Sidebar() {
           >
             <User size={24} weight="regular" />
           </button>
+          {isAuthenticated && (
+            <button
+              type="button"
+              className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+              onClick={() => router.push("/journal")}
+              aria-label="Journal"
+            >
+              <Notebook size={24} weight="regular" />
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {
