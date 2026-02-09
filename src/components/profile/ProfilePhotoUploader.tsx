@@ -158,7 +158,7 @@ export default function ProfilePhotoUploader({
   return (
     <div className="relative">
       <div
-        className="rounded-full overflow-hidden border border-slate-200 bg-slate-200"
+        className="rounded-full overflow-hidden bg-slate-200"
         style={{ width: size, height: size }}
       >
         {image ? (
