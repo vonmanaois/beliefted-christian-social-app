@@ -53,6 +53,7 @@ export default async function PostDetailPage({ params }: PageProps) {
                   _id: prayer._id.toString(),
                   userId: prayer.userId?.toString(),
                   heading: prayer.heading ?? undefined,
+                  scriptureRef: prayer.scriptureRef ?? null,
                   createdAt:
                     prayer.createdAt instanceof Date
                       ? prayer.createdAt.toISOString()
@@ -105,6 +106,7 @@ export default async function PostDetailPage({ params }: PageProps) {
                   ...word,
                   _id: word._id.toString(),
                   userId: word.userId?.toString() ?? null,
+                  scriptureRef: word.scriptureRef ?? null,
                   createdAt:
                     word.createdAt instanceof Date
                       ? word.createdAt.toISOString()

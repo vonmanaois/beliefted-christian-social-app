@@ -115,6 +115,7 @@ export async function GET(req: Request) {
           user,
           commentCount,
           userId: userIdString,
+          scriptureRef: word.scriptureRef ?? null,
           isOwner: Boolean(viewerId && userIdString && viewerId === userIdString),
         };
       })
@@ -154,6 +155,7 @@ export async function POST(req: Request) {
 
   const WordSchema = z.object({
     content: z.string().trim().min(1).max(2000),
+    scriptureRef: z.string().trim().max(80).optional().or(z.literal("")),
   });
 
   const body = WordSchema.safeParse(await req.json());
@@ -162,6 +164,7 @@ export async function POST(req: Request) {
   }
 
   const content = body.data.content.trim();
+  const scriptureRef = (body.data.scriptureRef ?? "").trim();
 
   if (!content) {
     return NextResponse.json({ error: "Content is required" }, { status: 400 });
@@ -179,8 +182,9 @@ export async function POST(req: Request) {
     authorName: author?.name ?? null,
     authorUsername: author?.username ?? null,
     authorImage: author?.image ?? null,
+    scriptureRef: scriptureRef || undefined,
   });
 
-  revalidateTag("words-feed", "layout");
+  revalidateTag("words-feed");
   return NextResponse.json(word, { status: 201 });
 }

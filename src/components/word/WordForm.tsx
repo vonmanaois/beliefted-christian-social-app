@@ -20,10 +20,11 @@ export default function WordForm({
 }: WordFormProps) {
   const { data: session } = useSession();
   const [content, setContent] = useState("");
+  const [scriptureRef, setScriptureRef] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
-  const isDirty = content.trim().length > 0;
+  const isDirty = content.trim().length > 0 || scriptureRef.trim().length > 0;
 
   useEffect(() => {
     if (variant !== "modal") return;
@@ -56,7 +57,7 @@ export default function WordForm({
       const response = await fetch("/api/words", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, scriptureRef }),
       });
 
       if (!response.ok) {
@@ -68,6 +69,7 @@ export default function WordForm({
       }
 
       setContent("");
+      setScriptureRef("");
       onPosted?.();
       onDirtyChange?.(false);
       if (typeof window !== "undefined") {
@@ -97,6 +99,13 @@ export default function WordForm({
         </div>
       )}
 
+      <input
+        type="text"
+        className="soft-input modal-input text-sm"
+        placeholder="Scripture reference (optional)"
+        value={scriptureRef}
+        onChange={(event) => setScriptureRef(event.target.value)}
+      />
       <textarea
         className={`soft-input modal-input text-sm ${compact ? "min-h-[90px]" : "min-h-[110px]"}`}
         placeholder="Share a verse or reflection..."

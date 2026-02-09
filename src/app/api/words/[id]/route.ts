@@ -31,7 +31,7 @@ export async function DELETE(
   await WordCommentModel.deleteMany({ wordId: word._id });
   await WordModel.deleteOne({ _id: word._id });
 
-  revalidateTag("words-feed", "layout");
+  revalidateTag("words-feed");
   return NextResponse.json({ ok: true });
 }
 
@@ -67,6 +67,6 @@ export async function PUT(
   word.content = content;
   await word.save();
 
-  revalidateTag("words-feed", "layout");
+  revalidateTag("words-feed");
   return NextResponse.json({ ok: true, content: word.content });
 }

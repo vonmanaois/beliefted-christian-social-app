@@ -110,6 +110,7 @@ export async function GET(req: Request) {
           content: typeof prayer.content === "string" ? prayer.content : "",
           _id: prayer._id.toString(),
           userId: userIdString,
+          scriptureRef: prayer.scriptureRef ?? null,
           isOwner: Boolean(viewerId && userIdString && viewerId === userIdString),
         };
 
@@ -177,6 +178,7 @@ export async function POST(req: Request) {
       )
       .max(8)
       .optional(),
+    scriptureRef: z.string().trim().max(80).optional().or(z.literal("")),
     isAnonymous: z.boolean().optional(),
     expiresInDays: z.union([z.literal(7), z.literal(30), z.literal("never")]).optional(),
   });
@@ -192,6 +194,7 @@ export async function POST(req: Request) {
   const kind = body.data.kind ?? "prayer";
   const content = (body.data.content ?? "").trim();
   const heading = (body.data.heading ?? "").trim();
+  const scriptureRef = (body.data.scriptureRef ?? "").trim();
   const prayerPoints = (body.data.prayerPoints ?? []).filter(
     (point) => point.title.trim() && point.description.trim()
   );
@@ -229,11 +232,12 @@ export async function POST(req: Request) {
     authorImage: author?.image ?? null,
     heading,
     prayerPoints,
+    scriptureRef: scriptureRef || undefined,
     isAnonymous,
     prayedBy: [],
     expiresAt,
   });
 
-  revalidateTag("prayers-feed", "layout");
+  revalidateTag("prayers-feed");
   return NextResponse.json(prayer, { status: 201 });
 }

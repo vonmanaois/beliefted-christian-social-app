@@ -2,19 +2,10 @@
 
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import WordCard from "@/components/word/WordCard";
+import WordCard, { type Word } from "@/components/word/WordCard";
 import EmptyState from "@/components/ui/EmptyState";
 import { BookOpenText } from "@phosphor-icons/react";
 import FeedSkeleton from "@/components/ui/FeedSkeleton";
-
-type Word = {
-  _id: string;
-  content: string;
-  createdAt: string | Date;
-  user?: { name?: string | null; username?: string | null; image?: string | null } | null;
-  userId?: string;
-  isOwner?: boolean;
-};
 
 type WordFeedProps = {
   refreshKey: number;

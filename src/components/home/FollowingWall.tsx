@@ -3,21 +3,11 @@
 import { useSession } from "next-auth/react";
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import EmptyState from "@/components/ui/EmptyState";
 import { UserPlus } from "@phosphor-icons/react";
 import { useUIStore } from "@/lib/uiStore";
-import WordCard from "@/components/word/WordCard";
+import WordCard, { type Word } from "@/components/word/WordCard";
 import PrayerCard, { type Prayer } from "@/components/prayer/PrayerCard";
 import FeedSkeleton from "@/components/ui/FeedSkeleton";
-
-type Word = {
-  _id: string;
-  content: string;
-  createdAt: string | Date;
-  user?: { name?: string | null; username?: string | null; image?: string | null } | null;
-  userId?: string;
-  isOwner?: boolean;
-};
 
 type FollowingItem =
   | { type: "word"; word: Word }
@@ -82,13 +72,26 @@ export default function FollowingWall() {
 
   if (!isAuthenticated) {
     return (
-      <EmptyState
-        title="Follow people to see their posts."
-        description="Sign in to build a following feed."
-        icon={<UserPlus size={18} weight="regular" />}
-        actionLabel="Sign in"
-        onAction={openSignIn}
-      />
+      <div className="panel p-6 text-sm text-[color:var(--subtle)]">
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--panel-border)] text-[color:var(--subtle)]">
+            <UserPlus size={18} weight="regular" />
+          </span>
+          <div>
+            <p className="text-[color:var(--ink)] font-semibold">
+              Follow people to see their posts.
+            </p>
+            <p className="mt-1">Sign in to build a following feed.</p>
+            <button
+              type="button"
+              onClick={openSignIn}
+              className="mt-3 post-button bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
+            >
+              Sign in
+            </button>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -115,11 +118,17 @@ export default function FollowingWall() {
   const items = data?.pages.flatMap((page) => page.items) ?? [];
   if (items.length === 0) {
     return (
-      <EmptyState
-        title="No posts yet."
-        description="Follow more people to see their latest prayers and words."
-        icon={<UserPlus size={18} weight="regular" />}
-      />
+      <div className="panel p-6 text-sm text-[color:var(--subtle)]">
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--panel-border)] text-[color:var(--subtle)]">
+            <UserPlus size={18} weight="regular" />
+          </span>
+          <div>
+            <p className="text-[color:var(--ink)] font-semibold">No posts yet.</p>
+            <p className="mt-1">Follow more people to see their latest prayers and words.</p>
+          </div>
+        </div>
+      </div>
     );
   }
 

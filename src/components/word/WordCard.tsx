@@ -9,13 +9,13 @@ import Avatar from "@/components/ui/Avatar";
 import Modal from "@/components/layout/Modal";
 import { useUIStore } from "@/lib/uiStore";
 
-type WordUser = {
+export type WordUser = {
   name?: string | null;
   image?: string | null;
   username?: string | null;
 };
 
-type Word = {
+export type Word = {
   _id: string | { $oid?: string };
   content: string;
   createdAt: string | Date;
@@ -24,6 +24,7 @@ type Word = {
   user?: WordUser | null;
   userId?: string | null;
   isOwner?: boolean;
+  scriptureRef?: string | null;
 };
 
 type WordCommentData = {
@@ -640,6 +641,11 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
           </div>
         ) : (
           <>
+            {word.scriptureRef && (
+              <p className="mt-2 text-xs font-semibold text-[color:var(--accent)]">
+                {word.scriptureRef}
+              </p>
+            )}
             <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
               {showFullContent || word.content.length <= 320
                 ? word.content

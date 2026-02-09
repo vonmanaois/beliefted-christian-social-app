@@ -7,6 +7,7 @@ const WordSchema = new Schema(
     authorName: { type: String, trim: true },
     authorUsername: { type: String, trim: true },
     authorImage: { type: String, trim: true },
+    scriptureRef: { type: String, trim: true, maxlength: 80 },
     likedBy: [{ type: Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: true }

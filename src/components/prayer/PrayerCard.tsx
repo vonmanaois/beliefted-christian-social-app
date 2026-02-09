@@ -29,6 +29,7 @@ export type Prayer = {
   heading?: string | null;
   kind?: "prayer" | "request";
   prayerPoints?: { title: string; description: string }[];
+  scriptureRef?: string | null;
   createdAt: string | Date;
   isAnonymous: boolean;
   prayedBy: string[];
@@ -804,6 +805,11 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
               <NotePencil size={16} weight="regular" />
               Prayer Request
             </div>
+            {prayer.scriptureRef && (
+              <p className="mt-2 text-xs font-semibold text-[color:var(--accent)]">
+                {prayer.scriptureRef}
+              </p>
+            )}
             <div className="mt-3 space-y-3">
               {requestPoints.map((point, index) => (
                 <div key={`${point.title}-${index}`}>
@@ -823,6 +829,11 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
               <BookOpenText size={16} weight="regular" className="text-[color:var(--accent)]" />
               Prayer
             </div>
+            {prayer.scriptureRef && (
+              <p className="mt-2 text-xs font-semibold text-[color:var(--accent)]">
+                {prayer.scriptureRef}
+              </p>
+            )}
             <>
               <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
                 {showFullContent || prayer.content.length <= 320

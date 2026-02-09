@@ -9,6 +9,7 @@ import Modal from "@/components/layout/Modal";
 import { useUIStore } from "@/lib/uiStore";
 import { UserCircle } from "@phosphor-icons/react";
 import Spinner from "@/components/ui/Spinner";
+import DailyVerseCard from "@/components/home/DailyVerseCard";
 
 const WordForm = dynamic(() => import("@/components/word/WordForm"), {
   ssr: false,
@@ -43,6 +44,7 @@ export default function WordWall() {
 
   return (
     <section className="feed-surface">
+      <DailyVerseCard />
       <button
         type="button"
         onClick={() => {

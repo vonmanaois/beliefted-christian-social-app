@@ -22,6 +22,7 @@ export default function PostForm({
   const { data: session } = useSession();
   const [kind, setKind] = useState<"prayer" | "request">("prayer");
   const [content, setContent] = useState("");
+  const [scriptureRef, setScriptureRef] = useState("");
   const [points, setPoints] = useState<
     { title: string; description: string }[]
   >([{ title: "", description: "" }]);
@@ -48,8 +49,9 @@ export default function PostForm({
 
   const isDirty =
     kind === "prayer"
-      ? content.trim().length > 0
-      : points.some(
+      ? content.trim().length > 0 || scriptureRef.trim().length > 0
+      : scriptureRef.trim().length > 0 ||
+        points.some(
           (point) => point.title.trim().length > 0 || point.description.trim().length > 0
         );
 
@@ -102,6 +104,7 @@ export default function PostForm({
               : [],
           isAnonymous,
           expiresInDays,
+          scriptureRef,
         }),
       });
 
@@ -115,6 +118,7 @@ export default function PostForm({
 
       setKind("prayer");
       setContent("");
+      setScriptureRef("");
       setPoints([{ title: "", description: "" }]);
       setIsAnonymous(false);
       setExpiresInDays(7);
@@ -163,6 +167,13 @@ export default function PostForm({
         </label>
       </div>
 
+      <input
+        type="text"
+        className="soft-input modal-input text-sm"
+        placeholder="Scripture reference (optional)"
+        value={scriptureRef}
+        onChange={(event) => setScriptureRef(event.target.value)}
+      />
       {kind === "prayer" ? (
         <textarea
           className={`soft-input modal-input text-sm ${compact ? "min-h-[90px]" : "min-h-[110px]"}`}
