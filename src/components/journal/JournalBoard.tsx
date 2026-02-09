@@ -221,7 +221,7 @@ export default function JournalBoard() {
             <p className="text-sm font-semibold text-[color:var(--ink)] line-clamp-2">
               {journal.title}
             </p>
-            <p className="mt-3 text-xs text-[color:var(--subtle)] leading-relaxed line-clamp-6">
+            <p className="mt-3 text-xs text-[color:var(--subtle)] leading-relaxed line-clamp-6 whitespace-pre-line">
               {journal.content}
             </p>
           </div>

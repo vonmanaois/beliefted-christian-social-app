@@ -72,7 +72,9 @@ export default function ProfileHeader({
         @{profile?.username ?? initialUsername}
       </p>
       {profile?.bio ? (
-        <p className="mt-2 text-sm text-[color:var(--ink)]">{profile.bio}</p>
+        <p className="mt-2 text-sm text-[color:var(--ink)] whitespace-pre-line">
+          {profile.bio}
+        </p>
       ) : null}
     </div>
   );

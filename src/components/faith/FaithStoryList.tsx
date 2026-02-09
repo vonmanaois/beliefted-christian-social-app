@@ -230,7 +230,7 @@ export default function FaithStoryList() {
                 <h2 className="text-lg font-semibold text-[color:var(--ink)] text-center">
                   {story.title}
                 </h2>
-                <p className="text-sm text-[color:var(--subtle)] line-clamp-4">
+                <p className="text-sm text-[color:var(--subtle)] line-clamp-4 whitespace-pre-line">
                   {story.content}
                 </p>
               </button>

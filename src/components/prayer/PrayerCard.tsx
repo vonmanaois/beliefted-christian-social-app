@@ -119,6 +119,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
   const [editError, setEditError] = useState<string | null>(null);
   const [prayError, setPrayError] = useState<string | null>(null);
   const [commentError, setCommentError] = useState<string | null>(null);
+  const [showFullContent, setShowFullContent] = useState(false);
   const [editText, setEditText] = useState(prayer.content);
   const [editPoints, setEditPoints] = useState(
     prayer.prayerPoints ?? []
@@ -797,7 +798,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
                   <p className="text-[13px] sm:text-sm font-semibold text-[color:var(--ink)]">
                     {point.title}
                   </p>
-                  <p className="mt-2 text-[13px] sm:text-sm leading-relaxed text-[color:var(--subtle)]">
+                  <p className="mt-2 text-[13px] sm:text-sm leading-relaxed text-[color:var(--subtle)] whitespace-pre-line">
                     {point.description}
                   </p>
                 </div>
@@ -810,9 +811,25 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
               <BookOpenText size={16} weight="regular" className="text-[color:var(--accent)]" />
               Prayer
             </div>
-            <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)]">
-              {prayer.content}
-            </p>
+            <>
+              <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
+                {showFullContent || prayer.content.length <= 320
+                  ? prayer.content
+                  : `${prayer.content.slice(0, 320).trimEnd()}…`}
+              </p>
+              {prayer.content.length > 320 && (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setShowFullContent((prev) => !prev);
+                  }}
+                  className="mt-2 text-xs font-semibold text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
+                >
+                  {showFullContent ? "See less" : "See more"}
+                </button>
+              )}
+            </>
           </>
         )}
         <div className="mt-2 sm:mt-3 flex items-center gap-1.5 sm:gap-3 text-[11px] sm:text-xs">

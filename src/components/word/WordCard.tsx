@@ -274,6 +274,7 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
   });
 
   const [commentError, setCommentError] = useState<string | null>(null);
+  const [showFullContent, setShowFullContent] = useState(false);
 
   const commentMutation = useMutation({
     mutationFn: async () => {
@@ -626,9 +627,25 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
             </div>
           </div>
         ) : (
-          <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)]">
-            {word.content}
-          </p>
+          <>
+            <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
+              {showFullContent || word.content.length <= 320
+                ? word.content
+                : `${word.content.slice(0, 320).trimEnd()}…`}
+            </p>
+            {word.content.length > 320 && (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setShowFullContent((prev) => !prev);
+                }}
+                className="mt-2 text-xs font-semibold text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
+              >
+                {showFullContent ? "See less" : "See more"}
+              </button>
+            )}
+          </>
         )}
         <div className="mt-2 sm:mt-3 flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs">
           <button
