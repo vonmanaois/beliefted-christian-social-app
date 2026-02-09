@@ -45,28 +45,26 @@ export default async function PublicProfilePage({
         <Sidebar />
         <div className="panel rounded-none p-0 sm:p-8">
           <div className="px-4 pt-6 sm:px-0 sm:pt-0">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center justify-between gap-4">
               <ProfileHeader
                 initialName={user?.name ?? "User"}
                 initialUsername={user?.username ?? "username"}
                 initialBio={user?.bio ?? null}
                 usernameParam={user?.username ?? null}
               />
-              <div className="flex items-center gap-4 self-end sm:self-auto">
-                <div className="h-16 w-16 rounded-full overflow-hidden border border-slate-200 bg-slate-200">
-                  {user?.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={user.image}
-                      alt="Profile"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-full w-full flex items-center justify-center text-[color:var(--subtle)]">
-                      <UserIcon size={36} />
-                    </div>
-                  )}
-                </div>
+              <div className="h-20 w-20 rounded-full overflow-hidden border border-slate-200 bg-slate-200">
+                {user?.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={user.image}
+                    alt="Profile"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center text-[color:var(--subtle)]">
+                    <UserIcon size={44} />
+                  </div>
+                )}
               </div>
             </div>
             {!isSelf && (
@@ -74,6 +72,15 @@ export default async function PublicProfilePage({
                 <FollowButton
                   targetUserId={user._id.toString()}
                   initialFollowing={isFollowing}
+                />
+              </div>
+            )}
+            {isSelf && (
+              <div className="mt-4">
+                <ProfileUpdateModal
+                  currentUsername={user?.username ?? null}
+                  currentName={user?.name ?? null}
+                  currentBio={user?.bio ?? null}
                 />
               </div>
             )}
@@ -85,17 +92,6 @@ export default async function PublicProfilePage({
               usernameParam={user?.username ?? null}
             />
 
-            <div className="my-6 border-t border-[color:var(--panel-border)]" />
-
-            {isSelf && (
-              <div className="mt-6">
-                <ProfileUpdateModal
-                  currentUsername={user?.username ?? null}
-                  currentName={user?.name ?? null}
-                  currentBio={user?.bio ?? null}
-                />
-              </div>
-            )}
             <div className="my-6 border-t border-[color:var(--panel-border)]" />
           </div>
 

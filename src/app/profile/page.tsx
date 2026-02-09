@@ -42,13 +42,13 @@ export default async function ProfilePage() {
                 <ProfileSettings required currentName={user?.name ?? null} />
               </div>
             )}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center justify-between gap-4">
               <ProfileHeader
                 initialName={user?.name ?? session.user.name ?? "Your Name"}
                 initialUsername={user?.username ?? "username"}
                 initialBio={user?.bio ?? null}
               />
-              <div className="h-16 w-16 self-end sm:self-auto rounded-full overflow-hidden border border-slate-200 bg-slate-200">
+              <div className="h-20 w-20 rounded-full overflow-hidden border border-slate-200 bg-slate-200">
                 {user?.image || session.user.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -58,21 +58,13 @@ export default async function ProfilePage() {
                   />
                 ) : (
                   <div className="h-full w-full flex items-center justify-center text-[color:var(--subtle)]">
-                    <UserIcon size={36} />
+                    <UserIcon size={44} />
                   </div>
                 )}
               </div>
             </div>
 
-            <ProfileStats
-              initialPrayedCount={prayedCount}
-              initialFollowersCount={user?.followers?.length ?? 0}
-              initialFollowingCount={user?.following?.length ?? 0}
-            />
-
-            <div className="my-6 border-t border-[color:var(--panel-border)]" />
-
-            <div className="mt-6">
+            <div className="mt-4">
               <ProfileUpdateModal
                 currentUsername={user?.username ?? null}
                 currentName={user?.name ?? null}
@@ -81,6 +73,13 @@ export default async function ProfilePage() {
                 onUpdated={() => {}}
               />
             </div>
+
+            <ProfileStats
+              initialPrayedCount={prayedCount}
+              initialFollowersCount={user?.followers?.length ?? 0}
+              initialFollowingCount={user?.following?.length ?? 0}
+            />
+
             <div className="my-6 border-t border-[color:var(--panel-border)]" />
           </div>
 
