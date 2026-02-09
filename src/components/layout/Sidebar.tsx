@@ -8,7 +8,6 @@ import Image from "next/image";
 import {
   BellSimple,
   BookOpenText,
-  ChartBar,
   GoogleLogo,
   House,
   Info,
@@ -40,7 +39,6 @@ export default function Sidebar() {
     closePreferences,
     togglePreferences,
   } = useUIStore();
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "von.manaois@gmail.com";
   const prefsButtonRef = useRef<HTMLButtonElement | null>(null);
   const mobilePrefsButtonRef = useRef<HTMLButtonElement | null>(null);
   const router = useRouter();
@@ -402,18 +400,6 @@ export default function Sidebar() {
           </span>
           <span className="hidden lg:inline">Why Beliefted</span>
         </button>
-        {session?.user?.email === adminEmail && (
-          <button
-            type="button"
-            className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-            onClick={() => router.push("/analytics")}
-          >
-            <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
-              <ChartBar size={22} weight="regular" />
-            </span>
-            <span className="hidden lg:inline">Analytics</span>
-          </button>
-        )}
         <button
           type="button"
           ref={prefsButtonRef}

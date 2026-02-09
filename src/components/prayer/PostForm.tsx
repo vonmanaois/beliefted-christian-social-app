@@ -124,13 +124,6 @@ export default function PostForm({
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("feed:refresh"));
       }
-      if (typeof window !== "undefined") {
-        void fetch("/api/analytics", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ event: "prayer_posted" }),
-        });
-      }
     } catch (error) {
       console.error(error);
     } finally {

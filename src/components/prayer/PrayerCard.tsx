@@ -499,13 +499,6 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     onSuccess: () => {
       setPrayError(null);
       if (typeof window !== "undefined") {
-        void fetch("/api/analytics", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ event: "prayed", entityId: prayerId }),
-        });
-      }
-      if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("stats:refresh"));
         window.dispatchEvent(new Event("notifications:refresh"));
       }

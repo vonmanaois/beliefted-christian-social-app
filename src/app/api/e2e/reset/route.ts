@@ -70,7 +70,6 @@ export async function POST(request: Request) {
         },
       }
     ),
-    db.collection("analytics_events").deleteMany({ userId: { $in: userIds } }),
     db.collection("sessions").deleteMany({ userId: { $in: userIds } }),
   ]);
 

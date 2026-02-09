@@ -61,13 +61,6 @@ export default function FollowButton({
         );
       }
       if (typeof window !== "undefined") {
-        void fetch("/api/analytics", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ event: "followed", entityId: targetUserId }),
-        });
-      }
-      if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("notifications:refresh"));
       }
     } catch (error) {
