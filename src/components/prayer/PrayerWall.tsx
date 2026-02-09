@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import Image from "next/image";
 import PostForm from "@/components/prayer/PostForm";
 import PrayerFeed from "@/components/prayer/PrayerFeed";
 import Modal from "@/components/layout/Modal";
@@ -45,10 +46,12 @@ export default function PrayerWall() {
         <span className="inline-flex items-center gap-2">
           <span className="h-7 w-7 rounded-full bg-[color:var(--surface-strong)] overflow-hidden flex items-center justify-center text-[10px] font-semibold text-[color:var(--subtle)]">
             {session?.user?.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={session.user.image}
-                alt=""
+                alt="Profile"
+                width={56}
+                height={56}
+                sizes="28px"
                 className="h-full w-full object-cover"
               />
             ) : (

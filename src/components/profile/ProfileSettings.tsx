@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
+import Image from "next/image";
 import { UserSquare } from "@phosphor-icons/react";
 import Modal from "@/components/layout/Modal";
 import Button from "@/components/ui/Button";
@@ -259,10 +260,12 @@ export default function ProfileSettings({
       <div className="flex items-center gap-4">
         <div className="h-14 w-14 rounded-full bg-[color:var(--surface-strong)] flex items-center justify-center overflow-hidden">
           {image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={cloudinaryTransform(image, { width: 120, height: 120 })}
               alt="Profile"
+              width={120}
+              height={120}
+              sizes="56px"
               className="h-full w-full object-cover"
             />
           ) : (

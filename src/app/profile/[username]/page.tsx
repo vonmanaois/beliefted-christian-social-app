@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth/next";
+import Image from "next/image";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import clientPromise from "@/lib/mongodb";
@@ -55,10 +56,12 @@ export default async function PublicProfilePage({
               />
               <div className="h-20 w-20 rounded-full overflow-hidden border border-slate-200 bg-slate-200">
                 {user?.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <Image
                     src={cloudinaryTransform(user.image, { width: 160, height: 160 })}
                     alt="Profile"
+                    width={160}
+                    height={160}
+                    sizes="80px"
                     className="h-full w-full object-cover"
                   />
                 ) : (

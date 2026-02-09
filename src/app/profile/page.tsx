@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth/next";
+import Image from "next/image";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import UserModel from "@/models/User";
@@ -51,13 +52,15 @@ export default async function ProfilePage() {
               />
               <div className="h-20 w-20 rounded-full overflow-hidden border border-slate-200 bg-slate-200">
                 {user?.image || session?.user?.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <Image
                     src={cloudinaryTransform(user?.image ?? session?.user?.image ?? "", {
                       width: 160,
                       height: 160,
                     })}
                     alt="Profile"
+                    width={160}
+                    height={160}
+                    sizes="80px"
                     className="h-full w-full object-cover"
                   />
                 ) : (

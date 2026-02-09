@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import Image from "next/image";
 import PrayerFeed from "@/components/prayer/PrayerFeed";
 import WordFeed from "@/components/word/WordFeed";
 import PostForm from "@/components/prayer/PostForm";
@@ -100,10 +101,12 @@ export default function ProfileTabs({
                 <span className="inline-flex items-center gap-2">
                   <span className="h-7 w-7 rounded-full bg-[color:var(--surface-strong)] overflow-hidden flex items-center justify-center text-[10px] font-semibold text-[color:var(--subtle)]">
                     {session?.user?.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={cloudinaryTransform(session.user.image, { width: 64, height: 64 })}
                         alt=""
+                        width={64}
+                        height={64}
+                        sizes="28px"
                         className="h-full w-full object-cover"
                       />
                     ) : (
@@ -127,10 +130,12 @@ export default function ProfileTabs({
                 <span className="inline-flex items-center gap-2">
                   <span className="h-7 w-7 rounded-full bg-[color:var(--surface-strong)] overflow-hidden flex items-center justify-center text-[10px] font-semibold text-[color:var(--subtle)]">
                     {session?.user?.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={cloudinaryTransform(session.user.image, { width: 64, height: 64 })}
                         alt=""
+                        width={64}
+                        height={64}
+                        sizes="28px"
                         className="h-full w-full object-cover"
                       />
                     ) : (
