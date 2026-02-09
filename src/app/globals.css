@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 :root {
+  --font-sans: "Inter";
+  --font-serif: "DM Sans";
   color-scheme: light;
   --ink: #0b0b0b;
   --subtle: #6b6b6b;

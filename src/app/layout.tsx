@@ -1,19 +1,9 @@
 import type { Metadata } from "next";
-import { Inter, DM_Sans } from "next/font/google";
 import "./globals.css";
 import Providers from "@/app/providers";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  display: "swap",
-});
-
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  variable: "--font-serif",
-  display: "swap",
-});
+import "@fontsource/inter/variable.css";
+import "@fontsource/dm-sans/variable.css";
 
 export const metadata: Metadata = {
   title: "Beliefted",
@@ -31,11 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en"
-      className={`${dmSans.variable} ${inter.variable}`}
-      suppressHydrationWarning
-    >
+    <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
