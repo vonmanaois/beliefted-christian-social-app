@@ -53,6 +53,10 @@ export default async function PostDetailPage({ params }: PageProps) {
                   _id: prayer._id.toString(),
                   userId: prayer.userId?.toString(),
                   heading: prayer.heading ?? undefined,
+                  createdAt:
+                    prayer.createdAt instanceof Date
+                      ? prayer.createdAt.toISOString()
+                      : (prayer.createdAt as unknown as string),
                   isOwner: Boolean(
                     session?.user?.id && String(prayer.userId) === String(session.user.id)
                   ),
