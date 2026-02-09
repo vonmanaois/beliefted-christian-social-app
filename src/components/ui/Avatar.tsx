@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import UserIcon from "@/components/ui/UserIcon";
 
 type AvatarProps = {
   src?: string | null;
@@ -20,17 +21,27 @@ export default function Avatar({
   fallback,
   className,
 }: AvatarProps) {
+  const isDataUrl = Boolean(src && src.startsWith("data:image/"));
   const content = src ? (
-    <Image
-      src={src}
-      alt={alt}
-      width={size}
-      height={size}
-      sizes={`${size}px`}
-      className="h-full w-full object-cover rounded-full"
-    />
+    isDataUrl ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src}
+        alt={alt}
+        className="h-full w-full object-cover rounded-full"
+      />
+    ) : (
+      <Image
+        src={src}
+        alt={alt}
+        width={size}
+        height={size}
+        sizes={`${size}px`}
+        className="h-full w-full object-cover rounded-full"
+      />
+    )
   ) : (
-    fallback
+    <UserIcon size={Math.round(size * 0.95)} />
   );
 
   const baseClass = `rounded-full bg-slate-200 overflow-hidden flex items-center justify-center font-semibold text-slate-500 ${className ?? ""}`;

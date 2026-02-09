@@ -8,12 +8,14 @@ type OnboardingFormProps = {
   name?: string | null;
   username?: string | null;
   bio?: string | null;
+  image?: string | null;
 };
 
 export default function OnboardingForm({
   name,
   username,
   bio,
+  image,
 }: OnboardingFormProps) {
   const [agreed, setAgreed] = useState(false);
 
@@ -53,6 +55,7 @@ export default function OnboardingForm({
         currentName={name ?? null}
         currentUsername={username ?? null}
         currentBio={bio ?? null}
+        currentImage={image ?? null}
         showDangerZone={false}
         submitDisabled={!agreed}
         submitDisabledMessage="Agree to the Terms and Privacy Policy to continue."

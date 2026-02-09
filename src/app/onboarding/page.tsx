@@ -40,6 +40,7 @@ export default async function OnboardingPage() {
             name={user?.name ?? null}
             username={user?.username ?? null}
             bio={user?.bio ?? null}
+            image={user?.image ?? null}
           />
         </div>
       </div>

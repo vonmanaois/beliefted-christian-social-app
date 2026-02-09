@@ -19,6 +19,11 @@ export async function PATCH(req: Request) {
     username: z.string().trim().min(3).max(20),
     name: z.string().trim().max(100).optional().or(z.literal("")),
     bio: z.string().trim().max(280).optional().or(z.literal("")),
+    image: z
+      .string()
+      .trim()
+      .optional()
+      .or(z.literal("")),
   });
 
   const body = ProfileSchema.safeParse(await req.json());
@@ -29,6 +34,14 @@ export async function PATCH(req: Request) {
   const username = body.data.username.trim();
   const name = (body.data.name ?? "").trim();
   const bio = (body.data.bio ?? "").trim();
+  const image = (body.data.image ?? "").trim();
+
+  if (image && (!image.startsWith("data:image/") || image.length > 1_000_000)) {
+    return NextResponse.json(
+      { error: "Invalid image data." },
+      { status: 400 }
+    );
+  }
 
   if (!usernameRegex.test(username)) {
     return NextResponse.json(
@@ -65,6 +78,7 @@ export async function PATCH(req: Request) {
         username,
         name,
         bio: bio.slice(0, 280),
+        image: image || null,
         onboardingComplete: true,
       },
     }
@@ -76,6 +90,7 @@ export async function PATCH(req: Request) {
     username: updated?.username ?? username,
     name: updated?.name ?? name,
     bio: updated?.bio ?? bio,
+    image: updated?.image ?? (image || null),
   });
 }
 
@@ -100,6 +115,7 @@ export async function GET(req: Request) {
         name: user.name ?? null,
         username: user.username ?? null,
         bio: user.bio ?? null,
+        image: user.image ?? null,
         followersCount: Array.isArray(user.followers) ? user.followers.length : 0,
         followingCount: Array.isArray(user.following) ? user.following.length : 0,
         prayersLiftedCount: typeof prayersLiftedCount === "number" ? prayersLiftedCount : 0,
@@ -136,6 +152,7 @@ export async function GET(req: Request) {
     name: user?.name ?? null,
     username: user?.username ?? null,
     bio: user?.bio ?? null,
+    image: user?.image ?? null,
     followersCount: Array.isArray(user?.followers) ? user.followers.length : 0,
     followingCount: Array.isArray(user?.following) ? user.following.length : 0,
     prayersLiftedCount: typeof prayersLiftedCount === "number" ? prayersLiftedCount : 0,

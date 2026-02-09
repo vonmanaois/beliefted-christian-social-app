@@ -60,6 +60,7 @@ export const authOptions: NextAuthOptions = {
       await UserModel.findByIdAndUpdate(user.id, {
         username: candidate,
         onboardingComplete: false,
+        image: null,
       });
     },
     async signIn({ user }) {

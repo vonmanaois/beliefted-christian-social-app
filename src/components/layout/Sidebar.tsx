@@ -218,7 +218,9 @@ export default function Sidebar() {
         <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#2d6cdf] to-[#9b6cff]" />
         <div className="hidden md:block">
           <p className="text-sm font-semibold text-[color:var(--ink)]">Beliefted</p>
-          <p className="text-xs text-[color:var(--subtle)]">Prayer Wall</p>
+          <p className="text-xs text-[color:var(--subtle)]">
+            Faith that lifts others through prayer
+          </p>
         </div>
       </button>
 

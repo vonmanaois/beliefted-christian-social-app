@@ -9,6 +9,7 @@ import ProfileTabs from "@/components/profile/ProfileTabs";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import ProfileUpdateModal from "@/components/profile/ProfileUpdateModal";
 import ProfileStats from "@/components/profile/ProfileStats";
+import UserIcon from "@/components/ui/UserIcon";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +56,11 @@ export default async function ProfilePage() {
                     alt="Profile"
                     className="h-full w-full object-cover"
                   />
-                ) : null}
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center text-[color:var(--subtle)]">
+                    <UserIcon size={36} />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -72,6 +77,7 @@ export default async function ProfilePage() {
                 currentUsername={user?.username ?? null}
                 currentName={user?.name ?? null}
                 currentBio={user?.bio ?? null}
+                currentImage={user?.image ?? null}
                 onUpdated={() => {}}
               />
             </div>

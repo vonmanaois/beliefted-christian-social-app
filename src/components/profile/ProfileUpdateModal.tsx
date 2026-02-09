@@ -9,6 +9,7 @@ type ProfileUpdateModalProps = {
   currentUsername?: string | null;
   currentName?: string | null;
   currentBio?: string | null;
+  currentImage?: string | null;
   onUpdated?: () => void;
 };
 
@@ -16,6 +17,7 @@ export default function ProfileUpdateModal({
   currentUsername,
   currentName,
   currentBio,
+  currentImage,
   onUpdated,
 }: ProfileUpdateModalProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -35,6 +37,7 @@ export default function ProfileUpdateModal({
           currentUsername={currentUsername}
           currentName={currentName}
           currentBio={currentBio}
+          currentImage={currentImage}
           onUpdated={() => {
             setIsOpen(false);
             onUpdated?.();

@@ -9,6 +9,7 @@ import FollowButton from "@/components/profile/FollowButton";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import ProfileUpdateModal from "@/components/profile/ProfileUpdateModal";
 import ProfileStats from "@/components/profile/ProfileStats";
+import UserIcon from "@/components/ui/UserIcon";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +61,11 @@ export default async function PublicProfilePrayersPage({
                       alt="Profile"
                       className="h-full w-full object-cover"
                     />
-                  ) : null}
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center text-[color:var(--subtle)]">
+                      <UserIcon size={36} />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
