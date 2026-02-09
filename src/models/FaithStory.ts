@@ -8,6 +8,7 @@ const FaithStorySchema = new Schema(
     authorName: { type: String, trim: true },
     authorUsername: { type: String, trim: true },
     authorImage: { type: String, trim: true },
+    isAnonymous: { type: Boolean, default: false },
     likedBy: [{ type: Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: true }

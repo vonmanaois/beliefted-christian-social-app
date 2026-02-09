@@ -44,11 +44,13 @@ export async function GET(req: Request) {
         storyId: story._id,
       });
       const user =
-        userMap.get(userIdString ?? "") ?? {
-          name: story.authorName,
-          image: story.authorImage,
-          username: story.authorUsername,
-        };
+        story.isAnonymous
+          ? { name: "Anonymous", image: null, username: null }
+          : userMap.get(userIdString ?? "") ?? {
+              name: story.authorName,
+              image: story.authorImage,
+              username: story.authorUsername,
+            };
 
       return {
         ...story,
@@ -78,6 +80,7 @@ export async function POST(req: Request) {
   const StorySchema = z.object({
     title: z.string().trim().min(1).max(160),
     content: z.string().trim().min(1).max(10000),
+    isAnonymous: z.boolean().optional(),
   });
 
   const body = StorySchema.safeParse(await req.json());
@@ -90,6 +93,7 @@ export async function POST(req: Request) {
   const author = await UserModel.findById(session.user.id)
     .select("name image username")
     .lean();
+  const isAnonymous = Boolean(body.data.isAnonymous);
 
   const story = await FaithStoryModel.create({
     title: body.data.title.trim(),
@@ -98,6 +102,7 @@ export async function POST(req: Request) {
     authorName: author?.name ?? null,
     authorUsername: author?.username ?? null,
     authorImage: author?.image ?? null,
+    isAnonymous,
     likedBy: [],
   });
 

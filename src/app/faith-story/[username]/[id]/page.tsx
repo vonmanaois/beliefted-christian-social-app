@@ -116,6 +116,7 @@ export default async function FaithStoryDetailPage({ params }: PageProps) {
               content: story.content,
               createdAt: story.createdAt.toISOString(),
               likedBy: (story.likedBy ?? []).map((id) => id.toString()),
+              isAnonymous: story.isAnonymous ?? false,
               userId: story.userId?.toString() ?? null,
               user: {
                 name: author?.name ?? story.authorName ?? "User",

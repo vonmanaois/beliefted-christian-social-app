@@ -34,6 +34,65 @@ export default function HomeTabs() {
   }, [router]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (pathname !== "/" && pathname !== "/prayerwall") {
+      return;
+    }
+    let source: EventSource | null = null;
+    let retryDelay = 1000;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const connect = () => {
+      if (document.visibilityState === "hidden") return;
+      if (source) return;
+      source = new EventSource("/api/feeds/stream");
+
+      source.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data) as {
+            wordsChanged?: boolean;
+            prayersChanged?: boolean;
+          };
+          if (payload.wordsChanged) {
+            queryClient.invalidateQueries({ queryKey: ["words"] });
+          }
+          if (payload.prayersChanged) {
+            queryClient.invalidateQueries({ queryKey: ["prayers"] });
+          }
+        } catch {
+          // ignore parse errors
+        }
+      };
+
+      source.onerror = () => {
+        source?.close();
+        source = null;
+        if (retryTimer) clearTimeout(retryTimer);
+        retryTimer = setTimeout(connect, retryDelay);
+        retryDelay = Math.min(retryDelay * 2, 30000);
+      };
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        source?.close();
+        source = null;
+        return;
+      }
+      connect();
+    };
+
+    connect();
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      if (retryTimer) clearTimeout(retryTimer);
+      source?.close();
+    };
+  }, [queryClient, pathname]);
+
+  useEffect(() => {
     const handleOpenWord = () => {
       router.push("/");
     };

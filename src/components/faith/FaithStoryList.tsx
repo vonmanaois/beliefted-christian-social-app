@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
+import { MagnifyingGlass, Plus, UserCircle } from "@phosphor-icons/react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
@@ -30,6 +30,7 @@ type FaithStory = {
   userId?: string | null;
   commentCount?: number;
   authorUsername?: string | null;
+  isAnonymous?: boolean;
 };
 
 export default function FaithStoryList() {
@@ -70,11 +71,19 @@ export default function FaithStoryList() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async ({ title, content }: { title: string; content: string }) => {
+    mutationFn: async ({
+      title,
+      content,
+      isAnonymous,
+    }: {
+      title: string;
+      content: string;
+      isAnonymous: boolean;
+    }) => {
       const response = await fetch("/api/faith-stories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, content }),
+        body: JSON.stringify({ title, content, isAnonymous }),
       });
       if (!response.ok) {
         throw new Error("Failed to create story");
@@ -159,8 +168,8 @@ export default function FaithStoryList() {
         <div ref={createRef} className="panel p-6 sm:p-8 rounded-none">
           <FaithStoryForm
             submitLabel="Publish"
-            onSubmit={async (title, content) => {
-              await createMutation.mutateAsync({ title, content });
+            onSubmit={async (title, content, isAnonymous) => {
+              await createMutation.mutateAsync({ title, content, isAnonymous });
             }}
             onCancel={() => {
               if (isDirty) {
@@ -187,8 +196,8 @@ export default function FaithStoryList() {
       ) : (
         <div className="flex flex-col gap-4">
           {results.map((story) => {
-            const username = story.user?.username ?? "";
-            const displayName = story.user?.name ?? "User";
+            const username = story.authorUsername ?? story.user?.username ?? "";
+            const displayName = story.isAnonymous ? "Anonymous" : story.user?.name ?? "User";
             return (
               <button
                 key={story._id}
@@ -201,19 +210,25 @@ export default function FaithStoryList() {
               >
                 <div className="flex items-center justify-between text-xs text-[color:var(--subtle)]">
                   <div className="flex items-center gap-2">
-                    <Avatar
-                      src={story.user?.image ?? null}
-                      alt={displayName}
-                      size={32}
-                      href={username ? `/profile/${username}` : "/profile"}
-                      fallback={(displayName[0] ?? "U").toUpperCase()}
-                      className="h-8 w-8 text-[11px]"
-                    />
+                    {story.isAnonymous ? (
+                      <div className="h-8 w-8 rounded-full bg-[color:var(--surface-strong)] flex items-center justify-center">
+                        <UserCircle size={20} weight="regular" />
+                      </div>
+                    ) : (
+                      <Avatar
+                        src={story.user?.image ?? null}
+                        alt={displayName}
+                        size={32}
+                        href={username ? `/profile/${username}` : "/profile"}
+                        fallback={(displayName[0] ?? "U").toUpperCase()}
+                        className="h-8 w-8 text-[11px]"
+                      />
+                    )}
                     <div className="leading-tight">
                       <p className="text-xs font-semibold text-[color:var(--ink)]">
                         {displayName}
                       </p>
-                      {username && (
+                      {!story.isAnonymous && username && (
                         <p className="text-[10px] text-[color:var(--subtle)]">
                           @{username}
                         </p>

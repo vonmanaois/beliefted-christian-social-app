@@ -5,7 +5,8 @@ import { useEffect, useRef, useState } from "react";
 type FaithStoryFormProps = {
   initialTitle?: string;
   initialContent?: string;
-  onSubmit: (title: string, content: string) => Promise<void> | void;
+  initialAnonymous?: boolean;
+  onSubmit: (title: string, content: string, isAnonymous: boolean) => Promise<void> | void;
   onCancel?: () => void;
   submitLabel?: string;
   onDirtyChange?: (dirty: boolean) => void;
@@ -14,6 +15,7 @@ type FaithStoryFormProps = {
 export default function FaithStoryForm({
   initialTitle = "",
   initialContent = "",
+  initialAnonymous = false,
   onSubmit,
   onCancel,
   submitLabel = "Publish",
@@ -21,11 +23,14 @@ export default function FaithStoryForm({
 }: FaithStoryFormProps) {
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
+  const [isAnonymous, setIsAnonymous] = useState(initialAnonymous);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const textRef = useRef<HTMLTextAreaElement | null>(null);
   const isDirty =
-    title.trim() !== initialTitle.trim() || content.trim() !== initialContent.trim();
+    title.trim() !== initialTitle.trim() ||
+    content.trim() !== initialContent.trim() ||
+    isAnonymous !== initialAnonymous;
 
   useEffect(() => {
     onDirtyChange?.(isDirty);
@@ -49,7 +54,7 @@ export default function FaithStoryForm({
     }
     setIsSaving(true);
     try {
-      await onSubmit(title.trim(), content.trim());
+      await onSubmit(title.trim(), content.trim(), isAnonymous);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -73,6 +78,15 @@ export default function FaithStoryForm({
         onChange={(event) => setContent(event.target.value)}
       />
       {error && <p className="text-xs text-[color:var(--danger)]">{error}</p>}
+      <label className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] cursor-pointer">
+        <input
+          type="checkbox"
+          checked={isAnonymous}
+          onChange={(event) => setIsAnonymous(event.target.checked)}
+          className="h-4 w-4"
+        />
+        Post anonymously
+      </label>
       <div className="flex items-center justify-end gap-2">
         {onCancel && (
           <button

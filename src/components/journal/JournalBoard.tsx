@@ -252,10 +252,10 @@ export default function JournalBoard() {
             }
             setShowCreate(true);
           }}
-          className="post-button inline-flex items-center gap-2"
+          className="text-[color:var(--ink)] hover:text-[color:var(--accent)] inline-flex items-center justify-center"
+          aria-label="New journal"
         >
-          <Plus size={16} weight="regular" />
-          New journal
+          <Plus size={22} weight="regular" />
         </button>
       </div>
 

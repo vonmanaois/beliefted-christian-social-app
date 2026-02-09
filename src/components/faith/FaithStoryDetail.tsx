@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChatCircle, DotsThreeOutline, Heart } from "@phosphor-icons/react";
+import { ChatCircle, DotsThreeOutline, Heart, UserCircle } from "@phosphor-icons/react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Avatar from "@/components/ui/Avatar";
@@ -16,6 +16,7 @@ type FaithStoryDetailProps = {
     content: string;
     createdAt: string;
     likedBy: string[];
+    isAnonymous?: boolean;
     user: { name?: string | null; username?: string | null; image?: string | null } | null;
     userId?: string | null;
   };
@@ -290,22 +291,30 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
                 {story.title}
               </h1>
               <div className="mt-3 flex items-center justify-center gap-2 text-xs text-[color:var(--subtle)]">
-                <Avatar
-                  src={story.user?.image ?? null}
-                  alt={story.user?.name ?? "User"}
-                  size={28}
-                  href={
-                    story.user?.username ? `/profile/${story.user.username}` : "/profile"
-                  }
-                  fallback={(story.user?.name?.[0] ?? "U").toUpperCase()}
-                  className="h-7 w-7 text-[10px]"
-                />
+                {story.isAnonymous ? (
+                  <div className="h-7 w-7 rounded-full bg-[color:var(--surface-strong)] flex items-center justify-center">
+                    <UserCircle size={20} weight="regular" />
+                  </div>
+                ) : (
+                  <Avatar
+                    src={story.user?.image ?? null}
+                    alt={story.user?.name ?? "User"}
+                    size={28}
+                    href={
+                      story.user?.username ? `/profile/${story.user.username}` : "/profile"
+                    }
+                    fallback={(story.user?.name?.[0] ?? "U").toUpperCase()}
+                    className="h-7 w-7 text-[10px]"
+                  />
+                )}
                 <span>
                   by{" "}
                   <span className="text-[color:var(--ink)] font-semibold">
-                    {story.user?.name ?? "User"}
+                    {story.isAnonymous ? "Anonymous" : story.user?.name ?? "User"}
                   </span>{" "}
-                  {story.user?.username ? `@${story.user.username}` : ""}
+                  {!story.isAnonymous && story.user?.username
+                    ? `@${story.user.username}`
+                    : ""}
                 </span>
               </div>
             </div>
