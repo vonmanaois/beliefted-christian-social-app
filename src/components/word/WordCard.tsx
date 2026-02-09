@@ -18,7 +18,7 @@ type WordUser = {
 type Word = {
   _id: string | { $oid?: string };
   content: string;
-  createdAt: string;
+  createdAt: string | Date;
   likedBy?: string[];
   commentCount?: number;
   user?: WordUser | null;

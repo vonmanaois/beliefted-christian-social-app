@@ -26,10 +26,10 @@ export type PrayerUser = {
 export type Prayer = {
   _id: string | { $oid?: string };
   content: string;
-  heading?: string;
+  heading?: string | null;
   kind?: "prayer" | "request";
   prayerPoints?: { title: string; description: string }[];
-  createdAt: string;
+  createdAt: string | Date;
   isAnonymous: boolean;
   prayedBy: string[];
   commentCount?: number;
