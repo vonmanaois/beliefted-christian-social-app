@@ -1,13 +1,21 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Providers from "@/app/providers";
+import { Inter, DM_Sans } from "next/font/google";
 
-import "@fontsource/inter/400.css";
-import "@fontsource/inter/600.css";
-import "@fontsource/inter/700.css";
-import "@fontsource/dm-sans/400.css";
-import "@fontsource/dm-sans/600.css";
-import "@fontsource/dm-sans/700.css";
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+  variable: "--font-dm-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Beliefted",
@@ -26,7 +34,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body suppressHydrationWarning>
+      <body
+        suppressHydrationWarning
+        className={`${inter.variable} ${dmSans.variable}`}
+      >
         <Providers>{children}</Providers>
       </body>
     </html>

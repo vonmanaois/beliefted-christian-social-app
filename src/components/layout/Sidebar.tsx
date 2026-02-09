@@ -22,6 +22,12 @@ import ThemeToggle from "@/components/layout/ThemeToggle";
 import UserSearch from "@/components/layout/UserSearch";
 import { useUIStore } from "@/lib/uiStore";
 
+let notificationStream: EventSource | null = null;
+let notificationStreamUsers = 0;
+let notificationStreamRetryDelay = 1000;
+let notificationStreamRetryTimer: ReturnType<typeof setTimeout> | null = null;
+let notificationStreamCloseTimer: ReturnType<typeof setTimeout> | null = null;
+
 export default function Sidebar() {
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
@@ -69,7 +75,9 @@ export default function Sidebar() {
       return Array.isArray(data) ? data.length : 0;
     },
     enabled: isAuthenticated,
-    refetchInterval: 30000,
+    staleTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   useEffect(() => {
@@ -81,16 +89,37 @@ export default function Sidebar() {
   }, [queryClient]);
 
   useEffect(() => {
-    if (!isAuthenticated || typeof window === "undefined") return;
-    let source: EventSource | null = null;
-    let retryDelay = 1000;
-    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    if (typeof window === "undefined") return;
+    if (!isAuthenticated) {
+      if (notificationStreamCloseTimer) {
+        clearTimeout(notificationStreamCloseTimer);
+        notificationStreamCloseTimer = null;
+      }
+      if (notificationStreamRetryTimer) {
+        clearTimeout(notificationStreamRetryTimer);
+        notificationStreamRetryTimer = null;
+      }
+      notificationStream?.close();
+      notificationStream = null;
+      notificationStreamUsers = 0;
+      return;
+    }
+
+    notificationStreamUsers += 1;
+    if (notificationStreamCloseTimer) {
+      clearTimeout(notificationStreamCloseTimer);
+      notificationStreamCloseTimer = null;
+    }
 
     const connect = () => {
-      if (!isAuthenticated) return;
-      source = new EventSource("/api/notifications/stream");
+      if (notificationStream) return;
+      notificationStream = new EventSource("/api/notifications/stream");
 
-      source.onmessage = (event) => {
+      notificationStream.onopen = () => {
+        notificationStreamRetryDelay = 1000;
+      };
+
+      notificationStream.onmessage = (event) => {
         try {
           const payload = JSON.parse(event.data) as { count?: number };
           if (typeof payload.count === "number") {
@@ -101,20 +130,31 @@ export default function Sidebar() {
         }
       };
 
-      source.onerror = () => {
-        source?.close();
-        source = null;
-        if (retryTimer) clearTimeout(retryTimer);
-        retryTimer = setTimeout(connect, retryDelay);
-        retryDelay = Math.min(retryDelay * 2, 30000);
+      notificationStream.onerror = () => {
+        notificationStream?.close();
+        notificationStream = null;
+        if (notificationStreamRetryTimer) {
+          clearTimeout(notificationStreamRetryTimer);
+        }
+        notificationStreamRetryTimer = setTimeout(connect, notificationStreamRetryDelay);
+        notificationStreamRetryDelay = Math.min(notificationStreamRetryDelay * 2, 30000);
       };
     };
 
     connect();
 
     return () => {
-      if (retryTimer) clearTimeout(retryTimer);
-      source?.close();
+      notificationStreamUsers = Math.max(0, notificationStreamUsers - 1);
+      if (notificationStreamUsers === 0) {
+        notificationStreamCloseTimer = setTimeout(() => {
+          if (notificationStreamRetryTimer) {
+            clearTimeout(notificationStreamRetryTimer);
+            notificationStreamRetryTimer = null;
+          }
+          notificationStream?.close();
+          notificationStream = null;
+        }, 5000);
+      }
     };
   }, [isAuthenticated, queryClient]);
 
@@ -130,29 +170,33 @@ export default function Sidebar() {
     router.push("/notifications");
   };
 
-  useEffect(() => {
-    const loadProfile = async () => {
-      if (!isAuthenticated) return;
-      try {
-        const response = await fetch("/api/user/profile", { cache: "no-store" });
-        if (!response.ok) return;
-        const data = (await response.json()) as {
-          username?: string | null;
-          onboardingComplete?: boolean;
-        };
-        if (typeof data.username === "string") {
-          setProfileUsername(data.username);
-        }
-        if (typeof data.onboardingComplete === "boolean") {
-          setOnboardingComplete(data.onboardingComplete);
-        }
-      } catch (error) {
-        console.error(error);
+  const { data: profileSummary } = useQuery({
+    queryKey: ["profile", "summary"],
+    queryFn: async () => {
+      const response = await fetch("/api/user/profile", { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error("Failed to load profile");
       }
-    };
+      return (await response.json()) as {
+        username?: string | null;
+        onboardingComplete?: boolean;
+      };
+    },
+    enabled: isAuthenticated,
+    staleTime: 5 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
 
-    loadProfile();
-  }, [isAuthenticated]);
+  useEffect(() => {
+    if (!profileSummary) return;
+    if (typeof profileSummary.username === "string") {
+      setProfileUsername(profileSummary.username);
+    }
+    if (typeof profileSummary.onboardingComplete === "boolean") {
+      setOnboardingComplete(profileSummary.onboardingComplete);
+    }
+  }, [profileSummary]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
