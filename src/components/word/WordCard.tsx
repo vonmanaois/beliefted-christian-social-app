@@ -634,6 +634,7 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
             type="button"
             onClick={handleLike}
             disabled={isLiking}
+            aria-label={hasLiked ? "Unlike word" : "Like word"}
             className={`pill-button cursor-pointer transition-colors ${
               hasLiked
                 ? "text-[color:var(--accent-strong)]"
@@ -656,6 +657,7 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
           <button
             type="button"
             onClick={toggleComments}
+            aria-label="Comment on word"
             className="pill-button cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
             ref={commentButtonRef}
           >

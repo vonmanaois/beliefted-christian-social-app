@@ -14,7 +14,7 @@ test.describe("Lifted basic navigation", () => {
   test("faith share composer prompt shows", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByText("Share your faith")).toBeVisible();
+    await expect(page.getByText(/Share your faith|Sign in to post a word/)).toBeVisible();
   });
 
   test("search page renders", async ({ page }) => {

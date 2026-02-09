@@ -848,6 +848,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
           <button
             type="button"
             onClick={toggleComments}
+            aria-label="Comment on prayer"
             className="inline-flex items-center justify-center gap-2 rounded-lg px-2 py-1.5 cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
             ref={commentButtonRef}
           >
