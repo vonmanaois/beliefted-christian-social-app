@@ -93,6 +93,7 @@ export default function JournalBoard() {
       await queryClient.invalidateQueries({ queryKey: ["journals"] });
     },
   });
+  const isDeleting = deleteMutation.isPending;
 
   const todayKey = new Date().toDateString();
 
@@ -158,10 +159,24 @@ export default function JournalBoard() {
   const renderGrid = (items: Journal[]) => (
     <div className="flex flex-col gap-4">
       {items.map((journal) => (
-        <button
+        <div
           key={journal._id}
-          type="button"
+          role="button"
+          tabIndex={0}
           onClick={() => {
+            if (showCreate && isDirty) {
+              setPendingAction(() => () => {
+                setShowCreate(false);
+                setIsDirty(false);
+              });
+              setShowDiscardConfirm(true);
+              return;
+            }
+            router.push(`/journal/${journal._id}`);
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
             if (showCreate && isDirty) {
               setPendingAction(() => () => {
                 setShowCreate(false);
@@ -225,7 +240,7 @@ export default function JournalBoard() {
               {journal.content}
             </p>
           </div>
-        </button>
+        </div>
       ))}
     </div>
   );
@@ -362,13 +377,15 @@ export default function JournalBoard() {
           <button
             type="button"
             onClick={async () => {
+              if (isDeleting) return;
               if (pendingDeleteId) {
                 await deleteMutation.mutateAsync(pendingDeleteId);
               }
             }}
-            className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer"
+            disabled={isDeleting}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer disabled:opacity-60"
           >
-            Delete
+            {isDeleting ? "Deleting..." : "Delete"}
           </button>
         </div>
       </Modal>

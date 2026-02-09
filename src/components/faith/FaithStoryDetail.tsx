@@ -239,6 +239,7 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
       router.push("/faith-stories");
     },
   });
+  const isDeleting = deleteMutation.isPending;
 
   return (
     <div>
@@ -548,11 +549,13 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
           <button
             type="button"
             onClick={async () => {
+              if (isDeleting) return;
               await deleteMutation.mutateAsync();
             }}
-            className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer"
+            disabled={isDeleting}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer disabled:opacity-60"
           >
-            Delete
+            {isDeleting ? "Deleting..." : "Delete"}
           </button>
         </div>
       </Modal>

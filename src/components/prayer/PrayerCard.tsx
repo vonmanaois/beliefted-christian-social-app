@@ -469,6 +469,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
       await queryClient.invalidateQueries({ queryKey: ["prayers"] });
     },
   });
+  const isDeleting = deleteMutation.isPending;
 
   const prayMutation = useMutation({
     mutationFn: async () => {
@@ -1130,12 +1131,14 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
           <button
             type="button"
             onClick={async () => {
+              if (isDeleting) return;
               await handleDelete();
               setShowDeleteConfirm(false);
             }}
-            className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer pointer-events-auto hover:opacity-90 active:translate-y-[1px]"
+            disabled={isDeleting}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer pointer-events-auto hover:opacity-90 active:translate-y-[1px] disabled:opacity-60"
           >
-            Delete
+            {isDeleting ? "Deleting..." : "Delete"}
           </button>
         </div>
       </Modal>
