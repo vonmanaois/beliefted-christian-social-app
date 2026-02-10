@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Providers from "@/app/providers";
 import { Inter, DM_Sans } from "next/font/google";
+import OfflineBanner from "@/components/OfflineBanner";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -48,6 +49,7 @@ export default function RootLayout({
         suppressHydrationWarning
         className={`${inter.variable} ${dmSans.variable}`}
       >
+        <OfflineBanner />
         <Providers>{children}</Providers>
       </body>
     </html>
