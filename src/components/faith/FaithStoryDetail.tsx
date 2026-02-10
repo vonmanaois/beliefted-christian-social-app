@@ -150,9 +150,26 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
     },
     onSuccess: async (newComment) => {
       setCommentText("");
+      const shouldHydrateUser =
+        session?.user?.id &&
+        (!newComment.userId ||
+          typeof newComment.userId === "string" ||
+          !("name" in newComment.userId) ||
+          !newComment.userId?.name);
+      const hydratedComment = shouldHydrateUser
+        ? {
+            ...newComment,
+            userId: {
+              _id: session.user.id,
+              name: session.user.name ?? "User",
+              image: session.user.image ?? null,
+              username: session.user.username ?? null,
+            },
+          }
+        : newComment;
       queryClient.setQueryData<Comment[]>(
         ["faith-story-comments", story._id],
-        (current = []) => [newComment, ...current]
+        (current = []) => [hydratedComment as Comment, ...current]
       );
     },
   });

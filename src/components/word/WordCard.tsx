@@ -299,18 +299,23 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
         ...item,
         commentCount: (item.commentCount ?? 0) + 1,
       }));
-      const hydratedComment =
-        session?.user?.id && !newComment.userId
-          ? {
-              ...newComment,
-              userId: {
-                _id: session.user.id,
-                name: session.user.name ?? "User",
-                image: session.user.image ?? null,
-                username: session.user.username ?? null,
-              },
-            }
-          : newComment;
+      const shouldHydrateUser =
+        session?.user?.id &&
+        (!newComment.userId ||
+          typeof newComment.userId === "string" ||
+          !("name" in newComment.userId) ||
+          !newComment.userId?.name);
+      const hydratedComment = shouldHydrateUser
+        ? {
+            ...newComment,
+            userId: {
+              _id: session.user.id,
+              name: session.user.name ?? "User",
+              image: session.user.image ?? null,
+              username: session.user.username ?? null,
+            },
+          }
+        : newComment;
       queryClient.setQueryData<WordCommentData[]>(
         ["word-comments", wordId],
         (current = []) => [hydratedComment as WordCommentData, ...current]

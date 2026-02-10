@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "@/app/providers";
 import { Inter, DM_Sans } from "next/font/google";
@@ -22,7 +22,6 @@ export const metadata: Metadata = {
   title: "Beliefted",
   description: "A Christian prayer wall and social journal.",
   manifest: "/manifest.webmanifest",
-  themeColor: "#3aa0f6",
   icons: {
     icon: [
       { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
@@ -36,6 +35,10 @@ export const metadata: Metadata = {
     title: "Beliefted",
     statusBarStyle: "default",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#3aa0f6",
 };
 
 export default function RootLayout({

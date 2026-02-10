@@ -31,8 +31,33 @@
    prayerId?: { _id?: string; content?: string; authorUsername?: string | null } | null;
    wordId?: { _id?: string; content?: string; authorUsername?: string | null } | null;
    faithStoryId?: { _id?: string; title?: string; authorUsername?: string | null } | null;
-   isFollowing?: boolean;
-  };
+  isFollowing?: boolean;
+ };
+
+const formatNotificationTime = (timestamp: string) => {
+  const createdAt = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - createdAt.getTime();
+  const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
+
+  if (diffMinutes < 1) {
+    return "just now";
+  }
+  if (diffMinutes < 60) {
+    return `${diffMinutes}min`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours}h`;
+  }
+
+  const sameYear = createdAt.getFullYear() === now.getFullYear();
+  const options: Intl.DateTimeFormatOptions = sameYear
+    ? { month: "short", day: "numeric" }
+    : { month: "short", day: "numeric", year: "numeric" };
+  return new Intl.DateTimeFormat("en-US", options).format(createdAt);
+};
 
 export default function NotificationsPage() {
    const [entered, setEntered] = useState(false);
@@ -245,9 +270,6 @@ export default function NotificationsPage() {
                                “{note.faithStoryId.title}”
                              </p>
                            )}
-                           <p className="mt-2 text-xs text-[color:var(--subtle)]">
-                             {new Date(note.createdAt).toLocaleString()}
-                           </p>
                          </>
                        );
                        return href ? (
@@ -258,7 +280,7 @@ export default function NotificationsPage() {
                          <div className="flex-1">{content}</div>
                        );
                      })()}
-                     <div className="flex flex-col items-end gap-2">
+                     <div className="flex items-center gap-2">
                        {note.type === "follow" &&
                          note.actorId?._id &&
                          !note.isFollowing && (
@@ -270,10 +292,13 @@ export default function NotificationsPage() {
                              Follow back
                            </button>
                          )}
+                       <span className="text-[11px] text-[color:var(--subtle)] whitespace-nowrap">
+                         {formatNotificationTime(note.createdAt)}
+                       </span>
                        <button
                          type="button"
                          onClick={() => deleteMutation.mutate(note._id)}
-                         className="h-8 w-8 rounded-full border border-[color:var(--panel-border)] text-[color:var(--subtle)] hover:text-[color:var(--ink)] flex items-center justify-center"
+                         className="h-8 w-8 rounded-full text-[color:var(--subtle)] hover:text-[color:var(--ink)] flex items-center justify-center"
                          aria-label="Dismiss notification"
                        >
                          <X size={14} weight="bold" />
