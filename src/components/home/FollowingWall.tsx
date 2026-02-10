@@ -3,7 +3,8 @@
 import { useSession } from "next-auth/react";
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { UserPlus } from "@phosphor-icons/react";
+import { UserCircle, UserPlus } from "@phosphor-icons/react";
+import Image from "next/image";
 import { useUIStore } from "@/lib/uiStore";
 import WordCard, { type Word } from "@/components/word/WordCard";
 import PrayerCard, { type Prayer } from "@/components/prayer/PrayerCard";
@@ -14,7 +15,7 @@ type FollowingItem =
   | { type: "prayer"; prayer: Prayer };
 
 export default function FollowingWall() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
   const { openSignIn } = useUIStore();
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -72,68 +73,136 @@ export default function FollowingWall() {
 
   if (!isAuthenticated) {
     return (
-      <div className="panel p-6 text-sm text-[color:var(--subtle)]">
-        <div className="flex items-start gap-3">
-          <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--panel-border)] text-[color:var(--subtle)]">
-            <UserPlus size={18} weight="regular" />
-          </span>
-          <div>
-            <p className="text-[color:var(--ink)] font-semibold">
-              Follow people to see their posts.
-            </p>
-            <p className="mt-1">Sign in to build a following feed.</p>
-            <button
-              type="button"
-              onClick={openSignIn}
-              className="mt-3 post-button bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
-            >
-              Sign in
-            </button>
+      <section className="feed-surface">
+        <div className="panel p-6 text-sm text-[color:var(--subtle)]">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--panel-border)] text-[color:var(--subtle)]">
+              <UserPlus size={18} weight="regular" />
+            </span>
+            <div>
+              <p className="text-[color:var(--ink)] font-semibold">
+                Follow people to see their posts.
+              </p>
+              <p className="mt-1">Sign in to build a following feed.</p>
+              <button
+                type="button"
+                onClick={openSignIn}
+                className="mt-3 post-button bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
+              >
+                Sign in
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
     );
   }
 
   if (isLoading) {
-    return <FeedSkeleton />;
+    return (
+      <section className="feed-surface">
+        <FeedSkeleton />
+      </section>
+    );
   }
 
   if (isError) {
     return (
-      <div className="panel p-6 text-sm text-[color:var(--subtle)]">
-        <p className="text-[color:var(--ink)] font-semibold">Something went wrong.</p>
-        <p className="mt-1">We couldn&apos;t load your following feed.</p>
-        <button
-          type="button"
-          onClick={() => refetch()}
-          className="mt-4 post-button bg-transparent border border-[color:var(--panel-border)] text-[color:var(--ink)]"
-        >
-          Retry
-        </button>
-      </div>
+      <section className="feed-surface">
+        <div className="panel p-6 text-sm text-[color:var(--subtle)]">
+          <p className="text-[color:var(--ink)] font-semibold">Something went wrong.</p>
+          <p className="mt-1">We couldn&apos;t load your following feed.</p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="mt-4 post-button bg-transparent border border-[color:var(--panel-border)] text-[color:var(--ink)]"
+          >
+            Retry
+          </button>
+        </div>
+      </section>
     );
   }
 
   const items = data?.pages.flatMap((page) => page.items) ?? [];
   if (items.length === 0) {
     return (
-      <div className="panel p-6 text-sm text-[color:var(--subtle)]">
-        <div className="flex items-start gap-3">
-          <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--panel-border)] text-[color:var(--subtle)]">
-            <UserPlus size={18} weight="regular" />
+      <section className="feed-surface">
+        <button
+          type="button"
+          onClick={() => {
+            if (!isAuthenticated) {
+              openSignIn();
+              return;
+            }
+            window.dispatchEvent(new Event("open-word-composer"));
+          }}
+          className="composer-trigger cursor-pointer"
+        >
+          <span className="inline-flex items-center gap-2">
+            <span className="h-7 w-7 rounded-full bg-[color:var(--surface-strong)] overflow-hidden flex items-center justify-center text-[10px] font-semibold text-[color:var(--subtle)]">
+              {session?.user?.image ? (
+                <Image
+                  src={session.user.image}
+                  alt="Profile"
+                  width={56}
+                  height={56}
+                  sizes="28px"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <UserCircle size={20} weight="regular" className="text-[color:var(--subtle)]" />
+              )}
+            </span>
+            Share your faith
           </span>
-          <div>
-            <p className="text-[color:var(--ink)] font-semibold">No posts yet.</p>
-            <p className="mt-1">Follow more people to see their latest prayers and words.</p>
+        </button>
+        <div className="panel p-6 text-sm text-[color:var(--subtle)]">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--panel-border)] text-[color:var(--subtle)]">
+              <UserPlus size={18} weight="regular" />
+            </span>
+            <div>
+              <p className="text-[color:var(--ink)] font-semibold">No posts yet.</p>
+              <p className="mt-1">Follow more people to see their latest prayers and words.</p>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className="flex flex-col">
+    <section className="feed-surface">
+      <button
+        type="button"
+        onClick={() => {
+          if (!isAuthenticated) {
+            openSignIn();
+            return;
+          }
+          window.dispatchEvent(new Event("open-word-composer"));
+        }}
+        className="composer-trigger cursor-pointer"
+      >
+        <span className="inline-flex items-center gap-2">
+          <span className="h-7 w-7 rounded-full bg-[color:var(--surface-strong)] overflow-hidden flex items-center justify-center text-[10px] font-semibold text-[color:var(--subtle)]">
+            {session?.user?.image ? (
+              <Image
+                src={session.user.image}
+                alt="Profile"
+                width={56}
+                height={56}
+                sizes="28px"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <UserCircle size={20} weight="regular" className="text-[color:var(--subtle)]" />
+            )}
+          </span>
+          Share your faith
+        </span>
+      </button>
       {isFetching && (
         <div className="mb-3 h-1 w-full overflow-hidden rounded-full bg-[color:var(--surface-strong)]">
           <div className="h-full w-1/3 animate-pulse rounded-full bg-[color:var(--accent)]/70" />
@@ -155,6 +224,6 @@ export default function FollowingWall() {
           )}
         </div>
       )}
-    </div>
+    </section>
   );
 }
