@@ -211,6 +211,10 @@ h3 {
   .page-grid {
     gap: 0;
   }
+
+  .feed-surface {
+    padding: 0 1px;
+  }
 }
 
 @media (max-width: 1024px) {
@@ -368,16 +372,47 @@ html[data-theme="banana"] .panel-glass {
 
 @media (max-width: 640px) {
   .wall-card {
-    padding: 8px;
+    padding: 12px;
   }
 
   .composer-trigger {
     padding: 10px 12px;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
   }
 
   .feed-surface {
     min-height: calc(100vh - 140px);
+  }
+
+  body {
+    font-size: 16px;
+  }
+
+  .text-sm {
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .text-xs {
+    font-size: 0.85rem;
+    line-height: 1.4;
+  }
+
+  .text-\[13px\] {
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .text-\[11px\] {
+    font-size: 0.78rem;
+  }
+
+  .text-\[10px\] {
+    font-size: 0.72rem;
+  }
+
+  .leading-relaxed {
+    line-height: 1.65;
   }
 }
 

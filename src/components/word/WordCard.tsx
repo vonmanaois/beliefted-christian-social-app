@@ -554,76 +554,78 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
   };
 
   return (
-    <article className="wall-card flex gap-2 sm:gap-3 rounded-none cursor-pointer" onClick={handleCardClick}>
-      <div className="avatar-ring">
-        <Avatar
-          src={word.user?.image ?? null}
-          alt={word.user?.name ?? "User"}
-          size={64}
-          sizes="(min-width: 640px) 48px, 32px"
-          href={word.user?.username ? `/profile/${word.user.username}` : "/profile"}
-          fallback={(word.user?.name?.[0] ?? "W").toUpperCase()}
-          className="avatar-core cursor-pointer h-8 w-8 sm:h-12 sm:w-12"
-        />
-      </div>
-      <div className="flex-1">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
+    <article className="wall-card flex flex-col gap-3 rounded-none cursor-pointer" onClick={handleCardClick}>
+      <div className="flex items-start gap-3">
+        <div className="avatar-ring">
+          <Avatar
+            src={word.user?.image ?? null}
+            alt={word.user?.name ?? "User"}
+            size={64}
+            sizes="(min-width: 640px) 48px, 32px"
+            href={word.user?.username ? `/profile/${word.user.username}` : "/profile"}
+            fallback={(word.user?.name?.[0] ?? "W").toUpperCase()}
+            className="avatar-core cursor-pointer h-8 w-8 sm:h-12 sm:w-12"
+          />
+        </div>
+        <div className="flex-1">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
               <a
-                href={
-                  word.user?.username ? `/profile/${word.user.username}` : "/profile"
-                }
+                href={word.user?.username ? `/profile/${word.user.username}` : "/profile"}
                 className="text-xs sm:text-sm font-semibold text-[color:var(--ink)] hover:underline"
               >
                 {word.user?.name ?? "User"}
               </a>
-            <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
-              {word.user?.username ? `@${word.user.username}` : ""}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
-              {formatPostTime(
-                word.createdAt instanceof Date
-                  ? word.createdAt.toISOString()
-                  : word.createdAt
-              )}
-            </p>
-            {isOwner && (
-              <div className="relative" ref={menuRef}>
-                <button
-                  type="button"
-                  onClick={() => setShowMenu((prev) => !prev)}
-                  className="h-8 w-8 rounded-full text-[color:var(--subtle)] hover:text-[color:var(--ink)] cursor-pointer"
-                  aria-label="More actions"
-                >
-                  <DotsThreeOutline size={20} weight="regular" />
-                </button>
-                {showMenu && (
-                  <div className="absolute right-0 top-10 z-10 min-w-[200px] rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-2 shadow-lg">
-                    <button
-                      type="button"
-                      onClick={handleEditStart}
-                      className="mb-1 w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
-                    >
-                      Edit Post
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowMenu(false);
-                        setShowDeleteConfirm(true);
-                      }}
-                      className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
-                    >
-                      Delete Post
-                    </button>
-                  </div>
+              <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
+                {word.user?.username ? `@${word.user.username}` : ""}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 pr-1">
+              <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
+                {formatPostTime(
+                  word.createdAt instanceof Date
+                    ? word.createdAt.toISOString()
+                    : word.createdAt
                 )}
-              </div>
-            )}
+              </p>
+              {isOwner && (
+                <div className="relative" ref={menuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setShowMenu((prev) => !prev)}
+                    className="h-8 w-8 rounded-full text-[color:var(--subtle)] hover:text-[color:var(--ink)] cursor-pointer"
+                    aria-label="More actions"
+                  >
+                    <DotsThreeOutline size={20} weight="regular" />
+                  </button>
+                  {showMenu && (
+                    <div className="absolute right-0 top-10 z-10 min-w-[200px] rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-2 shadow-lg">
+                      <button
+                        type="button"
+                        onClick={handleEditStart}
+                        className="mb-1 w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
+                      >
+                        Edit Post
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowMenu(false);
+                          setShowDeleteConfirm(true);
+                        }}
+                        className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
+                      >
+                        Delete Post
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
+      </div>
+      <div>
         {isEditing ? (
           <div ref={editRef} className="mt-3 flex flex-col gap-2">
             <textarea
@@ -918,7 +920,6 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
             </div>
           </div>
         )}
-
       </div>
 
       <Modal

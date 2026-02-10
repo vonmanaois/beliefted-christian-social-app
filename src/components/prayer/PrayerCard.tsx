@@ -648,100 +648,104 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
   };
 
   return (
-    <article className="wall-card flex gap-2 sm:gap-3 rounded-none cursor-pointer" onClick={handleCardClick}>
-      <div className="avatar-ring">
-        {prayer.isAnonymous ? (
-          <div className="avatar-core">
-            <UserCircle size={28} weight="regular" />
-          </div>
-        ) : (
-          <Avatar
-            src={prayer.user?.image ?? null}
-            alt={prayer.user?.name ?? "User"}
-            size={64}
-            sizes="(min-width: 640px) 48px, 32px"
-            href={
-              prayer.user?.username
-                ? `/profile/${prayer.user.username}`
-                : "/profile"
-            }
-            fallback={(prayer.user?.name?.[0] ?? "U").toUpperCase()}
-            className="avatar-core cursor-pointer h-8 w-8 sm:h-12 sm:w-12"
-          />
-        )}
-      </div>
-      <div className="flex-1">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              {prayer.isAnonymous ? (
-                <p className="text-xs sm:text-sm font-semibold text-[color:var(--ink)]">
-                  Anonymous
-                </p>
-              ) : (
-                <div className="flex flex-wrap items-center gap-2">
-                  <a
-                    href={
-                      prayer.user?.username
-                        ? `/profile/${prayer.user.username}`
-                        : "/profile"
-                    }
-                    className="text-xs sm:text-sm font-semibold text-[color:var(--ink)] hover:underline"
+    <article className="wall-card flex flex-col gap-3 rounded-none cursor-pointer" onClick={handleCardClick}>
+      <div className="flex items-start gap-3">
+        <div className="avatar-ring">
+          {prayer.isAnonymous ? (
+            <div className="avatar-core">
+              <UserCircle size={28} weight="regular" />
+            </div>
+          ) : (
+            <Avatar
+              src={prayer.user?.image ?? null}
+              alt={prayer.user?.name ?? "User"}
+              size={64}
+              sizes="(min-width: 640px) 48px, 32px"
+              href={
+                prayer.user?.username
+                  ? `/profile/${prayer.user.username}`
+                  : "/profile"
+              }
+              fallback={(prayer.user?.name?.[0] ?? "U").toUpperCase()}
+              className="avatar-core cursor-pointer h-8 w-8 sm:h-12 sm:w-12"
+            />
+          )}
+        </div>
+        <div className="flex-1">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                {prayer.isAnonymous ? (
+                  <p className="text-xs sm:text-sm font-semibold text-[color:var(--ink)]">
+                    Anonymous
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <a
+                      href={
+                        prayer.user?.username
+                          ? `/profile/${prayer.user.username}`
+                          : "/profile"
+                      }
+                      className="text-xs sm:text-sm font-semibold text-[color:var(--ink)] hover:underline"
+                    >
+                      {prayer.user?.name ?? "User"}
+                    </a>
+                    {prayer.user?.username && (
+                      <span className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
+                        @{prayer.user.username}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 pr-1">
+              <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
+                {formatPostTime(
+                  prayer.createdAt instanceof Date
+                    ? prayer.createdAt.toISOString()
+                    : prayer.createdAt
+                )}
+              </p>
+              {isOwner && (
+                <div className="relative" ref={menuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setShowMenu((prev) => !prev)}
+                    className="h-8 w-8 rounded-full text-[color:var(--subtle)] hover:text-[color:var(--ink)] cursor-pointer"
+                    aria-label="More actions"
                   >
-                    {prayer.user?.name ?? "User"}
-                  </a>
-                  {prayer.user?.username && (
-                    <span className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
-                      @{prayer.user.username}
-                    </span>
+                    <DotsThreeOutline size={20} weight="regular" />
+                  </button>
+                  {showMenu && (
+                    <div className="absolute right-0 top-10 z-10 min-w-[200px] rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-2 shadow-lg">
+                      <button
+                        type="button"
+                        onClick={handleEditStart}
+                        className="mb-1 w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
+                      >
+                        Edit Prayer
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowMenu(false);
+                          setShowDeleteConfirm(true);
+                        }}
+                        className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
+                      >
+                        Delete Prayer
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
-              {formatPostTime(
-                prayer.createdAt instanceof Date
-                  ? prayer.createdAt.toISOString()
-                  : prayer.createdAt
-              )}
-            </p>
-            {isOwner && (
-              <div className="relative" ref={menuRef}>
-                <button
-                  type="button"
-                  onClick={() => setShowMenu((prev) => !prev)}
-                  className="h-8 w-8 rounded-full text-[color:var(--subtle)] hover:text-[color:var(--ink)] cursor-pointer"
-                  aria-label="More actions"
-                >
-                  <DotsThreeOutline size={20} weight="regular" />
-                </button>
-                {showMenu && (
-                  <div className="absolute right-0 top-10 z-10 min-w-[200px] rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-2 shadow-lg">
-                    <button
-                      type="button"
-                      onClick={handleEditStart}
-                      className="mb-1 w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
-                    >
-                      Edit Prayer
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowMenu(false);
-                        setShowDeleteConfirm(true);
-                      }}
-                      className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
-                    >
-                      Delete Prayer
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
         </div>
+      </div>
+      <div>
         {isEditing ? (
           <div ref={editRef} className="mt-3 flex flex-col gap-2">
             {prayer.kind === "request" ? (
