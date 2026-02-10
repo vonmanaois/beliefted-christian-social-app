@@ -17,6 +17,8 @@ export async function GET(request: Request) {
   let lastNotificationsCount: number | null = null;
   let lastEmitAt = 0;
   const minEmitIntervalMs = 10000;
+  const startId = request.headers.get("last-event-id");
+  let eventId = Number.isNaN(Number(startId)) ? 0 : Number(startId);
 
   const stream = new ReadableStream({
     start(controller) {
@@ -60,14 +62,18 @@ export async function GET(request: Request) {
             if (notificationsChanged) {
               lastNotificationsCount = notificationsCount;
             }
+            eventId += 1;
             controller.enqueue(
               encoder.encode(
-                `data: ${JSON.stringify({
-                  wordsChanged,
-                  prayersChanged,
-                  notificationsCount:
-                    typeof notificationsCount === "number" ? notificationsCount : undefined,
-                })}\n\n`
+                `id: ${eventId}\n` +
+                  `data: ${JSON.stringify({
+                    wordsChanged,
+                    prayersChanged,
+                    notificationsCount:
+                      typeof notificationsCount === "number"
+                        ? notificationsCount
+                        : undefined,
+                  })}\n\n`
               )
             );
           }
