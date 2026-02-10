@@ -15,6 +15,8 @@ export async function GET(request: Request) {
   let lastWordId: string | null = null;
   let lastPrayerId: string | null = null;
   let lastNotificationsCount: number | null = null;
+  let lastEmitAt = 0;
+  const minEmitIntervalMs = 10000;
 
   const stream = new ReadableStream({
     start(controller) {
@@ -43,17 +45,21 @@ export async function GET(request: Request) {
             typeof notificationsCount === "number" &&
             notificationsCount !== lastNotificationsCount;
 
-          if (wordsChanged) {
-            lastWordId = nextWordId;
-          }
-          if (prayersChanged) {
-            lastPrayerId = nextPrayerId;
-          }
-          if (notificationsChanged) {
-            lastNotificationsCount = notificationsCount;
-          }
-
           if (wordsChanged || prayersChanged || notificationsChanged) {
+            const now = Date.now();
+            if (now - lastEmitAt < minEmitIntervalMs) {
+              return;
+            }
+            lastEmitAt = now;
+            if (wordsChanged) {
+              lastWordId = nextWordId;
+            }
+            if (prayersChanged) {
+              lastPrayerId = nextPrayerId;
+            }
+            if (notificationsChanged) {
+              lastNotificationsCount = notificationsCount;
+            }
             controller.enqueue(
               encoder.encode(
                 `data: ${JSON.stringify({
