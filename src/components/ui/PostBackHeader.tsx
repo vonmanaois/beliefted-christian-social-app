@@ -1,19 +1,28 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 
 type PostBackHeaderProps = {
   label: string;
+  refreshOnBack?: boolean;
 };
 
-export default function PostBackHeader({ label }: PostBackHeaderProps) {
+export default function PostBackHeader({ label, refreshOnBack }: PostBackHeaderProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   return (
     <div className="mb-3 flex items-center justify-between px-2">
       <button
         type="button"
-        onClick={() => router.back()}
+        onClick={() => {
+          if (refreshOnBack) {
+            queryClient.invalidateQueries({ queryKey: ["words"] });
+            queryClient.invalidateQueries({ queryKey: ["prayers"] });
+          }
+          router.back();
+        }}
         className="inline-flex items-center justify-center h-11 w-11 rounded-full text-[color:var(--ink)] hover:text-[color:var(--accent)]"
         aria-label="Back"
       >

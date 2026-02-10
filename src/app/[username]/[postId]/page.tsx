@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { Types } from "mongoose";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
@@ -20,7 +20,22 @@ type PageProps = {
 export default async function PostDetailPage({ params }: PageProps) {
   const { username, postId } = await params;
   if (!Types.ObjectId.isValid(postId)) {
-    notFound();
+    return (
+      <main className="container">
+        <div className="page-grid">
+          <Sidebar />
+          <div>
+            <PostBackHeader label="Post" refreshOnBack />
+            <div className="panel p-6 text-sm text-[color:var(--subtle)]">
+              <p className="text-[color:var(--ink)] font-semibold">
+                This post is not available anymore.
+              </p>
+              <p className="mt-1">It may have been deleted by the author.</p>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   await dbConnect();
@@ -141,5 +156,20 @@ export default async function PostDetailPage({ params }: PageProps) {
     );
   }
 
-  notFound();
+  return (
+    <main className="container">
+      <div className="page-grid">
+        <Sidebar />
+        <div>
+          <PostBackHeader label="Post" refreshOnBack />
+          <div className="panel p-6 text-sm text-[color:var(--subtle)]">
+            <p className="text-[color:var(--ink)] font-semibold">
+              This post is not available anymore.
+            </p>
+            <p className="mt-1">It may have been deleted by the author.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
 }

@@ -39,6 +39,12 @@ export default function Sidebar() {
     openPreferences,
     closePreferences,
     togglePreferences,
+    newWordPosts,
+    newPrayerPosts,
+    lastSeenNotificationsCount,
+    setLastSeenNotificationsCount,
+    setNewWordPosts,
+    setNewPrayerPosts,
   } = useUIStore();
   const prefsButtonRef = useRef<HTMLButtonElement | null>(null);
   const mobilePrefsButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -83,6 +89,15 @@ export default function Sidebar() {
     refetchOnMount: false,
     refetchOnWindowFocus: false,
   });
+
+  const hasUnreadNotifications =
+    isAuthenticated && notificationsCount > lastSeenNotificationsCount;
+
+  useEffect(() => {
+    if (notificationsCount < lastSeenNotificationsCount) {
+      setLastSeenNotificationsCount(notificationsCount);
+    }
+  }, [notificationsCount, lastSeenNotificationsCount, setLastSeenNotificationsCount]);
 
   useEffect(() => {
     const refresh = () => {
@@ -132,10 +147,10 @@ export default function Sidebar() {
             notificationsCount?: number;
           };
           if (payload.wordsChanged) {
-            queryClient.invalidateQueries({ queryKey: ["words"] });
+            setNewWordPosts(true);
           }
           if (payload.prayersChanged) {
-            queryClient.invalidateQueries({ queryKey: ["prayers"] });
+            setNewPrayerPosts(true);
           }
           if (typeof payload.notificationsCount === "number") {
             queryClient.setQueryData(["notifications", "count"], payload.notificationsCount);
@@ -189,12 +204,15 @@ export default function Sidebar() {
       openSignIn();
       return;
     }
+    setLastSeenNotificationsCount(notificationsCount);
     if (pathname === "/notifications") {
       triggerPanelClose("notifications");
       return;
     }
     router.push("/notifications");
   };
+
+  const hasHomeBadge = newWordPosts || newPrayerPosts;
 
   const { data: profileSummary } = useQuery({
     queryKey: ["profile", "summary"],
@@ -241,11 +259,20 @@ export default function Sidebar() {
           <div className="absolute left-4 flex items-center gap-2">
             <button
               type="button"
-              onClick={() => router.push("/")}
+              onClick={() => {
+                router.push("/");
+                queryClient.invalidateQueries({ queryKey: ["words"] });
+                setNewWordPosts(false);
+              }}
               className="h-10 w-10 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
               aria-label="Home"
             >
-              <House size={22} weight="regular" />
+              <span className="relative inline-flex">
+                <House size={22} weight="regular" />
+                {hasHomeBadge && (
+                  <span className="absolute -top-1.5 -right-1.5 h-2.5 w-2.5 rounded-full bg-[color:var(--accent)]" />
+                )}
+              </span>
             </button>
             <button
               type="button"
@@ -341,12 +368,17 @@ export default function Sidebar() {
             if (pathname !== "/") {
               router.push("/");
             }
-            queryClient.invalidateQueries({ queryKey: ["prayers"] });
             queryClient.invalidateQueries({ queryKey: ["words"] });
+            setNewWordPosts(false);
           }}
         >
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
-            <House size={22} weight="regular" />
+            <span className="relative inline-flex">
+              <House size={22} weight="regular" />
+              {hasHomeBadge && (
+                <span className="absolute -top-1.5 -right-1.5 h-2.5 w-2.5 rounded-full bg-[color:var(--accent)]" />
+              )}
+            </span>
           </span>
           <span className="hidden lg:inline">Home</span>
         </button>
@@ -390,7 +422,7 @@ export default function Sidebar() {
         >
           <span className="relative h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
             <BellSimple size={22} weight="regular" />
-            {isAuthenticated && notificationsCount > 0 && (
+            {hasUnreadNotifications && (
               <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-[color:var(--accent)]" />
             )}
           </span>
@@ -562,7 +594,7 @@ export default function Sidebar() {
           >
             <span className="relative">
               <BellSimple size={24} weight="regular" />
-              {isAuthenticated && notificationsCount > 0 && (
+              {hasUnreadNotifications && (
                 <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-[color:var(--accent)]" />
               )}
             </span>

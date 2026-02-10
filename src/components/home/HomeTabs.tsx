@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import PrayerWall from "@/components/prayer/PrayerWall";
 import WordWall from "@/components/word/WordWall";
 import FollowingWall from "@/components/home/FollowingWall";
+import { useUIStore } from "@/lib/uiStore";
 
 const tabs = ["Faith Share", "Prayer Wall", "Following"] as const;
 
@@ -18,6 +19,7 @@ export default function HomeTabs() {
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
+  const { newWordPosts, newPrayerPosts, setNewWordPosts, setNewPrayerPosts } = useUIStore();
 
   const activeTab = useMemo<Tab>(() => {
     if (pathname === "/prayerwall") {
@@ -106,55 +108,87 @@ export default function HomeTabs() {
             isAuthenticated ? "max-w-none" : "max-w-2xl"
           }`}
         >
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => {
-                router.push(
-                  tab === "Prayer Wall"
-                    ? "/prayerwall"
-                    : tab === "Following"
-                      ? "/following"
-                      : "/"
-                );
-              }}
-              className={`flex-1 px-4 py-2 text-sm font-semibold transition ${
-                activeTab === tab
-                  ? "rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
-                  : "rounded-lg text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+          {tabs.map((tab) => {
+            const showDot =
+              (tab === "Faith Share" && newWordPosts) ||
+              (tab === "Prayer Wall" && newPrayerPosts);
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => {
+                  if (tab === "Prayer Wall") {
+                    queryClient.invalidateQueries({ queryKey: ["prayers"] });
+                    setNewPrayerPosts(false);
+                    router.push("/prayerwall");
+                    return;
+                  }
+                  if (tab === "Following") {
+                    router.push("/following");
+                    return;
+                  }
+                  queryClient.invalidateQueries({ queryKey: ["words"] });
+                  setNewWordPosts(false);
+                  router.push("/");
+                }}
+                className={`flex-1 px-4 py-2 text-sm font-semibold transition ${
+                  activeTab === tab
+                    ? "rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
+                    : "rounded-lg text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+                }`}
+              >
+                <span className="inline-flex items-center gap-1">
+                  {tab}
+                  {showDot && (
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--accent)]" />
+                  )}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       <div className="md:hidden w-full pt-2">
         <div className="grid w-full max-w-none grid-cols-3 rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => {
-                router.push(
-                  tab === "Prayer Wall"
-                    ? "/prayerwall"
-                    : tab === "Following"
-                      ? "/following"
-                      : "/"
-                );
-              }}
-              className={`w-full rounded-lg px-3 py-2 text-xs font-semibold transition ${
-                activeTab === tab
-                  ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
-                  : "text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+          {tabs.map((tab) => {
+            const showDot =
+              (tab === "Faith Share" && newWordPosts) ||
+              (tab === "Prayer Wall" && newPrayerPosts);
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => {
+                  if (tab === "Prayer Wall") {
+                    queryClient.invalidateQueries({ queryKey: ["prayers"] });
+                    setNewPrayerPosts(false);
+                    router.push("/prayerwall");
+                    return;
+                  }
+                  if (tab === "Following") {
+                    router.push("/following");
+                    return;
+                  }
+                  queryClient.invalidateQueries({ queryKey: ["words"] });
+                  setNewWordPosts(false);
+                  router.push("/");
+                }}
+                className={`w-full rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                  activeTab === tab
+                    ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
+                    : "text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+                }`}
+              >
+                <span className="inline-flex items-center gap-1">
+                  {tab}
+                  {showDot && (
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--accent)]" />
+                  )}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
