@@ -22,11 +22,11 @@ import ThemeToggle from "@/components/layout/ThemeToggle";
 import UserSearch from "@/components/layout/UserSearch";
 import { useUIStore } from "@/lib/uiStore";
 
-let notificationStream: EventSource | null = null;
-let notificationStreamUsers = 0;
-let notificationStreamRetryDelay = 1000;
-let notificationStreamRetryTimer: ReturnType<typeof setTimeout> | null = null;
-let notificationStreamCloseTimer: ReturnType<typeof setTimeout> | null = null;
+let unifiedStream: EventSource | null = null;
+let unifiedStreamUsers = 0;
+let unifiedStreamRetryDelay = 1000;
+let unifiedStreamRetryTimer: ReturnType<typeof setTimeout> | null = null;
+let unifiedStreamCloseTimer: ReturnType<typeof setTimeout> | null = null;
 
 export default function Sidebar() {
   const { data: session, status } = useSession();
@@ -95,61 +95,71 @@ export default function Sidebar() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!isAuthenticated) {
-      if (notificationStreamCloseTimer) {
-        clearTimeout(notificationStreamCloseTimer);
-        notificationStreamCloseTimer = null;
+      if (unifiedStreamCloseTimer) {
+        clearTimeout(unifiedStreamCloseTimer);
+        unifiedStreamCloseTimer = null;
       }
-      if (notificationStreamRetryTimer) {
-        clearTimeout(notificationStreamRetryTimer);
-        notificationStreamRetryTimer = null;
+      if (unifiedStreamRetryTimer) {
+        clearTimeout(unifiedStreamRetryTimer);
+        unifiedStreamRetryTimer = null;
       }
-      notificationStream?.close();
-      notificationStream = null;
-      notificationStreamUsers = 0;
+      unifiedStream?.close();
+      unifiedStream = null;
+      unifiedStreamUsers = 0;
       return;
     }
 
-    notificationStreamUsers += 1;
-    if (notificationStreamCloseTimer) {
-      clearTimeout(notificationStreamCloseTimer);
-      notificationStreamCloseTimer = null;
+    unifiedStreamUsers += 1;
+    if (unifiedStreamCloseTimer) {
+      clearTimeout(unifiedStreamCloseTimer);
+      unifiedStreamCloseTimer = null;
     }
 
     const connect = () => {
       if (document.visibilityState === "hidden") return;
-      if (notificationStream) return;
-      notificationStream = new EventSource("/api/notifications/stream");
+      if (unifiedStream) return;
+      unifiedStream = new EventSource("/api/stream");
 
-      notificationStream.onopen = () => {
-        notificationStreamRetryDelay = 1000;
+      unifiedStream.onopen = () => {
+        unifiedStreamRetryDelay = 1000;
       };
 
-      notificationStream.onmessage = (event) => {
+      unifiedStream.onmessage = (event) => {
         try {
-          const payload = JSON.parse(event.data) as { count?: number };
-          if (typeof payload.count === "number") {
-            queryClient.setQueryData(["notifications", "count"], payload.count);
+          const payload = JSON.parse(event.data) as {
+            wordsChanged?: boolean;
+            prayersChanged?: boolean;
+            notificationsCount?: number;
+          };
+          if (payload.wordsChanged) {
+            queryClient.invalidateQueries({ queryKey: ["words"] });
+          }
+          if (payload.prayersChanged) {
+            queryClient.invalidateQueries({ queryKey: ["prayers"] });
+          }
+          if (typeof payload.notificationsCount === "number") {
+            queryClient.setQueryData(["notifications", "count"], payload.notificationsCount);
           }
         } catch {
           // ignore parse errors
         }
       };
 
-      notificationStream.onerror = () => {
-        notificationStream?.close();
-        notificationStream = null;
-        if (notificationStreamRetryTimer) {
-          clearTimeout(notificationStreamRetryTimer);
+      unifiedStream.onerror = () => {
+        unifiedStream?.close();
+        unifiedStream = null;
+        if (unifiedStreamRetryTimer) {
+          clearTimeout(unifiedStreamRetryTimer);
         }
-        notificationStreamRetryTimer = setTimeout(connect, notificationStreamRetryDelay);
-        notificationStreamRetryDelay = Math.min(notificationStreamRetryDelay * 2, 30000);
+        unifiedStreamRetryTimer = setTimeout(connect, unifiedStreamRetryDelay);
+        unifiedStreamRetryDelay = Math.min(unifiedStreamRetryDelay * 2, 30000);
       };
     };
 
     const handleVisibility = () => {
       if (document.visibilityState === "hidden") {
-        notificationStream?.close();
-        notificationStream = null;
+        unifiedStream?.close();
+        unifiedStream = null;
         return;
       }
       connect();
@@ -160,15 +170,15 @@ export default function Sidebar() {
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
-      notificationStreamUsers = Math.max(0, notificationStreamUsers - 1);
-      if (notificationStreamUsers === 0) {
-        notificationStreamCloseTimer = setTimeout(() => {
-          if (notificationStreamRetryTimer) {
-            clearTimeout(notificationStreamRetryTimer);
-            notificationStreamRetryTimer = null;
+      unifiedStreamUsers = Math.max(0, unifiedStreamUsers - 1);
+      if (unifiedStreamUsers === 0) {
+        unifiedStreamCloseTimer = setTimeout(() => {
+          if (unifiedStreamRetryTimer) {
+            clearTimeout(unifiedStreamRetryTimer);
+            unifiedStreamRetryTimer = null;
           }
-          notificationStream?.close();
-          notificationStream = null;
+          unifiedStream?.close();
+          unifiedStream = null;
         }, 5000);
       }
     };
