@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Providers from "@/app/providers";
 import { Inter, DM_Sans } from "next/font/google";
-import OfflineBanner from "@/components/OfflineBanner";
+import PWARegistration from "@/components/PWARegistration";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -49,7 +49,7 @@ export default function RootLayout({
         suppressHydrationWarning
         className={`${inter.variable} ${dmSans.variable}`}
       >
-        <OfflineBanner />
+        <PWARegistration />
         <Providers>{children}</Providers>
       </body>
     </html>
