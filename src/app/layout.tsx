@@ -20,10 +20,20 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   title: "Beliefted",
   description: "A Christian prayer wall and social journal.",
+  manifest: "/manifest.webmanifest",
+  themeColor: "#3aa0f6",
   icons: {
-    icon: "/images/beliefted-logo.svg",
-    apple: "/images/beliefted-logo.svg",
-    shortcut: "/images/beliefted-logo.svg",
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/icon-192.png",
+    shortcut: "/icon-192.png",
+  },
+  appleWebApp: {
+    capable: true,
+    title: "Beliefted",
+    statusBarStyle: "default",
   },
 };
 
