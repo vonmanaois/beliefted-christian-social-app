@@ -255,21 +255,6 @@ export default function NotificationsPage() {
                                         ? "posted reflection on your faith story."
                                      : "followed you."}
                            </p>
-                           {note.prayerId?.content && (
-                             <p className="mt-2 text-xs text-[color:var(--subtle)] line-clamp-2 whitespace-pre-line">
-                               “{note.prayerId.content}”
-                             </p>
-                           )}
-                           {note.wordId?.content && (
-                             <p className="mt-2 text-xs text-[color:var(--subtle)] line-clamp-2 whitespace-pre-line">
-                               “{note.wordId.content}”
-                             </p>
-                           )}
-                           {note.faithStoryId?.title && (
-                             <p className="mt-2 text-xs text-[color:var(--subtle)] line-clamp-2 whitespace-pre-line">
-                               “{note.faithStoryId.title}”
-                             </p>
-                           )}
                          </>
                        );
                        return href ? (

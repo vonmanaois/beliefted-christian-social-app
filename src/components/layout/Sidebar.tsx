@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
@@ -11,6 +11,7 @@ import {
   GoogleLogo,
   House,
   Info,
+  List,
   Question,
   Notebook,
   MagnifyingGlass,
@@ -18,7 +19,6 @@ import {
   User,
 } from "@phosphor-icons/react";
 import Modal from "@/components/layout/Modal";
-import ThemeToggle from "@/components/layout/ThemeToggle";
 import UserSearch from "@/components/layout/UserSearch";
 import { useUIStore } from "@/lib/uiStore";
 
@@ -29,16 +29,12 @@ let unifiedStreamRetryTimer: ReturnType<typeof setTimeout> | null = null;
 let unifiedStreamCloseTimer: ReturnType<typeof setTimeout> | null = null;
 
 export default function Sidebar() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const isAuthenticated = status === "authenticated";
   const {
     signInOpen,
-    preferencesOpen,
     openSignIn,
     closeSignIn,
-    openPreferences,
-    closePreferences,
-    togglePreferences,
     newWordPosts,
     newPrayerPosts,
     lastSeenNotificationsCount,
@@ -46,11 +42,11 @@ export default function Sidebar() {
     setNewWordPosts,
     setNewPrayerPosts,
   } = useUIStore();
-  const prefsButtonRef = useRef<HTMLButtonElement | null>(null);
-  const mobilePrefsButtonRef = useRef<HTMLButtonElement | null>(null);
+  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const triggerPanelClose = (target: "why" | "notifications" | "search") => {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("panel:close", { detail: { target } }));
@@ -252,28 +248,23 @@ export default function Sidebar() {
     return () => window.removeEventListener("open-signin", handleOpenSignIn);
   }, [openSignIn]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!mobileMenuRef.current) return;
+      if (mobileMenuRef.current.contains(event.target as Node)) return;
+      setShowMobileMenu(false);
+    };
+    if (showMobileMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showMobileMenu]);
+
   return (
     <>
       <div className="lg:hidden sticky top-0 z-40 bg-[color:var(--panel)]/95 backdrop-blur">
-        <div className="grid grid-cols-[96px_auto_96px] items-center px-3 py-3 h-12">
-          <div className="flex items-center gap-2 justify-start w-[96px]">
-            <button
-              type="button"
-              onClick={handleWhyClick}
-              className="h-10 w-10 rounded-xl bg-transparent text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-              aria-label="Why Beliefted"
-            >
-              <Info size={22} weight="regular" />
-            </button>
-            <button
-              type="button"
-              onClick={handleHowClick}
-              className="h-10 w-10 rounded-xl bg-transparent text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-              aria-label="How To Use"
-            >
-              <Question size={22} weight="regular" />
-            </button>
-          </div>
+        <div className="grid grid-cols-[120px_1fr_120px] items-center px-4 py-0 h-12">
+          <div className="flex items-center gap-4 justify-start w-full text-[color:var(--ink)]" />
           <button
             type="button"
             onClick={() => router.push("/")}
@@ -290,11 +281,11 @@ export default function Sidebar() {
               Beliefted
             </span>
           </button>
-          <div className="flex items-center gap-2 justify-end w-[96px]">
+          <div className="flex items-center gap-4 justify-end w-full text-[color:var(--ink)]">
             <button
               type="button"
               onClick={openNotifications}
-              className="h-10 w-10 rounded-xl bg-transparent text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+              className="flex items-center justify-center hover:text-[color:var(--accent)]"
               aria-label="Notifications"
             >
               <span className="relative inline-flex">
@@ -306,15 +297,88 @@ export default function Sidebar() {
             </button>
             <button
               type="button"
-              ref={mobilePrefsButtonRef}
-              onClick={() => openPreferences()}
-              className="h-10 w-10 rounded-xl bg-transparent text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-              aria-label="Preferences"
+              onClick={() => setShowMobileMenu((prev) => !prev)}
+              className="flex items-center justify-center hover:text-[color:var(--accent)]"
+              aria-label="Menu"
             >
-              <SlidersHorizontal size={22} weight="regular" />
+              <List size={22} weight="regular" />
             </button>
           </div>
         </div>
+        {showMobileMenu && (
+          <div className="fixed inset-0 z-50" aria-hidden="true">
+            <div className="absolute inset-0 bg-black/10" />
+            <div
+              ref={mobileMenuRef}
+              className="absolute right-4 top-12 w-56 rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-2 shadow-lg"
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMobileMenu(false);
+                  handleWhyClick();
+                }}
+                className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)]"
+              >
+                Why Beliefted
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMobileMenu(false);
+                  handleHowClick();
+                }}
+                className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)]"
+              >
+                How To Use
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMobileMenu(false);
+                  router.push("/community-guidelines");
+                }}
+                className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)]"
+              >
+                Community Guidelines
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMobileMenu(false);
+                  router.push("/preferences");
+                }}
+                className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)]"
+              >
+                Preferences
+              </button>
+              <div className="my-2 border-t border-[color:var(--panel-border)]" />
+              {isAuthenticated ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMobileMenu(false);
+                    signOut();
+                  }}
+                  className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)]"
+                >
+                  Sign out
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMobileMenu(false);
+                    signIn("google");
+                  }}
+                  className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-[color:var(--accent)] hover:bg-[color:var(--surface)]"
+                >
+                  Sign in
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
       <aside className="hidden lg:flex p-5 flex-col gap-5 h-fit items-center text-center lg:items-start lg:text-left bg-transparent border-none shadow-none">
       <button
@@ -456,16 +520,23 @@ export default function Sidebar() {
         </button>
         <button
           type="button"
-          ref={prefsButtonRef}
           className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-          onClick={() => {
-            togglePreferences();
-          }}
+          onClick={() => router.push("/preferences")}
         >
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
             <SlidersHorizontal size={22} weight="regular" />
           </span>
           <span className="hidden lg:inline">Preferences</span>
+        </button>
+        <button
+          type="button"
+          className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+          onClick={() => router.push("/community-guidelines")}
+        >
+          <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
+            <Info size={22} weight="regular" />
+          </span>
+          <span className="hidden lg:inline">Community Guidelines</span>
         </button>
       </div>
 
@@ -487,46 +558,6 @@ export default function Sidebar() {
           <GoogleLogo size={16} weight="regular" />
           Continue with Google
         </button>
-      </Modal>
-
-      <Modal
-        title="Preferences"
-        isOpen={preferencesOpen}
-        onClose={closePreferences}
-      >
-        <div className="flex flex-col gap-4">
-          <ThemeToggle />
-          <div className="border-t border-slate-200 pt-4">
-            {isAuthenticated ? (
-              <div className="flex flex-col gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-[color:var(--ink)]">
-                    {session.user?.name ?? "Signed in"}
-                  </p>
-                  <p className="text-xs text-[color:var(--subtle)]">
-                    {session.user?.email}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => signOut()}
-                  className="pill-button border border-slate-200 text-[color:var(--ink)] cursor-pointer"
-                >
-                  Sign out
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => signIn("google")}
-                className="pill-button bg-slate-900 text-white cursor-pointer inline-flex items-center gap-2"
-              >
-                <GoogleLogo size={16} weight="regular" />
-                Sign in
-              </button>
-            )}
-          </div>
-        </div>
       </Modal>
 
       <nav

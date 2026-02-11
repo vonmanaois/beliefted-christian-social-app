@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "@/app/providers";
-import { Inter, DM_Sans } from "next/font/google";
+import { Inter } from "next/font/google";
 import PWARegistration from "@/components/PWARegistration";
 
 const inter = Inter({
@@ -11,12 +11,6 @@ const inter = Inter({
   display: "swap",
 });
 
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  variable: "--font-dm-sans",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Beliefted",
@@ -50,7 +44,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         suppressHydrationWarning
-        className={`${inter.variable} ${dmSans.variable}`}
+        className={`${inter.variable}`}
       >
         <PWARegistration />
         <Providers>{children}</Providers>
