@@ -21,7 +21,7 @@ export default function WordForm({
   compact = false,
   flat = false,
   variant = "modal",
-  showHeader = true,
+  showHeader: _showHeader = true,
   showScriptureToggle = false,
   placeholder = "What did God put on your heart today?",
 }: WordFormProps) {
@@ -68,7 +68,7 @@ export default function WordForm({
     };
     document.addEventListener("mousedown", handlePointer);
     return () => document.removeEventListener("mousedown", handlePointer);
-  }, []);
+  }, [scriptureRef, spotifyUrl, youtubeUrl]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -147,6 +147,7 @@ export default function WordForm({
   return (
     <form
       onSubmit={handleSubmit}
+      data-show-header={_showHeader ? "true" : "false"}
       className={`${
         variant === "modal" ? "modal-form" : flat ? "feed-form" : "panel-glass"
       } flex flex-col gap-2 ${

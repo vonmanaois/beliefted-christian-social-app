@@ -62,11 +62,9 @@ export default function ProfileTabs({
   const { data: session } = useSession();
   const isSelf = Boolean(session?.user?.id && session.user.id === userId);
   const visibleTabs = tabs.filter((tab) => (tab === "Saved" ? isSelf : true));
-
-  useEffect(() => {
-    if (visibleTabs.includes(activeTab)) return;
-    setActiveTab(visibleTabs[0] ?? "Faith Share");
-  }, [activeTab, visibleTabs]);
+  const resolvedTab = visibleTabs.includes(activeTab)
+    ? activeTab
+    : visibleTabs[0] ?? "Faith Share";
 
   useEffect(() => {
     const handleOpenPrayer = () => {
@@ -124,7 +122,7 @@ export default function ProfileTabs({
                 router.push(basePath);
               }}
               className={`w-full rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                activeTab === tab
+                resolvedTab === tab
                   ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
                   : "text-[color:var(--ink)] hover:text-[color:var(--accent)]"
               }`}
@@ -136,7 +134,7 @@ export default function ProfileTabs({
       </div>
 
       <div className="feed-surface">
-        {activeTab === "Faith Share" ? (
+        {resolvedTab === "Faith Share" ? (
           <>
             {showComposer && (
               <button
@@ -165,7 +163,7 @@ export default function ProfileTabs({
             )}
             <WordFeed refreshKey={refreshKey} userId={userId} />
           </>
-        ) : activeTab === "Prayers" ? (
+        ) : resolvedTab === "Prayers" ? (
           <>
             {showComposer && (
               <button
@@ -194,7 +192,7 @@ export default function ProfileTabs({
             )}
             <PrayerFeed refreshKey={refreshKey} userId={userId} />
           </>
-        ) : activeTab === "Reprayed" ? (
+        ) : resolvedTab === "Reprayed" ? (
           <PrayerFeed refreshKey={refreshKey} userId={userId} reprayedOnly />
         ) : (
           <WordFeed refreshKey={refreshKey} userId={userId} savedOnly />

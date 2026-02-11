@@ -197,7 +197,7 @@ export default function Sidebar() {
         }, 5000);
       }
     };
-  }, [isAuthenticated, queryClient]);
+  }, [isAuthenticated, queryClient, setNewPrayerPosts, setNewWordPosts]);
 
   const openNotifications = () => {
     if (!isAuthenticated) {

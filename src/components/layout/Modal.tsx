@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 type ModalProps = {
   title: string;
@@ -26,11 +26,7 @@ export default function Modal({
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const wasOpenRef = useRef(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = typeof document !== "undefined";
 
   useEffect(() => {
     if (!isOpen) {
@@ -74,7 +70,7 @@ export default function Modal({
       document.removeEventListener("keydown", handleKeyDown);
       if (timer) clearTimeout(timer);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, autoFocus]);
 
   if (!isOpen || !mounted) return null;
 

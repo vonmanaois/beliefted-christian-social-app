@@ -1,24 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { X } from "@phosphor-icons/react";
 import { getDailyVerse } from "@/lib/dailyVerse";
 
 export default function DailyVerseCard() {
   const verse = getDailyVerse();
-  const [isDismissed, setIsDismissed] = useState(false);
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = window.localStorage.getItem("dailyVerseDismissed");
-    setIsDismissed(stored === "true");
-    setIsHydrated(true);
-  }, []);
-
-  if (!isHydrated) {
-    return null;
-  }
+  const [isDismissed, setIsDismissed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("dailyVerseDismissed") === "true";
+  });
 
   if (isDismissed) {
     return (
