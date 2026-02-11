@@ -7,25 +7,44 @@ import { BookOpenText, BookmarkSimple, ChatCircle, DotsThreeOutline, Heart } fro
 import { useRouter } from "next/navigation";
 import Avatar from "@/components/ui/Avatar";
 import Modal from "@/components/layout/Modal";
+import YouTubeEmbed from "@/components/ui/YouTubeEmbed";
 import { useUIStore } from "@/lib/uiStore";
-
-const YOUTUBE_PATTERNS = [
-  /https?:\/\/(?:www\.)?youtu\.be\/([A-Za-z0-9_-]{6,})/i,
-  /https?:\/\/(?:www\.)?youtube\.com\/watch\?v=([A-Za-z0-9_-]{6,})/i,
-  /https?:\/\/(?:www\.)?youtube\.com\/shorts\/([A-Za-z0-9_-]{6,})/i,
-  /https?:\/\/(?:www\.)?youtube\.com\/embed\/([A-Za-z0-9_-]{6,})/i,
-];
 
 const extractYouTube = (value: string) => {
   let videoId: string | null = null;
   let cleaned = value;
-  for (const pattern of YOUTUBE_PATTERNS) {
-    const match = cleaned.match(pattern);
-    if (match?.[1]) {
-      if (!videoId) videoId = match[1];
-      cleaned = cleaned.replace(match[0], "").trim();
+  const urlMatches = value.match(/https?:\/\/\S+/gi) ?? [];
+
+  for (const rawUrl of urlMatches) {
+    let parsed: URL | null = null;
+    try {
+      parsed = new URL(rawUrl);
+    } catch {
+      parsed = null;
+    }
+    if (!parsed) continue;
+
+    const host = parsed.hostname.replace(/^www\./, "");
+    let candidate: string | null = null;
+
+    if (host === "youtu.be") {
+      candidate = parsed.pathname.split("/").filter(Boolean)[0] ?? null;
+    } else if (host === "youtube.com" || host.endsWith(".youtube.com")) {
+      if (parsed.pathname.startsWith("/watch")) {
+        candidate = parsed.searchParams.get("v");
+      } else if (parsed.pathname.startsWith("/shorts/")) {
+        candidate = parsed.pathname.split("/").filter(Boolean)[1] ?? null;
+      } else if (parsed.pathname.startsWith("/embed/")) {
+        candidate = parsed.pathname.split("/").filter(Boolean)[1] ?? null;
+      }
+    }
+
+    if (candidate) {
+      if (!videoId) videoId = candidate;
+      cleaned = cleaned.replace(rawUrl, "").trim();
     }
   }
+
   return { videoId, cleaned };
 };
 
@@ -521,15 +540,13 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
     onSuccess: async () => {
       setShowMenu(false);
       await queryClient.invalidateQueries({ queryKey: ["words"] });
+      queryClient.invalidateQueries({
+        queryKey: ["words"],
+        predicate: (query) =>
+          Array.isArray(query.queryKey) && query.queryKey.includes("saved"),
+      });
       if (defaultShowComments) {
         router.back();
-      }
-      if (data.saved) {
-        queryClient.invalidateQueries({
-          queryKey: ["words"],
-          predicate: (query) =>
-            Array.isArray(query.queryKey) && query.queryKey.includes("saved"),
-        });
       }
     },
   });
@@ -786,14 +803,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                 className="mt-4 aspect-video w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)] bg-black/5"
                 onClick={(event) => event.stopPropagation()}
               >
-                <iframe
-                  src={`https://www.youtube.com/embed/${videoId}`}
-                  title="YouTube video"
-                  loading="lazy"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                  className="h-full w-full"
-                />
+                <YouTubeEmbed videoId={videoId} className="h-full w-full" />
               </div>
             )}
           </>
