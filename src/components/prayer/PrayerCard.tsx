@@ -98,6 +98,8 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     return String(raw);
   };
   const prayerId = normalizeId(prayer._id);
+  const createdAtValue =
+    prayer.createdAt instanceof Date ? prayer.createdAt : new Date(prayer.createdAt);
   const [isPending, setIsPending] = useState(false);
   const [showComments, setShowComments] = useState(defaultShowComments);
   const [showCommentConfirm, setShowCommentConfirm] = useState(false);
@@ -702,11 +704,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
             </div>
             <div className="flex items-center gap-2 pr-1">
               <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
-                {formatPostTime(
-                  prayer.createdAt instanceof Date
-                    ? prayer.createdAt.toISOString()
-                    : prayer.createdAt
-                )}
+                {formatPostTime(createdAtValue.toISOString())}
               </p>
               {isOwner && (
                 <div className="relative" ref={menuRef}>
@@ -819,9 +817,12 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
               Prayer Request
             </div>
             {prayer.scriptureRef && (
-              <p className="mt-2 text-xs font-semibold text-[color:var(--accent)]">
-                {prayer.scriptureRef}
-              </p>
+              <div className="mt-2">
+                <span className="verse-chip">
+                  <BookOpenText size={14} weight="regular" />
+                  {prayer.scriptureRef}
+                </span>
+              </div>
             )}
             <div className="mt-3 space-y-3">
               {requestPoints.map((point, index) => (
@@ -862,7 +863,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
                   }}
                   className="mt-2 text-xs font-semibold text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
                 >
-                  {showFullContent ? "See less" : "See more"}
+                  {showFullContent ? "Done" : "Continue"}
                 </button>
               )}
             </>
@@ -898,12 +899,15 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
           <button
             type="button"
             onClick={toggleComments}
-            aria-label="Comment on prayer"
+            aria-label="Encourage prayer"
             className="inline-flex items-center justify-center gap-2 rounded-lg px-2 py-1.5 cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
             ref={commentButtonRef}
           >
             <span className="inline-flex items-center gap-2">
               <ChatCircle size={22} weight="regular" />
+              <span className="text-xs font-semibold text-[color:var(--subtle)]">
+                Encourage
+              </span>
               {displayedCommentCount > 0 && (
                 <span className="text-xs font-semibold text-[color:var(--ink)]">
                   {displayedCommentCount}
@@ -939,14 +943,14 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
               <form onSubmit={handleCommentSubmit} className="flex flex-col gap-2">
                 <textarea
                   className="soft-input comment-input min-h-[56px] sm:min-h-[64px] text-sm"
-                  placeholder="Write a comment..."
+                  placeholder="Write encouragement..."
                   value={commentText}
                   ref={commentInputRef}
                   onChange={(event) => setCommentText(event.target.value)}
                 />
                 <div className="flex justify-end">
                   <button type="submit" className="post-button">
-                    Post comment
+                    Post encouragement
                   </button>
                 </div>
               </form>

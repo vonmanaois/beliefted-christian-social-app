@@ -244,15 +244,15 @@ export default function NotificationsPage() {
                            {note.type === "pray"
                               ? "prayed for your prayer."
                               : note.type === "comment"
-                                ? "commented on your prayer."
+                                ? "posted encouragement on your prayer."
                                 : note.type === "word_like"
                                   ? "liked your word."
                                   : note.type === "word_comment"
-                                    ? "commented on your word."
+                                    ? "posted reflection on your word."
                                     : note.type === "faith_like"
                                       ? "liked your faith story."
                                       : note.type === "faith_comment"
-                                        ? "commented on your faith story."
+                                        ? "posted reflection on your faith story."
                                      : "followed you."}
                            </p>
                            {note.prayerId?.content && (

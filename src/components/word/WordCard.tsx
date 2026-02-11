@@ -3,7 +3,7 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChatCircle, DotsThreeOutline, Heart } from "@phosphor-icons/react";
+import { BookOpenText, ChatCircle, DotsThreeOutline, Heart } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import Avatar from "@/components/ui/Avatar";
 import Modal from "@/components/layout/Modal";
@@ -86,6 +86,8 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
     return String(raw);
   };
   const wordId = normalizeId(word._id);
+  const createdAtValue =
+    word.createdAt instanceof Date ? word.createdAt : new Date(word.createdAt);
   const likedBy = Array.isArray(word.likedBy) ? word.likedBy : [];
   const hasLiked = session?.user?.id
     ? likedBy.includes(String(session.user.id))
@@ -582,11 +584,7 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
             </div>
             <div className="flex items-center gap-2 pr-1">
               <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
-                {formatPostTime(
-                  word.createdAt instanceof Date
-                    ? word.createdAt.toISOString()
-                    : word.createdAt
-                )}
+                {formatPostTime(createdAtValue.toISOString())}
               </p>
               {isOwner && (
                 <div className="relative" ref={menuRef}>
@@ -653,27 +651,30 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
         ) : (
           <>
             {word.scriptureRef && (
-              <p className="mt-2 text-xs font-semibold text-[color:var(--accent)]">
-                {word.scriptureRef}
-              </p>
+              <div className="mt-2">
+                <span className="verse-chip">
+                  <BookOpenText size={14} weight="regular" />
+                  {word.scriptureRef}
+                </span>
+              </div>
             )}
             <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
               {showFullContent || word.content.length <= 320
                 ? word.content
                 : `${word.content.slice(0, 320).trimEnd()}…`}
             </p>
-            {word.content.length > 320 && (
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setShowFullContent((prev) => !prev);
-                }}
-                className="mt-2 text-xs font-semibold text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
-              >
-                {showFullContent ? "See less" : "See more"}
-              </button>
-            )}
+              {word.content.length > 320 && (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setShowFullContent((prev) => !prev);
+                  }}
+                  className="mt-2 text-xs font-semibold text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
+                >
+                  {showFullContent ? "Done" : "Continue"}
+                </button>
+              )}
           </>
         )}
         <div className="mt-2 sm:mt-3 flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs">
@@ -704,12 +705,15 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
           <button
             type="button"
             onClick={toggleComments}
-            aria-label="Comment on word"
+            aria-label="Reflect on word"
             className="pill-button cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
             ref={commentButtonRef}
           >
             <span className="inline-flex items-center gap-2">
               <ChatCircle size={22} weight="regular" />
+              <span className="text-xs font-semibold text-[color:var(--subtle)]">
+                Reflect
+              </span>
               {displayedCommentCount > 0 && (
                 <span className="text-xs font-semibold text-[color:var(--ink)] transition-all duration-200">
                   {displayedCommentCount}
@@ -737,14 +741,14 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
               <form onSubmit={handleCommentSubmit} className="flex flex-col gap-2">
                 <textarea
                   className="soft-input comment-input min-h-[56px] sm:min-h-[64px] text-sm"
-                  placeholder="Write a comment..."
+                  placeholder="Share a reflection..."
                   value={commentText}
                   ref={commentInputRef}
                   onChange={(event) => setCommentText(event.target.value)}
                 />
                 <div className="flex justify-end">
                   <button type="submit" className="post-button">
-                    Post comment
+                    Post reflection
                   </button>
                 </div>
               </form>

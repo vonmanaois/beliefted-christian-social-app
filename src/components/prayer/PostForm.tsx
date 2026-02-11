@@ -150,9 +150,9 @@ export default function PostForm({
       }}
       className={`${
         variant === "modal" ? "modal-form" : flat ? "feed-form" : "panel-glass"
-      } flex flex-col gap-3 scroll-mt-24 w-full ${
+      } flex flex-col gap-2 scroll-mt-24 w-full ${
         compact ? "p-3" : "p-4"
-      }`}
+      } pb-0`}
     >
       {kind === "prayer" ? (
         <textarea

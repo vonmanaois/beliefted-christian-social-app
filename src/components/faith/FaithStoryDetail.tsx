@@ -50,6 +50,7 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(story.title);
   const [editContent, setEditContent] = useState(story.content);
+  const [showFullContent, setShowFullContent] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentText, setEditingCommentText] = useState("");
@@ -338,8 +339,19 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
             </div>
 
             <div className="text-sm text-[color:var(--ink)] whitespace-pre-wrap">
-              {story.content}
+              {showFullContent || story.content.length <= 900
+                ? story.content
+                : `${story.content.slice(0, 900).trimEnd()}…`}
             </div>
+            {story.content.length > 900 && (
+              <button
+                type="button"
+                onClick={() => setShowFullContent((prev) => !prev)}
+                className="text-xs font-semibold text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
+              >
+                {showFullContent ? "Done" : "Continue"}
+              </button>
+            )}
 
             <div className="flex items-center gap-4 text-sm">
               <button

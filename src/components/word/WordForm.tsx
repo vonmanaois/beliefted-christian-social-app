@@ -23,7 +23,7 @@ export default function WordForm({
   variant = "modal",
   showHeader = true,
   showScriptureToggle = false,
-  placeholder = "What does God want you to share today?",
+  placeholder = "What did God put on your heart today?",
 }: WordFormProps) {
   const { data: session } = useSession();
   const [content, setContent] = useState("");
@@ -96,9 +96,9 @@ export default function WordForm({
       onSubmit={handleSubmit}
       className={`${
         variant === "modal" ? "modal-form" : flat ? "feed-form" : "panel-glass"
-      } flex flex-col gap-3 ${
+      } flex flex-col gap-2 ${
         compact ? "p-3" : "p-4"
-      }`}
+      } pb-0`}
     >
 
       <textarea
