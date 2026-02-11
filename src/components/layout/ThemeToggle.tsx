@@ -18,12 +18,37 @@ export default function ThemeToggle() {
   const [mounted, setMounted] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const lastRequestedTheme = useRef<string | null>(null);
+  const hasFetched = useRef(false);
 
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
+    if (!mounted) return;
+    const getCookie = (name: string) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) {
+        return parts.pop()?.split(";").shift() ?? null;
+      }
+      return null;
+    };
+    const localTheme = window.localStorage.getItem("beliefted_theme");
+    const cookieTheme = getCookie("beliefted_theme");
+    const storedTheme = localTheme || cookieTheme;
+    if (storedTheme && storedTheme !== theme) {
+      setTheme(storedTheme);
+    }
+  }, [mounted, setTheme, theme]);
+
+  useEffect(() => {
     const loadTheme = async () => {
-      if (!session?.user?.id) return;
+      if (!session?.user?.id || hasFetched.current) return;
+      const localTheme = window.localStorage.getItem("beliefted_theme");
+      const cookieTheme = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("beliefted_theme="))
+        ?.split("=")[1];
+      if (localTheme || cookieTheme) return;
       try {
         const response = await fetch("/api/user/theme", { cache: "no-store" });
         if (!response.ok) return;
@@ -34,6 +59,8 @@ export default function ThemeToggle() {
         }
         setTheme(data.theme);
         lastRequestedTheme.current = null;
+        window.localStorage.setItem("beliefted_theme", data.theme);
+        hasFetched.current = true;
       } catch (error) {
         console.error(error);
       }
@@ -45,6 +72,10 @@ export default function ThemeToggle() {
   const handleThemeChange = async (value: string) => {
     lastRequestedTheme.current = value;
     setTheme(value);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("beliefted_theme", value);
+      document.cookie = `beliefted_theme=${value}; path=/; max-age=${60 * 60 * 24 * 365}`;
+    }
 
     if (!session?.user?.id) return;
 

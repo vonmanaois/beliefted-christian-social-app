@@ -18,8 +18,13 @@ export async function GET() {
   await dbConnect();
 
   const user = await UserModel.findById(session.user.id).lean();
-
-  return NextResponse.json({ theme: user?.theme ?? "light" });
+  const theme = user?.theme ?? "light";
+  const response = NextResponse.json({ theme });
+  response.cookies.set("beliefted_theme", theme, {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+  return response;
 }
 
 export async function POST(req: Request) {
@@ -40,5 +45,10 @@ export async function POST(req: Request) {
 
   await UserModel.findByIdAndUpdate(session.user.id, { theme });
 
-  return NextResponse.json({ theme });
+  const response = NextResponse.json({ theme });
+  response.cookies.set("beliefted_theme", theme, {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+  return response;
 }

@@ -1,15 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useSyncExternalStore } from "react";
 import { X } from "@phosphor-icons/react";
 import { getDailyVerse } from "@/lib/dailyVerse";
 
 export default function DailyVerseCard() {
   const verse = getDailyVerse();
-  const [isDismissed, setIsDismissed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.localStorage.getItem("dailyVerseDismissed") === "true";
-  });
+  const isDismissed = useSyncExternalStore(
+    (callback) => {
+      if (typeof window === "undefined") return () => {};
+      const handler = () => callback();
+      window.addEventListener("storage", handler);
+      window.addEventListener("beliefted:daily-verse", handler);
+      return () => {
+        window.removeEventListener("storage", handler);
+        window.removeEventListener("beliefted:daily-verse", handler);
+      };
+    },
+    () => {
+      if (typeof window === "undefined") return false;
+      return window.localStorage.getItem("dailyVerseDismissed") === "true";
+    },
+    () => false
+  );
 
   if (isDismissed) {
     return (
@@ -18,8 +31,8 @@ export default function DailyVerseCard() {
         <button
           type="button"
           onClick={() => {
-            setIsDismissed(false);
             window.localStorage.removeItem("dailyVerseDismissed");
+            window.dispatchEvent(new Event("beliefted:daily-verse"));
           }}
           className="ml-2 font-semibold text-[color:var(--accent)] hover:text-[color:var(--accent)]"
         >
@@ -38,9 +51,9 @@ export default function DailyVerseCard() {
         <button
           type="button"
           onClick={() => {
-            setIsDismissed(true);
             if (typeof window !== "undefined") {
               window.localStorage.setItem("dailyVerseDismissed", "true");
+              window.dispatchEvent(new Event("beliefted:daily-verse"));
             }
           }}
           className="h-7 w-7 rounded-full text-[color:var(--subtle)] hover:text-[color:var(--accent)]"
