@@ -9,6 +9,26 @@ import Avatar from "@/components/ui/Avatar";
 import Modal from "@/components/layout/Modal";
 import { useUIStore } from "@/lib/uiStore";
 
+const YOUTUBE_PATTERNS = [
+  /https?:\/\/(?:www\.)?youtu\.be\/([A-Za-z0-9_-]{6,})/i,
+  /https?:\/\/(?:www\.)?youtube\.com\/watch\?v=([A-Za-z0-9_-]{6,})/i,
+  /https?:\/\/(?:www\.)?youtube\.com\/shorts\/([A-Za-z0-9_-]{6,})/i,
+  /https?:\/\/(?:www\.)?youtube\.com\/embed\/([A-Za-z0-9_-]{6,})/i,
+];
+
+const extractYouTube = (value: string) => {
+  let videoId: string | null = null;
+  let cleaned = value;
+  for (const pattern of YOUTUBE_PATTERNS) {
+    const match = cleaned.match(pattern);
+    if (match?.[1]) {
+      if (!videoId) videoId = match[1];
+      cleaned = cleaned.replace(match[0], "").trim();
+    }
+  }
+  return { videoId, cleaned };
+};
+
 export type WordUser = {
   name?: string | null;
   image?: string | null;
@@ -632,6 +652,12 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
     }
   };
 
+  const { videoId, cleaned } = extractYouTube(word.content);
+  const displayContent =
+    showFullContent || cleaned.length <= 320
+      ? cleaned
+      : `${cleaned.slice(0, 320).trimEnd()}…`;
+
   return (
     <article
       className={`wall-card flex flex-col gap-3 rounded-none cursor-pointer transition-card ${isRemoving ? "fade-out-card" : ""}`}
@@ -738,12 +764,12 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                 </span>
               </div>
             )}
-            <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
-              {showFullContent || word.content.length <= 320
-                ? word.content
-                : `${word.content.slice(0, 320).trimEnd()}…`}
-            </p>
-              {word.content.length > 320 && (
+            {cleaned && (
+              <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
+                {displayContent}
+              </p>
+            )}
+            {cleaned.length > 320 && (
                 <button
                   type="button"
                   onClick={(event) => {
@@ -755,6 +781,21 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                   {showFullContent ? "Done" : "Continue"}
                 </button>
               )}
+            {videoId && (
+              <div
+                className="mt-4 aspect-video w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)] bg-black/5"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <iframe
+                  src={`https://www.youtube.com/embed/${videoId}`}
+                  title="YouTube video"
+                  loading="lazy"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  className="h-full w-full"
+                />
+              </div>
+            )}
           </>
         )}
         <div className="mt-2 sm:mt-3 flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs">
