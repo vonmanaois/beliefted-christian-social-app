@@ -1193,6 +1193,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
         title="Delete Prayer?"
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
+        autoFocus={false}
       >
         <p className="text-sm text-[color:var(--subtle)]">
           This will permanently delete your prayer and cannot be undone.

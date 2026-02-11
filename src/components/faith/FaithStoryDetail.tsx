@@ -563,6 +563,7 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
         title="Delete story?"
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
+        autoFocus={false}
       >
         <p className="text-sm text-[color:var(--subtle)]">
           This will permanently delete your story.

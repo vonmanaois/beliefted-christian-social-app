@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 type ModalProps = {
   title: string;
   isOpen: boolean;
@@ -25,6 +26,11 @@ export default function Modal({
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const wasOpenRef = useRef(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!isOpen) {
@@ -70,11 +76,11 @@ export default function Modal({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
+  const modal = (
     <div
-      className={`fixed inset-0 z-50 flex p-4 cursor-pointer ${
+      className={`fixed inset-0 z-[100] flex p-4 cursor-pointer ${
         align === "left" ? "items-start justify-start" : "items-center justify-center"
       } ${backdrop === "dim" ? "bg-black/40" : "bg-transparent"}`}
       onClick={onClose}
@@ -108,4 +114,6 @@ export default function Modal({
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }

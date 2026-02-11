@@ -1128,6 +1128,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
         title="Delete Post?"
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
+        autoFocus={false}
       >
         <p className="text-sm text-[color:var(--subtle)]">
           This will permanently delete your post and cannot be undone.
