@@ -164,6 +164,7 @@ html.menu-open .page-grid {
   pointer-events: none;
 }
 
+
 html.menu-open,
 html.menu-open body {
   overflow: hidden;
@@ -291,6 +292,10 @@ html.menu-open body {
   .feed-surface {
     padding: 0 1px;
   }
+
+  .notifications-page {
+    padding-bottom: 0;
+  }
 }
 
 @media (max-width: 1024px) {
@@ -299,6 +304,11 @@ html.menu-open body {
     overflow-y: auto;
     overscroll-behavior: contain;
   }
+}
+
+html.notifications-open,
+html.notifications-open body {
+  overflow: hidden;
 }
 
 @media (min-width: 1024px) {

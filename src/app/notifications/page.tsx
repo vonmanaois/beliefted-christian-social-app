@@ -66,10 +66,11 @@ export default function NotificationsPage() {
    const isAuthenticated = status === "authenticated";
    const queryClient = useQueryClient();
 
-   useEffect(() => {
-     const id = requestAnimationFrame(() => setEntered(true));
-     return () => cancelAnimationFrame(id);
-   }, []);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setEntered(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
 
    useEffect(() => {
      const handler = (event: Event) => {
@@ -82,11 +83,18 @@ export default function NotificationsPage() {
      return () => window.removeEventListener("panel:close", handler);
    }, []);
 
-   const panelState = closing
-     ? "panel-slide-down-exit"
-     : entered
-       ? "panel-slide-down-entered"
-       : "panel-slide-down-enter";
+  const panelState = closing
+    ? "panel-slide-right-exit"
+    : entered
+      ? "panel-slide-right-entered"
+      : "panel-slide-right-enter";
+
+  useEffect(() => {
+    document.documentElement.classList.add("notifications-open");
+    return () => {
+      document.documentElement.classList.remove("notifications-open");
+    };
+  }, []);
 
    const { data: notifications = [], isLoading } = useQuery({
      queryKey: ["notifications"],
@@ -174,10 +182,10 @@ export default function NotificationsPage() {
    };
 
    return (
-     <main className="container">
+     <main className="container notifications-page">
        <div className="page-grid">
          <Sidebar />
-         <div className={`panel p-8 rounded-none ${panelState}`}>
+        <div className={`panel p-8 rounded-none ${panelState} panel-scroll-mobile`}>
            <div className="flex flex-wrap items-center justify-between gap-3">
              <div>
                <h1 className="text-xl font-semibold text-[color:var(--ink)]">
