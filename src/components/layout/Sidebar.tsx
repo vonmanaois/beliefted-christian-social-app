@@ -255,38 +255,29 @@ export default function Sidebar() {
   return (
     <>
       <div className="lg:hidden sticky top-0 z-40 bg-[color:var(--panel)]/95 backdrop-blur">
-        <div className="relative flex items-center justify-center px-4 py-3 h-12">
-          <div className="absolute left-4 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                router.push("/");
-                queryClient.invalidateQueries({ queryKey: ["words"] });
-                setNewWordPosts(false);
-              }}
-              className="h-10 w-10 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-              aria-label="Home"
-            >
-              <span className="relative inline-flex">
-                <House size={22} weight="regular" />
-                {hasHomeBadge && (
-                  <span className="absolute -top-1.5 -right-1.5 h-2.5 w-2.5 rounded-full bg-[color:var(--accent)]" />
-                )}
-              </span>
-            </button>
+        <div className="grid grid-cols-[96px_auto_96px] items-center px-3 py-3 h-12">
+          <div className="flex items-center gap-2 justify-start w-[96px]">
             <button
               type="button"
               onClick={handleWhyClick}
-              className="h-10 w-10 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+              className="h-10 w-10 rounded-xl bg-transparent text-[color:var(--ink)] hover:text-[color:var(--accent)]"
               aria-label="Why Beliefted"
             >
               <Info size={22} weight="regular" />
+            </button>
+            <button
+              type="button"
+              onClick={handleHowClick}
+              className="h-10 w-10 rounded-xl bg-transparent text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+              aria-label="How To Use"
+            >
+              <Question size={22} weight="regular" />
             </button>
           </div>
           <button
             type="button"
             onClick={() => router.push("/")}
-            className="flex items-center gap-2 cursor-pointer min-w-0 absolute left-1/2 -translate-x-1/2"
+            className="flex items-center gap-2 cursor-pointer min-w-0 justify-self-center"
           >
             <Image
               src="/images/beliefted-logo.svg"
@@ -299,20 +290,25 @@ export default function Sidebar() {
               Beliefted
             </span>
           </button>
-          <div className="absolute right-4 flex items-center gap-2">
+          <div className="flex items-center gap-2 justify-end w-[96px]">
             <button
               type="button"
-              onClick={handleHowClick}
-              className="h-10 w-10 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-              aria-label="How To Use"
+              onClick={openNotifications}
+              className="h-10 w-10 rounded-xl bg-transparent text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+              aria-label="Notifications"
             >
-              <Question size={22} weight="regular" />
+              <span className="relative inline-flex">
+                <BellSimple size={22} weight="regular" />
+                {hasUnreadNotifications && (
+                  <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[color:var(--badge)]" />
+                )}
+              </span>
             </button>
             <button
               type="button"
               ref={mobilePrefsButtonRef}
               onClick={() => openPreferences()}
-              className="h-10 w-10 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+              className="h-10 w-10 rounded-xl bg-transparent text-[color:var(--ink)] hover:text-[color:var(--accent)]"
               aria-label="Preferences"
             >
               <SlidersHorizontal size={22} weight="regular" />
@@ -376,7 +372,7 @@ export default function Sidebar() {
             <span className="relative inline-flex">
               <House size={22} weight="regular" />
               {hasHomeBadge && (
-                <span className="absolute -top-1.5 -right-1.5 h-2.5 w-2.5 rounded-full bg-[color:var(--accent)]" />
+                <span className="absolute -top-1.5 -right-1.5 h-2.5 w-2.5 rounded-full bg-[color:var(--badge)]" />
               )}
             </span>
           </span>
@@ -423,7 +419,7 @@ export default function Sidebar() {
           <span className="relative h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
             <BellSimple size={22} weight="regular" />
             {hasUnreadNotifications && (
-              <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-[color:var(--accent)]" />
+              <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-[color:var(--badge)]" />
             )}
           </span>
           <span className="hidden lg:inline">Notifications</span>
@@ -542,6 +538,25 @@ export default function Sidebar() {
             type="button"
             className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
             onClick={() => {
+              if (pathname !== "/") {
+                router.push("/");
+              }
+              queryClient.invalidateQueries({ queryKey: ["words"] });
+              setNewWordPosts(false);
+            }}
+            aria-label="Home"
+          >
+            <span className="relative">
+              <House size={24} weight="regular" />
+              {hasHomeBadge && (
+                <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-[color:var(--badge)]" />
+              )}
+            </span>
+          </button>
+          <button
+            type="button"
+            className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+            onClick={() => {
               if (isAuthenticated) {
                 if (resolvedUsername) {
                   router.push(`/profile/${resolvedUsername}`);
@@ -555,16 +570,6 @@ export default function Sidebar() {
           >
             <User size={24} weight="regular" />
           </button>
-          {isAuthenticated && (
-            <button
-              type="button"
-              className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-              onClick={() => router.push("/journal")}
-              aria-label="Journal"
-            >
-              <Notebook size={24} weight="regular" />
-            </button>
-          )}
           <button
             type="button"
             className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
@@ -579,6 +584,16 @@ export default function Sidebar() {
           >
             <MagnifyingGlass size={24} weight="regular" />
           </button>
+          {isAuthenticated && (
+            <button
+              type="button"
+              className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+              onClick={() => router.push("/journal")}
+              aria-label="Journal"
+            >
+              <Notebook size={24} weight="regular" />
+            </button>
+          )}
           <button
             type="button"
             className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
@@ -586,18 +601,6 @@ export default function Sidebar() {
             aria-label="Faith Stories"
           >
             <BookOpenText size={24} weight="regular" />
-          </button>
-          <button
-            type="button"
-            className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-            onClick={openNotifications}
-          >
-            <span className="relative">
-              <BellSimple size={24} weight="regular" />
-              {hasUnreadNotifications && (
-                <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-[color:var(--accent)]" />
-              )}
-            </span>
           </button>
         </div>
       </nav>

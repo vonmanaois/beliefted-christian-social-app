@@ -24,10 +24,10 @@ export default function HowToUseClient() {
   }, []);
 
   const panelState = closing
-    ? "panel-slide-right-exit"
+    ? "panel-slide-left-exit"
     : entered
-      ? "panel-slide-right-entered"
-      : "panel-slide-right-enter";
+      ? "panel-slide-left-entered"
+      : "panel-slide-left-enter";
 
   return (
     <main className="container">

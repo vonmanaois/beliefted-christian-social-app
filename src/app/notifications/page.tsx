@@ -83,10 +83,10 @@ export default function NotificationsPage() {
    }, []);
 
    const panelState = closing
-     ? "panel-slide-up-exit"
+     ? "panel-slide-down-exit"
      : entered
-       ? "panel-slide-up-entered"
-       : "panel-slide-up-enter";
+       ? "panel-slide-down-entered"
+       : "panel-slide-down-enter";
 
    const { data: notifications = [], isLoading } = useQuery({
      queryKey: ["notifications"],

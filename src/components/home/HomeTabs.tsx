@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import PrayerWall from "@/components/prayer/PrayerWall";
 import WordWall from "@/components/word/WordWall";
 import FollowingWall from "@/components/home/FollowingWall";
+import PanelMotion from "@/components/layout/PanelMotion";
 import { useUIStore } from "@/lib/uiStore";
 
 const tabs = ["Faith Share", "Prayer Wall", "Following"] as const;
@@ -92,7 +93,7 @@ export default function HomeTabs() {
   }, [activeTab, queryClient]);
 
   return (
-    <section className="flex flex-col gap-6 w-full">
+    <PanelMotion className="flex flex-col gap-6 w-full">
       <div className="hidden md:flex items-center justify-center gap-4 w-full">
         {!isAuthenticated ? (
           <button
@@ -199,6 +200,6 @@ export default function HomeTabs() {
       ) : (
         <WordWall />
       )}
-    </section>
+    </PanelMotion>
   );
 }
