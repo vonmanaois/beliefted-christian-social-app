@@ -210,9 +210,34 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
     );
   };
 
+  const updateWordCacheNonSaved = (updater: (item: Word) => Word) => {
+    queryClient.setQueriesData<{ pages: { items: Word[] }[]; pageParams: unknown[] }>(
+      {
+        queryKey: ["words"],
+        predicate: (query) =>
+          Array.isArray(query.queryKey) && !query.queryKey.includes("saved"),
+      },
+      (data) => {
+        if (!data) return data;
+        return {
+          ...data,
+          pages: data.pages.map((page) => ({
+            ...page,
+            items: page.items.map((item) =>
+              normalizeId(item._id) === wordId ? updater(item) : item
+            ),
+          })),
+        };
+      }
+    );
+  };
   const removeFromSavedCache = () => {
     queryClient.setQueriesData<{ pages: { items: Word[] }[]; pageParams: unknown[] }>(
-      { queryKey: ["words"] },
+      {
+        queryKey: ["words"],
+        predicate: (query) =>
+          Array.isArray(query.queryKey) && query.queryKey.includes("saved"),
+      },
       (data) => {
         if (!data) return data;
         return {
@@ -378,6 +403,11 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
         setTimeout(() => {
           removeFromSavedCache();
         }, 260);
+        updateWordCacheNonSaved((item) => {
+          const currentSaved = Array.isArray(item.savedBy) ? item.savedBy : [];
+          const nextSavedBy = currentSaved.filter((id) => id !== viewerId);
+          return { ...item, savedBy: nextSavedBy };
+        });
         return;
       }
       updateWordCache((item) => {

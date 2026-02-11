@@ -23,6 +23,9 @@ import {
 import Modal from "@/components/layout/Modal";
 import ThemeToggle from "@/components/layout/ThemeToggle";
 import NotificationsContent from "@/components/notifications/NotificationsContent";
+import WhyBelieftedContent from "@/components/info/WhyBelieftedContent";
+import HowToDownloadContent from "@/components/info/HowToDownloadContent";
+import CommunityGuidelinesContent from "@/components/info/CommunityGuidelinesContent";
 import UserSearch from "@/components/layout/UserSearch";
 import { useUIStore } from "@/lib/uiStore";
 
@@ -56,9 +59,11 @@ export default function Sidebar() {
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notificationsClosing, setNotificationsClosing] = useState(false);
+  const [infoPanel, setInfoPanel] = useState<"why" | "how" | "guidelines" | null>(null);
+  const [infoClosing, setInfoClosing] = useState(false);
   const [menuMounted, setMenuMounted] = useState(false);
   const touchStartX = useRef<number | null>(null);
-  const triggerPanelClose = (target: "why" | "notifications" | "search") => {
+  const triggerPanelClose = (target: "search") => {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("panel:close", { detail: { target } }));
     }
@@ -66,20 +71,20 @@ export default function Sidebar() {
       router.back();
     }, 220);
   };
-  const handleWhyClick = () => {
-    if (pathname === "/why-beliefted") {
-      triggerPanelClose("why");
-      return;
-    }
-    router.push("/why-beliefted");
-  };
-  const handleHowClick = () => {
-    if (pathname === "/how-to-use") {
-      triggerPanelClose("how");
-      return;
-    }
-    router.push("/how-to-use");
-  };
+
+  const openInfoPanel = useCallback((panel: "why" | "how" | "guidelines") => {
+    setInfoClosing(false);
+    setInfoPanel(panel);
+  }, []);
+
+  const closeInfoPanel = useCallback(() => {
+    if (!infoPanel) return;
+    setInfoClosing(true);
+    setTimeout(() => {
+      setInfoPanel(null);
+      setInfoClosing(false);
+    }, 220);
+  }, [infoPanel]);
 
   const { data: notificationsCount = 0 } = useQuery({
     queryKey: ["notifications", "count"],
@@ -358,6 +363,15 @@ export default function Sidebar() {
     }
   }, [notificationsOpen, notificationsClosing]);
 
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (infoPanel || infoClosing) {
+      document.documentElement.classList.add("info-open");
+    } else {
+      document.documentElement.classList.remove("info-open");
+    }
+  }, [infoPanel, infoClosing]);
+
   return (
     <>
       <div className="lg:hidden sticky top-0 z-40 bg-[color:var(--panel)]/95 backdrop-blur">
@@ -479,7 +493,7 @@ export default function Sidebar() {
                     type="button"
                     onClick={() => {
                       closeMenu();
-                      handleWhyClick();
+                      openInfoPanel("why");
                     }}
                     className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface-strong)]"
                   >
@@ -489,17 +503,17 @@ export default function Sidebar() {
                     type="button"
                     onClick={() => {
                       closeMenu();
-                      handleHowClick();
+                      openInfoPanel("how");
                     }}
                     className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface-strong)]"
                   >
-                  How To Download
+                    How To Download
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       closeMenu();
-                      router.push("/community-guidelines");
+                      openInfoPanel("guidelines");
                     }}
                     className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface-strong)]"
                   >
@@ -616,7 +630,52 @@ export default function Sidebar() {
                     </button>
                   </div>
                   <div className="mt-4">
-                    <NotificationsContent />
+                    <NotificationsContent active={notificationsOpen} />
+                  </div>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )}
+        {(infoPanel || infoClosing) && menuMounted &&
+          createPortal(
+            <div className="fixed inset-0 z-[85]" role="dialog" aria-modal="true">
+              <button
+                type="button"
+                className="absolute inset-0 bg-transparent"
+                aria-label="Close panel"
+                onClick={closeInfoPanel}
+              />
+              <div
+                data-state={infoPanel ? "open" : "closing"}
+                className="info-drawer-panel absolute right-0 top-0 h-full w-full border-l border-[color:var(--panel-border)] bg-[color:var(--surface)] shadow-2xl"
+              >
+                <div className="panel h-full rounded-none border-0 bg-transparent p-6 panel-scroll-mobile">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs uppercase tracking-[0.2em] text-[color:var(--subtle)]">
+                      {infoPanel === "why"
+                        ? "Why Beliefted"
+                        : infoPanel === "how"
+                          ? "How To Download"
+                          : "Community Guidelines"}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={closeInfoPanel}
+                      className="h-9 w-9 rounded-full border border-[color:var(--panel-border)] text-[color:var(--subtle)] flex items-center justify-center"
+                      aria-label="Close panel"
+                    >
+                      <X size={14} weight="bold" />
+                    </button>
+                  </div>
+                  <div className="mt-4">
+                    {infoPanel === "why" ? (
+                      <WhyBelieftedContent />
+                    ) : infoPanel === "how" ? (
+                      <HowToDownloadContent />
+                    ) : (
+                      <CommunityGuidelinesContent />
+                    )}
                   </div>
                 </div>
               </div>
@@ -746,7 +805,7 @@ export default function Sidebar() {
         <button
           type="button"
           className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-          onClick={handleWhyClick}
+          onClick={() => openInfoPanel("why")}
         >
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
             <Info size={22} weight="regular" />
@@ -756,12 +815,22 @@ export default function Sidebar() {
         <button
           type="button"
           className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-          onClick={handleHowClick}
+          onClick={() => openInfoPanel("how")}
         >
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
             <Question size={22} weight="regular" />
           </span>
           <span className="hidden lg:inline">How To Download</span>
+        </button>
+        <button
+          type="button"
+          className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+          onClick={() => openInfoPanel("guidelines")}
+        >
+          <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
+            <Info size={22} weight="regular" />
+          </span>
+          <span className="hidden lg:inline">Community Guidelines</span>
         </button>
         <button
           type="button"
@@ -773,16 +842,11 @@ export default function Sidebar() {
           </span>
           <span className="hidden lg:inline">Themes</span>
         </button>
-        <button
-          type="button"
-          className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-          onClick={() => router.push("/community-guidelines")}
-        >
-          <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
-            <Info size={22} weight="regular" />
-          </span>
-          <span className="hidden lg:inline">Community Guidelines</span>
-        </button>
+        {themeMenuOpen && (
+          <div className="hidden lg:block rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-3">
+            <ThemeToggle />
+          </div>
+        )}
       </div>
 
       </aside>

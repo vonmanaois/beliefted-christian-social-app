@@ -68,6 +68,9 @@ export default function FaithStoryList() {
         _id: typeof item._id === "string" ? item._id : String(item._id),
       }));
     },
+    staleTime: 120000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const createMutation = useMutation({

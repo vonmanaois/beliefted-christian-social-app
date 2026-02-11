@@ -115,7 +115,6 @@ export default async function PublicProfileReprayedPage({
             userId={user._id.toString()}
             showComposer={isSelf}
             initialTab="Reprayed"
-            basePath={`/profile/${user.username}`}
           />
         </PanelMotion>
       </div>

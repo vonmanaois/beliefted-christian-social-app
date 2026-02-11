@@ -200,19 +200,60 @@ html.menu-open body {
   }
 }
 
-html.notifications-open .page-grid {
-  transform: translateX(-100vw);
-  filter: blur(6px);
-  pointer-events: none;
-}
-
-@media (min-width: 768px) {
+@media (max-width: 767px) {
   html.notifications-open .page-grid {
-    transform: translateX(-50vw);
+    transform: translateX(-100vw);
+    filter: blur(6px);
+    pointer-events: none;
   }
 }
 html.notifications-open,
 html.notifications-open body {
+  overflow: hidden;
+}
+
+.info-drawer-panel {
+  transform: translateX(100%);
+  transition: transform 220ms ease;
+  will-change: transform;
+}
+
+.info-drawer-panel[data-state="open"] {
+  transform: translateX(0);
+  animation: info-slide-in 220ms ease;
+}
+
+.info-drawer-panel[data-state="closing"] {
+  transform: translateX(100%);
+  animation: info-slide-out 220ms ease;
+}
+
+@keyframes info-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes info-slide-out {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (min-width: 768px) {
+  .info-drawer-panel {
+    width: 50vw;
+  }
+}
+
+html.info-open,
+html.info-open body {
   overflow: hidden;
 }
 

@@ -33,50 +33,6 @@ export default function HomeTabs() {
     return () => window.removeEventListener("open-word-composer", handleOpenWord);
   }, []);
 
-  useEffect(() => {
-    const prefetchWords = () =>
-      queryClient.prefetchInfiniteQuery({
-        queryKey: ["words", undefined, 0],
-        initialPageParam: null,
-        queryFn: async ({ pageParam }: { pageParam?: string | null }) => {
-          const params = new URLSearchParams();
-          if (pageParam) params.set("cursor", pageParam);
-          params.set("limit", "6");
-          const response = await fetch(`/api/words?${params.toString()}`, {
-            cache: "no-store",
-          });
-          if (!response.ok) {
-            throw new Error("Failed to prefetch words");
-          }
-          return response.json();
-        },
-      });
-
-    const prefetchPrayers = () =>
-      queryClient.prefetchInfiniteQuery({
-        queryKey: ["prayers", undefined, 0],
-        initialPageParam: null,
-        queryFn: async ({ pageParam }: { pageParam?: string | null }) => {
-          const params = new URLSearchParams();
-          if (pageParam) params.set("cursor", pageParam);
-          params.set("limit", "6");
-          const response = await fetch(`/api/prayers?${params.toString()}`, {
-            cache: "no-store",
-          });
-          if (!response.ok) {
-            throw new Error("Failed to prefetch prayers");
-          }
-          return response.json();
-        },
-      });
-
-    if (activeTab === "Prayer Wall") {
-      void prefetchWords();
-    } else if (activeTab === "Faith Share") {
-      void prefetchPrayers();
-    }
-  }, [activeTab, queryClient]);
-
   return (
     <div className="flex flex-col gap-6 w-full">
       <div className="hidden md:flex items-center justify-center gap-4 w-full">

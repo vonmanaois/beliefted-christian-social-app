@@ -114,8 +114,7 @@ export default async function PublicProfilePage({
           <ProfileTabs
             userId={user._id.toString()}
             showComposer={isSelf}
-            initialTab="Faith Share"
-            basePath={`/profile/${user.username}`}
+            initialTab="Word"
           />
         </PanelMotion>
       </div>

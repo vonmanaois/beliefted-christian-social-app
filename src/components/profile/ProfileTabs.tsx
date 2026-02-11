@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
@@ -12,7 +11,7 @@ import { UserCircle } from "@phosphor-icons/react";
 import { cloudinaryTransform } from "@/lib/cloudinary";
 import Spinner from "@/components/ui/Spinner";
 
-const tabs = ["Faith Share", "Prayers", "Reprayed", "Saved"] as const;
+const tabs = ["Word", "Prayers", "Reprayed", "Saved"] as const;
 
 const PostForm = dynamic(() => import("@/components/prayer/PostForm"), {
   ssr: false,
@@ -40,18 +39,14 @@ type ProfileTabsProps = {
   userId: string;
   showComposer?: boolean;
   initialTab?: Tab;
-  basePath?: string;
 };
 
 export default function ProfileTabs({
   userId,
   showComposer = true,
-  initialTab = "Faith Share",
-  basePath,
+  initialTab = "Word",
 }: ProfileTabsProps) {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
-  const router = useRouter();
-  const pathname = usePathname();
   const [refreshKey, setRefreshKey] = useState(0);
   const [showPrayerComposer, setShowPrayerComposer] = useState(false);
   const [showWordComposer, setShowWordComposer] = useState(false);
@@ -64,31 +59,39 @@ export default function ProfileTabs({
   const visibleTabs = tabs.filter((tab) => (tab === "Saved" ? isSelf : true));
   const resolvedTab = visibleTabs.includes(activeTab)
     ? activeTab
-    : visibleTabs[0] ?? "Faith Share";
+    : visibleTabs[0] ?? "Word";
+  const tabIndex = useMemo(
+    () => Math.max(0, visibleTabs.indexOf(resolvedTab)),
+    [resolvedTab, visibleTabs]
+  );
+
+  const hasInitialized = useRef(false);
+
+  useEffect(() => {
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      return;
+    }
+    setRefreshKey((prev) => prev + 1);
+  }, [resolvedTab]);
 
   useEffect(() => {
     const handleOpenPrayer = () => {
       setActiveTab("Prayers");
-      if (basePath) {
-        router.push(`${basePath}/prayers`);
-      }
       setShowPrayerComposer(true);
     };
     window.addEventListener("open-prayer-composer", handleOpenPrayer);
     return () => window.removeEventListener("open-prayer-composer", handleOpenPrayer);
-  }, [basePath, router]);
+  }, []);
 
   useEffect(() => {
     const handleOpenWord = () => {
-      setActiveTab("Faith Share");
-      if (basePath) {
-        router.push(basePath);
-      }
+      setActiveTab("Word");
       setShowWordComposer(true);
     };
     window.addEventListener("open-word-composer", handleOpenWord);
     return () => window.removeEventListener("open-word-composer", handleOpenWord);
-  }, [basePath, router]);
+  }, []);
 
   return (
     <section className="mt-6 flex flex-col gap-6">
@@ -103,23 +106,6 @@ export default function ProfileTabs({
               type="button"
               onClick={() => {
                 setActiveTab(tab);
-                if (!basePath) return;
-                if (tab === "Faith Share" && pathname === basePath) {
-                  return;
-                }
-                if (tab === "Prayers") {
-                  router.push(`${basePath}/prayers`);
-                  return;
-                }
-                if (tab === "Reprayed") {
-                  router.push(`${basePath}/reprayed`);
-                  return;
-                }
-                if (tab === "Saved") {
-                  router.push(`${basePath}/saved`);
-                  return;
-                }
-                router.push(basePath);
               }}
               className={`w-full rounded-lg px-4 py-2 text-sm font-semibold transition ${
                 resolvedTab === tab
@@ -134,69 +120,75 @@ export default function ProfileTabs({
       </div>
 
       <div className="feed-surface">
-        {resolvedTab === "Faith Share" ? (
-          <>
-            {showComposer && (
-              <button
-                type="button"
-                onClick={() => setShowWordComposer(true)}
-                className="composer-trigger cursor-pointer"
-              >
-                <span className="inline-flex items-center gap-2">
-                  <span className="h-7 w-7 rounded-full bg-[color:var(--surface-strong)] overflow-hidden flex items-center justify-center text-[10px] font-semibold text-[color:var(--subtle)]">
-                    {session?.user?.image ? (
-                      <Image
-                        src={cloudinaryTransform(session.user.image, { width: 64, height: 64 })}
-                        alt=""
-                        width={64}
-                        height={64}
-                        sizes="28px"
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <UserCircle size={20} weight="regular" className="text-[color:var(--subtle)]" />
-                    )}
+        <div className="relative w-full overflow-hidden">
+          <div
+            className="flex w-[400%] transition-transform duration-300 ease-out"
+            style={{ transform: `translateX(-${tabIndex * (100 / 4)}%)` }}
+          >
+            <div className="w-full">
+              {showComposer && (
+                <button
+                  type="button"
+                  onClick={() => setShowWordComposer(true)}
+                  className="composer-trigger cursor-pointer"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-7 w-7 rounded-full bg-[color:var(--surface-strong)] overflow-hidden flex items-center justify-center text-[10px] font-semibold text-[color:var(--subtle)]">
+                      {session?.user?.image ? (
+                        <Image
+                          src={cloudinaryTransform(session.user.image, { width: 64, height: 64 })}
+                          alt=""
+                          width={64}
+                          height={64}
+                          sizes="28px"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <UserCircle size={20} weight="regular" className="text-[color:var(--subtle)]" />
+                      )}
+                    </span>
+                    Share your word
                   </span>
-                  Share your faith
-                </span>
-              </button>
-            )}
-            <WordFeed refreshKey={refreshKey} userId={userId} />
-          </>
-        ) : resolvedTab === "Prayers" ? (
-          <>
-            {showComposer && (
-              <button
-                type="button"
-                onClick={() => setShowPrayerComposer(true)}
-                className="composer-trigger cursor-pointer"
-              >
-                <span className="inline-flex items-center gap-2">
-                  <span className="h-7 w-7 rounded-full bg-[color:var(--surface-strong)] overflow-hidden flex items-center justify-center text-[10px] font-semibold text-[color:var(--subtle)]">
-                    {session?.user?.image ? (
-                      <Image
-                        src={cloudinaryTransform(session.user.image, { width: 64, height: 64 })}
-                        alt=""
-                        width={64}
-                        height={64}
-                        sizes="28px"
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <UserCircle size={20} weight="regular" className="text-[color:var(--subtle)]" />
-                    )}
+                </button>
+              )}
+              <WordFeed refreshKey={refreshKey} userId={userId} />
+            </div>
+            <div className="w-full">
+              {showComposer && (
+                <button
+                  type="button"
+                  onClick={() => setShowPrayerComposer(true)}
+                  className="composer-trigger cursor-pointer"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-7 w-7 rounded-full bg-[color:var(--surface-strong)] overflow-hidden flex items-center justify-center text-[10px] font-semibold text-[color:var(--subtle)]">
+                      {session?.user?.image ? (
+                        <Image
+                          src={cloudinaryTransform(session.user.image, { width: 64, height: 64 })}
+                          alt=""
+                          width={64}
+                          height={64}
+                          sizes="28px"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <UserCircle size={20} weight="regular" className="text-[color:var(--subtle)]" />
+                      )}
+                    </span>
+                    Write your new prayer request ...
                   </span>
-                  Write your new prayer request ...
-                </span>
-              </button>
-            )}
-            <PrayerFeed refreshKey={refreshKey} userId={userId} />
-          </>
-        ) : resolvedTab === "Reprayed" ? (
-          <PrayerFeed refreshKey={refreshKey} userId={userId} reprayedOnly />
-        ) : (
-          <WordFeed refreshKey={refreshKey} userId={userId} savedOnly />
-        )}
+                </button>
+              )}
+              <PrayerFeed refreshKey={refreshKey} userId={userId} />
+            </div>
+            <div className="w-full">
+              <PrayerFeed refreshKey={refreshKey} userId={userId} reprayedOnly />
+            </div>
+            <div className="w-full">
+              <WordFeed refreshKey={refreshKey} userId={userId} savedOnly />
+            </div>
+          </div>
+        </div>
       </div>
 
       <Modal

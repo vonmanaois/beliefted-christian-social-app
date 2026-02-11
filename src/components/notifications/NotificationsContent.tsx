@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
@@ -57,12 +58,16 @@ const formatNotificationTime = (timestamp: string) => {
   return new Intl.DateTimeFormat("en-US", options).format(createdAt);
 };
 
-export default function NotificationsContent() {
+type NotificationsContentProps = {
+  active?: boolean;
+};
+
+export default function NotificationsContent({ active = false }: NotificationsContentProps) {
   const { status } = useSession();
   const isAuthenticated = status === "authenticated";
   const queryClient = useQueryClient();
 
-  const { data: notifications = [], isLoading } = useQuery({
+  const { data: notifications = [], isLoading, refetch } = useQuery({
     queryKey: ["notifications"],
     queryFn: async () => {
       const response = await fetch("/api/notifications", { cache: "no-store" });
@@ -72,7 +77,16 @@ export default function NotificationsContent() {
       return (await response.json()) as NotificationItem[];
     },
     enabled: isAuthenticated,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
+
+  useEffect(() => {
+    if (!active) return;
+    if (!isAuthenticated) return;
+    refetch();
+  }, [active, isAuthenticated, refetch]);
 
   const clearMutation = useMutation({
     mutationFn: async () => {

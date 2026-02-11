@@ -48,9 +48,11 @@ export default function FollowingWall() {
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     initialPageParam: null,
-    staleTime: 60000,
+    staleTime: 180000,
+    gcTime: 900000,
     placeholderData: keepPreviousData,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
     enabled: isAuthenticated,
   });
 
@@ -154,7 +156,7 @@ export default function FollowingWall() {
                 <UserCircle size={20} weight="regular" className="text-[color:var(--subtle)]" />
               )}
             </span>
-            Share your faith
+            Share your word
           </span>
         </button>
         <div className="panel p-6 text-sm text-[color:var(--subtle)]">

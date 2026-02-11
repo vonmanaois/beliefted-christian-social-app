@@ -115,7 +115,6 @@ export default async function PublicProfilePrayersPage({
             userId={user._id.toString()}
             showComposer={isSelf}
             initialTab="Prayers"
-            basePath={`/profile/${user.username}`}
           />
         </PanelMotion>
       </div>

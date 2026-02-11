@@ -119,7 +119,6 @@ export default async function PublicProfileSavedPage({
             userId={user._id.toString()}
             showComposer={isSelf}
             initialTab="Saved"
-            basePath={`/profile/${user.username}`}
           />
         </PanelMotion>
       </div>

@@ -1,4 +1,6 @@
-import HowToUseClient from "@/app/how-to-use/HowToUseClient";
+import Sidebar from "@/components/layout/Sidebar";
+import PanelMotion from "@/components/layout/PanelMotion";
+import HowToDownloadContent from "@/components/info/HowToDownloadContent";
 
 export const metadata = {
   title: "How To Download | Beliefted",
@@ -8,5 +10,14 @@ export const metadata = {
 export const dynamic = "force-static";
 
 export default function HowToUsePage() {
-  return <HowToUseClient />;
+  return (
+    <main className="container">
+      <div className="page-grid">
+        <Sidebar />
+        <PanelMotion className="panel p-8 rounded-none panel-scroll-mobile">
+          <HowToDownloadContent />
+        </PanelMotion>
+      </div>
+    </main>
+  );
 }
