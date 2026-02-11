@@ -73,4 +73,5 @@ src/
 - Performance & accessibility polish
 
 ## License
-This project is currently private and not licensed for redistribution.
+Copyright (c) 2026 Vondcm (Beliefted). All rights reserved.
+This project is proprietary and not licensed for redistribution, modification, or public use.
