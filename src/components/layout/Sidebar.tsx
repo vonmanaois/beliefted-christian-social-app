@@ -22,6 +22,7 @@ import {
 } from "@phosphor-icons/react";
 import Modal from "@/components/layout/Modal";
 import ThemeToggle from "@/components/layout/ThemeToggle";
+import NotificationsContent from "@/components/notifications/NotificationsContent";
 import UserSearch from "@/components/layout/UserSearch";
 import { useUIStore } from "@/lib/uiStore";
 
@@ -46,12 +47,15 @@ export default function Sidebar() {
     setNewPrayerPosts,
   } = useUIStore();
   const mobileMenuRef = useRef<HTMLDivElement | null>(null);
+  const notificationsRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [isMenuClosing, setIsMenuClosing] = useState(false);
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notificationsClosing, setNotificationsClosing] = useState(false);
   const [menuMounted, setMenuMounted] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const triggerPanelClose = (target: "why" | "notifications" | "search") => {
@@ -208,11 +212,12 @@ export default function Sidebar() {
       return;
     }
     setLastSeenNotificationsCount(notificationsCount);
-    if (pathname === "/notifications") {
-      triggerPanelClose("notifications");
+    if (notificationsOpen) {
+      closeNotifications();
       return;
     }
-    router.push("/notifications");
+    setNotificationsClosing(false);
+    setNotificationsOpen(true);
   };
 
   const hasHomeBadge = newWordPosts || newPrayerPosts;
@@ -268,6 +273,15 @@ export default function Sidebar() {
     }, 220);
   }, [showMobileMenu]);
 
+  const closeNotifications = useCallback(() => {
+    if (!notificationsOpen) return;
+    setNotificationsClosing(true);
+    setNotificationsOpen(false);
+    window.setTimeout(() => {
+      setNotificationsClosing(false);
+    }, 220);
+  }, [notificationsOpen]);
+
   const toggleThemeMenu = useCallback(() => {
     setThemeMenuOpen((prev) => !prev);
   }, []);
@@ -281,6 +295,16 @@ export default function Sidebar() {
     document.addEventListener("pointerdown", handlePointerDown);
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [showMobileMenu, closeMenu]);
+
+  useEffect(() => {
+    if (!notificationsOpen) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      if (notificationsRef.current?.contains(event.target as Node)) return;
+      closeNotifications();
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [notificationsOpen, closeNotifications]);
 
   useEffect(() => {
     const handleTouchStart = (event: TouchEvent) => {
@@ -297,6 +321,14 @@ export default function Sidebar() {
       }
       if (showMobileMenu && delta < -60) {
         closeMenu();
+      }
+
+      if (!notificationsOpen && startX > window.innerWidth - 40 && delta < -60) {
+        setNotificationsClosing(false);
+        setNotificationsOpen(true);
+      }
+      if (notificationsOpen && delta > 60) {
+        closeNotifications();
       }
       touchStartX.current = null;
     };
@@ -316,6 +348,15 @@ export default function Sidebar() {
       document.documentElement.classList.remove("menu-open");
     }
   }, [showMobileMenu, isMenuClosing]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (notificationsOpen || notificationsClosing) {
+      document.documentElement.classList.add("notifications-open");
+    } else {
+      document.documentElement.classList.remove("notifications-open");
+    }
+  }, [notificationsOpen, notificationsClosing]);
 
   return (
     <>
@@ -399,7 +440,16 @@ export default function Sidebar() {
                     <X size={14} weight="bold" />
                   </button>
                 </div>
-                <div className="mt-3 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (pathname !== "/") {
+                      router.push("/");
+                    }
+                  }}
+                  className="mt-3 flex items-center gap-3 text-left"
+                  aria-label="Go to home"
+                >
                   <Image
                     src="/images/beliefted-logo.svg"
                     alt="Beliefted"
@@ -416,7 +466,7 @@ export default function Sidebar() {
                       Lifting others through prayer
                     </p>
                   </div>
-                </div>
+                </button>
               </div>
 
               <div className="mt-3 flex flex-1 min-h-0 flex-col">
@@ -473,30 +523,39 @@ export default function Sidebar() {
                 <div className="mt-4 border-t border-[color:var(--panel-border)] pt-3">
                   {isAuthenticated ? (
                     <div className="flex flex-col gap-3">
-                      <div className="flex items-center gap-3">
-                        <span className="h-10 w-10 rounded-full bg-[color:var(--surface-strong)] overflow-hidden flex items-center justify-center text-[10px] font-semibold text-[color:var(--subtle)]">
-                          {session?.user?.image ? (
-                            <Image
-                              src={session.user.image}
-                              alt=""
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isAuthenticated) return;
+                        const target = resolvedUsername ? `/profile/${resolvedUsername}` : "/profile";
+                        router.push(target);
+                      }}
+                      className="flex items-center gap-3 text-left"
+                      aria-label="Go to profile"
+                    >
+                      <span className="h-10 w-10 rounded-full bg-[color:var(--surface-strong)] overflow-hidden flex items-center justify-center text-[10px] font-semibold text-[color:var(--subtle)]">
+                        {session?.user?.image ? (
+                          <Image
+                            src={session.user.image}
+                            alt=""
                               width={40}
                               height={40}
                               sizes="40px"
                               className="h-full w-full object-cover"
                             />
                           ) : (
-                            <User size={20} weight="regular" />
-                          )}
-                        </span>
-                        <div>
-                          <p className="text-sm font-semibold text-[color:var(--ink)]">
-                            {session?.user?.name ?? "Signed in"}
-                          </p>
-                          <p className="text-xs text-[color:var(--subtle)]">
-                            {resolvedUsername ? `@${resolvedUsername}` : session?.user?.email}
-                          </p>
-                        </div>
+                          <User size={20} weight="regular" />
+                        )}
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold text-[color:var(--ink)]">
+                          {session?.user?.name ?? "Signed in"}
+                        </p>
+                        <p className="text-xs text-[color:var(--subtle)]">
+                          {resolvedUsername ? `@${resolvedUsername}` : session?.user?.email}
+                        </p>
                       </div>
+                    </button>
                       <button
                         type="button"
                         onClick={() => {
@@ -522,6 +581,44 @@ export default function Sidebar() {
                   )}
                 </div>
               </div>
+              </div>
+            </div>,
+            document.body
+          )}
+        {(notificationsOpen || notificationsClosing) && menuMounted &&
+          createPortal(
+            <div className="fixed inset-0 z-[90]" role="dialog" aria-modal="true">
+              <button
+                type="button"
+                className="absolute inset-0 bg-transparent"
+                aria-label="Close notifications"
+                onClick={closeNotifications}
+              />
+              <div
+                ref={notificationsRef}
+                data-state={notificationsOpen ? "open" : "closing"}
+                className="notification-drawer-panel absolute right-0 top-0 h-full w-full border-l border-[color:var(--panel-border)] bg-[color:var(--surface)] shadow-2xl"
+              >
+                <div className="panel h-full rounded-none border-0 bg-transparent p-6 panel-scroll-mobile">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.2em] text-[color:var(--subtle)]">
+                        Notifications
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={closeNotifications}
+                      className="h-9 w-9 rounded-full border border-[color:var(--panel-border)] text-[color:var(--subtle)] flex items-center justify-center"
+                      aria-label="Close notifications"
+                    >
+                      <X size={14} weight="bold" />
+                    </button>
+                  </div>
+                  <div className="mt-4">
+                    <NotificationsContent />
+                  </div>
+                </div>
               </div>
             </div>,
             document.body

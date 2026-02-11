@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useQueryClient } from "@tanstack/react-query";
 import PrayerWall from "@/components/prayer/PrayerWall";
 import WordWall from "@/components/word/WordWall";
 import FollowingWall from "@/components/home/FollowingWall";
-import PanelMotion from "@/components/layout/PanelMotion";
 import { useUIStore } from "@/lib/uiStore";
 
 const tabs = ["Faith Share", "Prayer Wall", "Following"] as const;
@@ -17,36 +15,23 @@ type Tab = (typeof tabs)[number];
 export default function HomeTabs() {
   const { status } = useSession();
   const isAuthenticated = status === "authenticated";
-  const router = useRouter();
-  const pathname = usePathname();
   const queryClient = useQueryClient();
   const { newWordPosts, newPrayerPosts, setNewWordPosts, setNewPrayerPosts } = useUIStore();
 
-  const activeTab = useMemo<Tab>(() => {
-    if (pathname === "/prayerwall") {
-      return "Prayer Wall";
-    }
-    if (pathname === "/following") {
-      return "Following";
-    }
-    return "Faith Share";
-  }, [pathname]);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const activeTab = useMemo<Tab>(() => tabs[activeIndex], [activeIndex]);
 
   useEffect(() => {
-    const handleOpenPrayer = () => {
-      router.push("/prayerwall");
-    };
+    const handleOpenPrayer = () => setActiveIndex(1);
     window.addEventListener("open-prayer-composer", handleOpenPrayer);
     return () => window.removeEventListener("open-prayer-composer", handleOpenPrayer);
-  }, [router]);
+  }, []);
 
   useEffect(() => {
-    const handleOpenWord = () => {
-      router.push("/");
-    };
+    const handleOpenWord = () => setActiveIndex(0);
     window.addEventListener("open-word-composer", handleOpenWord);
     return () => window.removeEventListener("open-word-composer", handleOpenWord);
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     const prefetchWords = () =>
@@ -93,7 +78,7 @@ export default function HomeTabs() {
   }, [activeTab, queryClient]);
 
   return (
-    <PanelMotion className="flex flex-col gap-6 w-full">
+    <div className="flex flex-col gap-6 w-full">
       <div className="hidden md:flex items-center justify-center gap-4 w-full">
         {!isAuthenticated ? (
           <button
@@ -121,16 +106,16 @@ export default function HomeTabs() {
                   if (tab === "Prayer Wall") {
                     queryClient.invalidateQueries({ queryKey: ["prayers"] });
                     setNewPrayerPosts(false);
-                    router.push("/prayerwall");
+                    setActiveIndex(1);
                     return;
                   }
                   if (tab === "Following") {
-                    router.push("/following");
+                    setActiveIndex(2);
                     return;
                   }
                   queryClient.invalidateQueries({ queryKey: ["words"] });
                   setNewWordPosts(false);
-                  router.push("/");
+                  setActiveIndex(0);
                 }}
                 className={`flex-1 px-4 py-2 text-sm font-semibold transition ${
                   activeTab === tab
@@ -164,16 +149,16 @@ export default function HomeTabs() {
                   if (tab === "Prayer Wall") {
                     queryClient.invalidateQueries({ queryKey: ["prayers"] });
                     setNewPrayerPosts(false);
-                    router.push("/prayerwall");
+                    setActiveIndex(1);
                     return;
                   }
                   if (tab === "Following") {
-                    router.push("/following");
+                    setActiveIndex(2);
                     return;
                   }
                   queryClient.invalidateQueries({ queryKey: ["words"] });
                   setNewWordPosts(false);
-                  router.push("/");
+                  setActiveIndex(0);
                 }}
                 className={`w-full rounded-lg px-3 py-2 text-xs font-semibold transition ${
                   activeTab === tab
@@ -193,13 +178,22 @@ export default function HomeTabs() {
         </div>
       </div>
 
-      {activeTab === "Prayer Wall" ? (
-        <PrayerWall />
-      ) : activeTab === "Following" ? (
-        <FollowingWall />
-      ) : (
-        <WordWall />
-      )}
-    </PanelMotion>
+      <div className="relative w-full overflow-hidden">
+        <div
+          className="flex w-[300%] transition-transform duration-300 ease-out"
+          style={{ transform: `translateX(-${activeIndex * (100 / 3)}%)` }}
+        >
+          <div className="w-full">
+            <WordWall />
+          </div>
+          <div className="w-full">
+            <PrayerWall />
+          </div>
+          <div className="w-full">
+            <FollowingWall />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

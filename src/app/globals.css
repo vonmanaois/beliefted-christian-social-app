@@ -170,6 +170,52 @@ html.menu-open body {
   overflow: hidden;
 }
 
+.notification-drawer-panel {
+  transform: translateX(100%);
+  transition: transform 220ms ease;
+  will-change: transform;
+}
+
+.notification-drawer-panel[data-state="open"] {
+  transform: translateX(0);
+  animation: notification-slide-in 220ms ease;
+}
+
+.notification-drawer-panel[data-state="closing"] {
+  transform: translateX(100%);
+}
+
+@keyframes notification-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (min-width: 768px) {
+  .notification-drawer-panel {
+    width: 50vw;
+  }
+}
+
+html.notifications-open .page-grid {
+  transform: translateX(-100vw);
+  filter: blur(6px);
+  pointer-events: none;
+}
+
+@media (min-width: 768px) {
+  html.notifications-open .page-grid {
+    transform: translateX(-50vw);
+  }
+}
+html.notifications-open,
+html.notifications-open body {
+  overflow: hidden;
+}
+
 .mobile-menu-panel {
   transform: translateX(-100%);
   transition: transform 220ms ease;
