@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Types } from "mongoose";
 import dbConnect from "@/lib/db";
 import FaithStoryModel from "@/models/FaithStory";
@@ -83,7 +83,7 @@ export default async function FaithStoryDetailPage({ params }: PageProps) {
   const authorUsername = author?.username ?? story.authorUsername ?? null;
 
   if (authorUsername && authorUsername !== username) {
-    notFound();
+    redirect(`/faith-story/${authorUsername}/${id}`);
   }
 
   const canonical = `${siteUrl}/faith-story/${authorUsername ?? username}/${id}`;
