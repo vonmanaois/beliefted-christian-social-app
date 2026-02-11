@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
@@ -17,8 +18,10 @@ import {
   MagnifyingGlass,
   SlidersHorizontal,
   User,
+  X,
 } from "@phosphor-icons/react";
 import Modal from "@/components/layout/Modal";
+import ThemeToggle from "@/components/layout/ThemeToggle";
 import UserSearch from "@/components/layout/UserSearch";
 import { useUIStore } from "@/lib/uiStore";
 
@@ -29,7 +32,7 @@ let unifiedStreamRetryTimer: ReturnType<typeof setTimeout> | null = null;
 let unifiedStreamCloseTimer: ReturnType<typeof setTimeout> | null = null;
 
 export default function Sidebar() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
   const {
     signInOpen,
@@ -47,6 +50,10 @@ export default function Sidebar() {
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [isMenuClosing, setIsMenuClosing] = useState(false);
+  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+  const [menuMounted, setMenuMounted] = useState(false);
+  const touchStartX = useRef<number | null>(null);
   const triggerPanelClose = (target: "why" | "notifications" | "search") => {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("panel:close", { detail: { target } }));
@@ -249,22 +256,88 @@ export default function Sidebar() {
   }, [openSignIn]);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!mobileMenuRef.current) return;
-      if (mobileMenuRef.current.contains(event.target as Node)) return;
-      setShowMobileMenu(false);
-    };
-    if (showMobileMenu) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    setMenuMounted(true);
+  }, []);
+
+  const closeMenu = useCallback(() => {
+    if (!showMobileMenu) return;
+    setIsMenuClosing(true);
+    setShowMobileMenu(false);
+    window.setTimeout(() => {
+      setIsMenuClosing(false);
+    }, 220);
   }, [showMobileMenu]);
+
+  const toggleThemeMenu = useCallback(() => {
+    setThemeMenuOpen((prev) => !prev);
+  }, []);
+
+  useEffect(() => {
+    if (!showMobileMenu) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      if (mobileMenuRef.current?.contains(event.target as Node)) return;
+      closeMenu();
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [showMobileMenu, closeMenu]);
+
+  useEffect(() => {
+    const handleTouchStart = (event: TouchEvent) => {
+      touchStartX.current = event.touches[0]?.clientX ?? null;
+    };
+    const handleTouchEnd = (event: TouchEvent) => {
+      const startX = touchStartX.current;
+      if (startX === null) return;
+      const endX = event.changedTouches[0]?.clientX ?? startX;
+      const delta = endX - startX;
+      if (!showMobileMenu && startX < 40 && delta > 60) {
+        setIsMenuClosing(false);
+        setShowMobileMenu(true);
+      }
+      if (showMobileMenu && delta < -60) {
+        closeMenu();
+      }
+      touchStartX.current = null;
+    };
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [showMobileMenu]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (showMobileMenu || isMenuClosing) {
+      document.documentElement.classList.add("menu-open");
+    } else {
+      document.documentElement.classList.remove("menu-open");
+    }
+  }, [showMobileMenu, isMenuClosing]);
 
   return (
     <>
       <div className="lg:hidden sticky top-0 z-40 bg-[color:var(--panel)]/95 backdrop-blur">
         <div className="grid grid-cols-[120px_1fr_120px] items-center px-4 py-0 h-12">
-          <div className="flex items-center gap-4 justify-start w-full text-[color:var(--ink)]" />
+          <div className="flex items-center gap-4 justify-start w-full text-[color:var(--ink)]">
+            <button
+              type="button"
+              onClick={() => {
+                if (showMobileMenu) {
+                  closeMenu();
+                  return;
+                }
+                setIsMenuClosing(false);
+                setShowMobileMenu(true);
+              }}
+              className="flex items-center justify-center hover:text-[color:var(--accent)]"
+              aria-label="Menu"
+            >
+              <List size={22} weight="regular" />
+            </button>
+          </div>
           <button
             type="button"
             onClick={() => router.push("/")}
@@ -275,6 +348,7 @@ export default function Sidebar() {
               alt="Beliefted"
               width={36}
               height={36}
+              priority
               className="h-9 w-9 rounded-full"
             />
             <span className="hidden sm:inline text-sm font-semibold text-[color:var(--ink)] whitespace-nowrap">
@@ -295,90 +369,163 @@ export default function Sidebar() {
                 )}
               </span>
             </button>
-            <button
-              type="button"
-              onClick={() => setShowMobileMenu((prev) => !prev)}
-              className="flex items-center justify-center hover:text-[color:var(--accent)]"
-              aria-label="Menu"
-            >
-              <List size={22} weight="regular" />
-            </button>
           </div>
         </div>
-        {showMobileMenu && (
-          <div className="fixed inset-0 z-50" aria-hidden="true">
-            <div className="absolute inset-0 bg-black/10" />
-            <div
-              ref={mobileMenuRef}
-              className="absolute right-4 top-12 w-56 rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-2 shadow-lg"
-            >
+        {(showMobileMenu || isMenuClosing) && menuMounted &&
+          createPortal(
+            <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true">
               <button
                 type="button"
-                onClick={() => {
-                  setShowMobileMenu(false);
-                  handleWhyClick();
-                }}
-                className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)]"
+                className="absolute inset-0 bg-transparent"
+                aria-label="Close menu"
+                onClick={closeMenu}
+              />
+              <div
+                ref={mobileMenuRef}
+                data-state={showMobileMenu ? "open" : "closing"}
+                className="mobile-menu-panel absolute left-0 top-0 h-full w-[75vw] max-w-[360px] border-r border-[color:var(--panel-border)] bg-[color:var(--surface)] p-4 shadow-2xl flex flex-col overflow-hidden pb-5 min-h-0"
               >
-                Why Beliefted
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowMobileMenu(false);
-                  handleHowClick();
-                }}
-                className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)]"
-              >
-                How To Use
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowMobileMenu(false);
-                  router.push("/community-guidelines");
-                }}
-                className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)]"
-              >
-                Community Guidelines
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowMobileMenu(false);
-                  router.push("/preferences");
-                }}
-                className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)]"
-              >
-                Preferences
-              </button>
-              <div className="my-2 border-t border-[color:var(--panel-border)]" />
-              {isAuthenticated ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowMobileMenu(false);
-                    signOut();
-                  }}
-                  className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)]"
-                >
-                  Sign out
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowMobileMenu(false);
-                    signIn("google");
-                  }}
-                  className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-[color:var(--accent)] hover:bg-[color:var(--surface)]"
-                >
-                  Sign in
-                </button>
-              )}
-            </div>
-          </div>
-        )}
+              <div>
+                <div className="flex items-start justify-between gap-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-[color:var(--subtle)]">
+                    Menu
+                  </p>
+                  <button
+                    type="button"
+                    onClick={closeMenu}
+                    className="h-8 w-8 rounded-full border border-[color:var(--panel-border)] text-[color:var(--subtle)] flex items-center justify-center"
+                    aria-label="Close menu"
+                  >
+                    <X size={14} weight="bold" />
+                  </button>
+                </div>
+                <div className="mt-3 flex items-center gap-3">
+                  <Image
+                    src="/images/beliefted-logo.svg"
+                    alt="Beliefted"
+                    width={40}
+                    height={40}
+                    priority
+                    className="h-10 w-10 rounded-full"
+                  />
+                  <div>
+                    <p className="text-base font-semibold text-[color:var(--ink)]">
+                      Beliefted
+                    </p>
+                    <p className="text-xs text-[color:var(--subtle)]">
+                      Lifting others through prayer
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 flex flex-1 min-h-0 flex-col">
+                <div>
+                  <UserSearch />
+                </div>
+
+                <div className="mt-3 flex flex-col">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeMenu();
+                      handleWhyClick();
+                    }}
+                    className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface-strong)]"
+                  >
+                    Why Beliefted
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeMenu();
+                      handleHowClick();
+                    }}
+                    className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface-strong)]"
+                  >
+                  How To Download
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeMenu();
+                      router.push("/community-guidelines");
+                    }}
+                    className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface-strong)]"
+                  >
+                    Community Guidelines
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleThemeMenu}
+                    className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface-strong)]"
+                    aria-expanded={themeMenuOpen}
+                  >
+                    Theme
+                  </button>
+                  {themeMenuOpen && (
+                    <div className="mt-3 rounded-xl bg-[color:var(--panel)] p-3">
+                      <ThemeToggle />
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 border-t border-[color:var(--panel-border)] pt-3">
+                  {isAuthenticated ? (
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-3">
+                        <span className="h-10 w-10 rounded-full bg-[color:var(--surface-strong)] overflow-hidden flex items-center justify-center text-[10px] font-semibold text-[color:var(--subtle)]">
+                          {session?.user?.image ? (
+                            <Image
+                              src={session.user.image}
+                              alt=""
+                              width={40}
+                              height={40}
+                              sizes="40px"
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <User size={20} weight="regular" />
+                          )}
+                        </span>
+                        <div>
+                          <p className="text-sm font-semibold text-[color:var(--ink)]">
+                            {session?.user?.name ?? "Signed in"}
+                          </p>
+                          <p className="text-xs text-[color:var(--subtle)]">
+                            {resolvedUsername ? `@${resolvedUsername}` : session?.user?.email}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          closeMenu();
+                          signOut();
+                        }}
+                        className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[color:var(--danger)] border border-[color:var(--danger)]"
+                      >
+                        Sign out
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeMenu();
+                        signIn("google");
+                      }}
+                      className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[color:var(--accent)] hover:bg-[color:var(--surface-strong)]"
+                    >
+                      Sign in
+                    </button>
+                  )}
+                </div>
+              </div>
+              </div>
+            </div>,
+            document.body
+          )}
       </div>
       <aside className="hidden lg:flex p-5 flex-col gap-5 h-fit items-center text-center lg:items-start lg:text-left bg-transparent border-none shadow-none">
       <button
@@ -391,6 +538,7 @@ export default function Sidebar() {
           alt="Beliefted"
           width={40}
           height={40}
+          priority
           className="h-10 w-10 rounded-full"
         />
         <div className="hidden md:block">
@@ -516,17 +664,17 @@ export default function Sidebar() {
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
             <Question size={22} weight="regular" />
           </span>
-          <span className="hidden lg:inline">How To Use</span>
+          <span className="hidden lg:inline">How To Download</span>
         </button>
         <button
           type="button"
           className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-          onClick={() => router.push("/preferences")}
+          onClick={toggleThemeMenu}
         >
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
             <SlidersHorizontal size={22} weight="regular" />
           </span>
-          <span className="hidden lg:inline">Preferences</span>
+          <span className="hidden lg:inline">Themes</span>
         </button>
         <button
           type="button"

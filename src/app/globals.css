@@ -155,6 +155,42 @@ h3 {
   display: grid;
   gap: 32px;
   grid-template-columns: minmax(0, 1fr);
+  transition: transform 220ms ease, filter 220ms ease;
+}
+
+html.menu-open .page-grid {
+  transform: translateX(25vw);
+  filter: blur(6px);
+  pointer-events: none;
+}
+
+html.menu-open,
+html.menu-open body {
+  overflow: hidden;
+}
+
+.mobile-menu-panel {
+  transform: translateX(-100%);
+  transition: transform 220ms ease;
+  will-change: transform;
+}
+
+.mobile-menu-panel[data-state="open"] {
+  transform: translateX(0);
+  animation: menu-slide-in 220ms ease;
+}
+
+.mobile-menu-panel[data-state="closing"] {
+  transform: translateX(-100%);
+}
+
+@keyframes menu-slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

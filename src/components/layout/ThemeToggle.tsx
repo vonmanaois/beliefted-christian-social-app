@@ -100,17 +100,14 @@ export default function ThemeToggle() {
   }
 
   return (
-    <div className="panel p-4 flex flex-col gap-3">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--subtle)]">
-        Theme
-      </p>
+    <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2">
         {themes.map((item) => (
           <button
             key={item.value}
             type="button"
             onClick={() => handleThemeChange(item.value)}
-            className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm transition cursor-pointer ${
+            className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm cursor-pointer ${
               theme === item.value
                 ? "border-transparent bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
                 : "border-[color:var(--panel-border)] text-[color:var(--ink)] hover:border-[color:var(--accent)]"
@@ -118,12 +115,12 @@ export default function ThemeToggle() {
           >
             <span className="font-semibold">{item.label}</span>
             <span
-              className={`relative inline-flex h-5 w-10 items-center rounded-full transition ${
+              className={`relative inline-flex h-5 w-10 items-center rounded-full ${
                 theme === item.value ? "bg-white/30" : "bg-[color:var(--surface-strong)]"
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full transition ${
+                className={`inline-block h-4 w-4 transform rounded-full ${
                   theme === item.value
                     ? "translate-x-5 bg-white"
                     : "translate-x-1 bg-[color:var(--panel)]"
