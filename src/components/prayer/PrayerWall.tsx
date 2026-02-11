@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
@@ -22,9 +22,10 @@ const PostForm = dynamic(() => import("@/components/prayer/PostForm"), {
 
 export default function PrayerWall() {
   const [refreshKey, setRefreshKey] = useState(0);
-  const [showComposer, setShowComposer] = useState(false);
+  const [formKey, setFormKey] = useState(0);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [isPrayerDirty, setIsPrayerDirty] = useState(false);
+  const formRef = useRef<HTMLDivElement | null>(null);
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
   const { openSignIn } = useUIStore();
@@ -35,94 +36,58 @@ export default function PrayerWall() {
         openSignIn();
         return;
       }
-      setShowComposer(true);
     };
     window.addEventListener("open-prayer-composer", handleOpenPrayer);
     return () => window.removeEventListener("open-prayer-composer", handleOpenPrayer);
   }, [isAuthenticated, openSignIn]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (formRef.current?.contains(target)) return;
+      if (!isPrayerDirty || showDiscardConfirm) return;
+      setShowDiscardConfirm(true);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isPrayerDirty, showDiscardConfirm]);
+
   return (
     <section className="feed-surface">
-      {showComposer ? (
-        <div className="panel p-6 sm:p-8 rounded-none border-none shadow-none">
-          <div className="mb-4 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => {
-                if (isPrayerDirty) {
-                  setShowDiscardConfirm(true);
-                  return;
-                }
-                setShowComposer(false);
-              }}
-              className="inline-flex items-center justify-center h-11 w-11 rounded-full text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-              aria-label="Back"
-            >
-              <span className="text-xl font-semibold">⟵</span>
-            </button>
-            <span className="text-sm font-semibold text-[color:var(--ink)]">
-              New Prayer
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                if (isPrayerDirty) {
-                  setShowDiscardConfirm(true);
-                  return;
-                }
-                setShowComposer(false);
-              }}
-              className="text-sm font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
-            >
-              Cancel
-            </button>
-          </div>
+      <div ref={formRef} className="wall-card flex items-start gap-3 rounded-none border-b-0 pb-3">
+        <div className="avatar-ring">
+          {session?.user?.image ? (
+            <Image
+              src={session.user.image}
+              alt="Profile"
+              width={56}
+              height={56}
+              sizes="32px"
+              className="avatar-core h-8 w-8 sm:h-10 sm:w-10 object-cover"
+            />
+          ) : (
+            <div className="avatar-core h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center">
+              <UserCircle size={20} weight="regular" className="text-[color:var(--subtle)]" />
+            </div>
+          )}
+        </div>
+        <div className="flex-1">
           <PostForm
+            key={formKey}
             variant="inline"
             flat
+            compact
             onPosted={() => {
               setRefreshKey((prev) => prev + 1);
-              setShowComposer(false);
+              setFormKey((prev) => prev + 1);
+              setIsPrayerDirty(false);
             }}
             onDirtyChange={setIsPrayerDirty}
           />
         </div>
-      ) : (
-        <>
-          <button
-            type="button"
-            onClick={() => {
-              if (!isAuthenticated) {
-                openSignIn();
-                return;
-              }
-              setShowComposer(true);
-            }}
-            className="composer-trigger cursor-pointer"
-          >
-            <span className="inline-flex items-center gap-2">
-              <span className="h-7 w-7 rounded-full bg-[color:var(--surface-strong)] overflow-hidden flex items-center justify-center text-[10px] font-semibold text-[color:var(--subtle)]">
-                {session?.user?.image ? (
-                  <Image
-                    src={session.user.image}
-                    alt="Profile"
-                    width={56}
-                    height={56}
-                    sizes="28px"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <UserCircle size={20} weight="regular" className="text-[color:var(--subtle)]" />
-                )}
-              </span>
-              {isAuthenticated
-                ? "Write a prayer"
-                : "Sign in to post a prayer"}
-            </span>
-          </button>
-          <PrayerFeed refreshKey={refreshKey} />
-        </>
-      )}
+      </div>
+      <PrayerFeed refreshKey={refreshKey} />
 
       <Modal
         title="Discard prayer?"
@@ -144,7 +109,8 @@ export default function PrayerWall() {
             type="button"
             onClick={() => {
               setShowDiscardConfirm(false);
-              setShowComposer(false);
+              setFormKey((prev) => prev + 1);
+              setIsPrayerDirty(false);
             }}
             className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--danger)] text-white cursor-pointer"
           >

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { PlusCircle } from "@phosphor-icons/react";
+import { MinusCircle, PlusCircle } from "@phosphor-icons/react";
 import { useSession } from "next-auth/react";
 
 type PostFormProps = {
@@ -22,7 +22,6 @@ export default function PostForm({
   const { data: session } = useSession();
   const [kind, setKind] = useState<"prayer" | "request">("prayer");
   const [content, setContent] = useState("");
-  const [scriptureRef, setScriptureRef] = useState("");
   const [points, setPoints] = useState<
     { title: string; description: string }[]
   >([{ title: "", description: "" }]);
@@ -30,6 +29,8 @@ export default function PostForm({
   const [expiresInDays, setExpiresInDays] = useState<7 | 30 | "never">(7);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [showExtras, setShowExtras] = useState(false);
+  const formRef = useRef<HTMLFormElement | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
@@ -49,9 +50,8 @@ export default function PostForm({
 
   const isDirty =
     kind === "prayer"
-      ? content.trim().length > 0 || scriptureRef.trim().length > 0
-      : scriptureRef.trim().length > 0 ||
-        points.some(
+      ? content.trim().length > 0
+      : points.some(
           (point) => point.title.trim().length > 0 || point.description.trim().length > 0
         );
 
@@ -104,7 +104,6 @@ export default function PostForm({
               : [],
           isAnonymous,
           expiresInDays,
-          scriptureRef,
         }),
       });
 
@@ -118,7 +117,6 @@ export default function PostForm({
 
       setKind("prayer");
       setContent("");
-      setScriptureRef("");
       setPoints([{ title: "", description: "" }]);
       setIsAnonymous(false);
       setExpiresInDays(7);
@@ -139,45 +137,29 @@ export default function PostForm({
     <form
       id="prayer-form"
       onSubmit={handleSubmit}
+      ref={formRef}
+      onFocusCapture={() => setShowExtras(true)}
+      onBlurCapture={() => {
+        if (kind !== "prayer") return;
+        setTimeout(() => {
+          const active = document.activeElement;
+          if (formRef.current?.contains(active)) return;
+          if (isDirty) return;
+          setShowExtras(false);
+        }, 0);
+      }}
       className={`${
         variant === "modal" ? "modal-form" : flat ? "feed-form" : "panel-glass"
-      } flex flex-col gap-3 scroll-mt-24 ${
+      } flex flex-col gap-3 scroll-mt-24 w-full ${
         compact ? "p-3" : "p-4"
       }`}
     >
-      <div className="flex items-center gap-3 text-sm text-[color:var(--subtle)]">
-        <span>Type</span>
-        <label className="inline-flex items-center gap-2 cursor-pointer">
-          <input
-            type="radio"
-            name="kind"
-            checked={kind === "prayer"}
-            onChange={() => setKind("prayer")}
-          />
-          Prayer
-        </label>
-        <label className="inline-flex items-center gap-2 cursor-pointer">
-          <input
-            type="radio"
-            name="kind"
-            checked={kind === "request"}
-            onChange={() => setKind("request")}
-          />
-          Prayer Request
-        </label>
-      </div>
-
-      <input
-        type="text"
-        className="soft-input modal-input text-sm"
-        placeholder="Scripture reference (optional)"
-        value={scriptureRef}
-        onChange={(event) => setScriptureRef(event.target.value)}
-      />
       {kind === "prayer" ? (
         <textarea
-          className={`soft-input modal-input text-sm ${compact ? "min-h-[90px]" : "min-h-[110px]"}`}
-          placeholder="Write your prayer..."
+          className={`bg-transparent text-base text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none ${
+            compact ? "min-h-[28px]" : "min-h-[36px]"
+          }`}
+          placeholder="What can we pray for today?"
           value={content}
           ref={textAreaRef}
           onChange={(event) => {
@@ -190,15 +172,27 @@ export default function PostForm({
         />
       ) : (
         <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-[color:var(--ink)]">
+              Prayer request
+            </span>
+            <button
+              type="button"
+              onClick={() => setKind("prayer")}
+              className="text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
+            >
+              Back to prayer
+            </button>
+          </div>
           {points.map((point, index) => (
             <div key={index} className="flex flex-col gap-2">
               <input
-                className={`soft-input modal-input text-sm ${
+                className={`bg-transparent text-sm text-[color:var(--ink)] outline-none border-b border-[color:var(--panel-border)] pb-1 focus:outline-none focus:ring-0 ${
                   showRequestValidation && !point.title.trim()
                     ? "border-[color:var(--danger)]"
                     : ""
                 }`}
-                placeholder="Prayer point (title)"
+                placeholder="Prayer point"
                 value={point.title}
                 onChange={(event) => {
                   const next = [...points];
@@ -207,12 +201,12 @@ export default function PostForm({
                 }}
               />
               <textarea
-                className={`soft-input modal-input text-sm min-h-[80px] ${
+                className={`bg-transparent text-sm text-[color:var(--ink)] outline-none border-b border-[color:var(--panel-border)] pb-1 focus:outline-none focus:ring-0 resize-none min-h-[60px] ${
                   showRequestValidation && !point.description.trim()
                     ? "border-[color:var(--danger)]"
                     : ""
                 }`}
-                placeholder="Prayer description..."
+                placeholder="Description"
                 value={point.description}
                 onChange={(event) => {
                   const next = [...points];
@@ -220,6 +214,18 @@ export default function PostForm({
                   setPoints(next);
                 }}
               />
+              {points.length > 1 && index === points.length - 1 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPoints((prev) => prev.filter((_, i) => i !== index))
+                  }
+                  className="self-start text-[color:var(--danger)] hover:text-[color:var(--danger-strong)]"
+                  aria-label="Remove prayer point"
+                >
+                  <MinusCircle size={16} weight="bold" />
+                </button>
+              )}
             </div>
           ))}
           <button
@@ -232,65 +238,62 @@ export default function PostForm({
             <PlusCircle size={16} weight="regular" />
             Add prayer point
           </button>
-          <p
-            className={`text-xs ${
-              !hasValidRequestPoints
-                ? "text-[color:var(--subtle)]"
-                : "text-[color:var(--subtle)]"
-            }`}
-          >
-            Add at least one prayer point with a title and description.
-          </p>
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-4 text-sm">
-        <label className="switch-toggle text-[color:var(--subtle)]">
-          <input
-            type="checkbox"
-            checked={isAnonymous}
-            onChange={(event) => setIsAnonymous(event.target.checked)}
-          />
-          <span className="switch-track">
-            <span className="switch-thumb" />
-          </span>
-          Anonymous
-        </label>
+      {(showExtras || kind === "request") && (
+        <div className="mt-2 flex flex-wrap items-center gap-3 w-full text-xs text-[color:var(--subtle)]">
+          {kind === "prayer" && (
+            <button
+              type="button"
+              onClick={() => setKind("request")}
+              className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
+            >
+              <PlusCircle size={16} weight="regular" />
+              Add prayer request
+            </button>
+          )}
+          <label className="inline-flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isAnonymous}
+              onChange={(event) => setIsAnonymous(event.target.checked)}
+            />
+            Anonymous
+          </label>
 
-        <div className="flex items-center gap-3 text-[color:var(--subtle)]">
-          <span>Expires</span>
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="expires"
-              checked={expiresInDays === 7}
-              onChange={() => setExpiresInDays(7)}
-            />
-            7d
-          </label>
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="expires"
-              checked={expiresInDays === 30}
-              onChange={() => setExpiresInDays(30)}
-            />
-            30d
-          </label>
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="expires"
-              checked={expiresInDays === "never"}
-              onChange={() => setExpiresInDays("never")}
-            />
-            Never
-          </label>
+          <div className="flex items-center gap-3 flex-wrap">
+            <span>Expires</span>
+            <label className="inline-flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="expires"
+                checked={expiresInDays === 7}
+                onChange={() => setExpiresInDays(7)}
+              />
+              7d
+            </label>
+            <label className="inline-flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="expires"
+                checked={expiresInDays === 30}
+                onChange={() => setExpiresInDays(30)}
+              />
+              30d
+            </label>
+            <label className="inline-flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="expires"
+                checked={expiresInDays === "never"}
+                onChange={() => setExpiresInDays("never")}
+              />
+              Never
+            </label>
+          </div>
         </div>
-        <p className="text-xs text-[color:var(--subtle)]">
-          Expired prayers are removed and no longer viewable.
-        </p>
-      </div>
+      )}
 
       <div className="flex justify-end">
         <button
