@@ -10,8 +10,9 @@ import Modal from "@/components/layout/Modal";
 import YouTubeEmbed from "@/components/ui/YouTubeEmbed";
 import { useUIStore } from "@/lib/uiStore";
 
-const extractYouTube = (value: string) => {
+const extractMedia = (value: string) => {
   let videoId: string | null = null;
+  let spotifyEmbed: string | null = null;
   let cleaned = value;
   const urlMatches = value.match(/https?:\/\/\S+/gi) ?? [];
 
@@ -42,10 +43,23 @@ const extractYouTube = (value: string) => {
     if (candidate) {
       if (!videoId) videoId = candidate;
       cleaned = cleaned.replace(rawUrl, "").trim();
+      continue;
+    }
+
+    if (host === "open.spotify.com") {
+      const parts = parsed.pathname.split("/").filter(Boolean);
+      const type = parts[0];
+      const id = parts[1];
+      if (type && id) {
+        if (!spotifyEmbed) {
+          spotifyEmbed = `https://open.spotify.com/embed/${type}/${id}`;
+        }
+        cleaned = cleaned.replace(rawUrl, "").trim();
+      }
     }
   }
 
-  return { videoId, cleaned };
+  return { videoId, spotifyEmbed, cleaned };
 };
 
 export type WordUser = {
@@ -539,6 +553,8 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
     },
     onSuccess: async () => {
       setShowMenu(false);
+      setIsRemoving(true);
+      await new Promise((resolve) => setTimeout(resolve, 260));
       await queryClient.invalidateQueries({ queryKey: ["words"] });
       queryClient.invalidateQueries({
         queryKey: ["words"],
@@ -669,7 +685,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
     }
   };
 
-  const { videoId, cleaned } = extractYouTube(word.content);
+  const { videoId, spotifyEmbed, cleaned } = extractMedia(word.content);
   const displayContent =
     showFullContent || cleaned.length <= 320
       ? cleaned
@@ -804,6 +820,20 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                 onClick={(event) => event.stopPropagation()}
               >
                 <YouTubeEmbed videoId={videoId} className="h-full w-full" />
+              </div>
+            )}
+            {spotifyEmbed && (
+              <div
+                className="mt-4 w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)] bg-black/5"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <iframe
+                  src={spotifyEmbed}
+                  title="Spotify player"
+                  loading="lazy"
+                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                  className="h-[152px] w-full"
+                />
               </div>
             )}
           </>

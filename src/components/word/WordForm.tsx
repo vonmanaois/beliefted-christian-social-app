@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Plus } from "@phosphor-icons/react";
+import { Plus, YoutubeLogo, SpotifyLogo } from "@phosphor-icons/react";
 import { useSession } from "next-auth/react";
 
 type WordFormProps = {
@@ -29,10 +29,19 @@ export default function WordForm({
   const [content, setContent] = useState("");
   const [scriptureRef, setScriptureRef] = useState("");
   const [showScriptureRef, setShowScriptureRef] = useState(false);
+  const [showYoutubeInput, setShowYoutubeInput] = useState(false);
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [showSpotifyInput, setShowSpotifyInput] = useState(false);
+  const [spotifyUrl, setSpotifyUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
-  const isDirty = content.trim().length > 0 || scriptureRef.trim().length > 0;
+  const linkPanelRef = useRef<HTMLDivElement | null>(null);
+  const isDirty =
+    content.trim().length > 0 ||
+    scriptureRef.trim().length > 0 ||
+    youtubeUrl.trim().length > 0 ||
+    spotifyUrl.trim().length > 0;
 
   useEffect(() => {
     if (variant !== "modal") return;
@@ -46,6 +55,19 @@ export default function WordForm({
     onDirtyChange?.(isDirty);
   }, [isDirty, onDirtyChange]);
 
+  useEffect(() => {
+    const handlePointer = (event: MouseEvent) => {
+      if (!linkPanelRef.current) return;
+      if (!linkPanelRef.current.contains(event.target as Node)) {
+        setShowYoutubeInput(false);
+        setShowSpotifyInput(false);
+        setShowScriptureRef(false);
+      }
+    };
+    document.addEventListener("mousedown", handlePointer);
+    return () => document.removeEventListener("mousedown", handlePointer);
+  }, []);
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setSubmitError(null);
@@ -57,15 +79,18 @@ export default function WordForm({
       return;
     }
 
-    if (!content.trim()) return;
+    if (!content.trim() && !youtubeUrl.trim() && !spotifyUrl.trim()) return;
 
     setIsSubmitting(true);
 
     try {
+      const mergedContent = [content.trim(), youtubeUrl.trim(), spotifyUrl.trim()]
+        .filter(Boolean)
+        .join("\n");
       const response = await fetch("/api/words", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, scriptureRef }),
+        body: JSON.stringify({ content: mergedContent, scriptureRef }),
       });
 
       if (!response.ok) {
@@ -79,6 +104,10 @@ export default function WordForm({
       setContent("");
       setScriptureRef("");
       setShowScriptureRef(false);
+      setYoutubeUrl("");
+      setSpotifyUrl("");
+      setShowYoutubeInput(false);
+      setShowSpotifyInput(false);
       onPosted?.();
       onDirtyChange?.(false);
       if (typeof window !== "undefined") {
@@ -118,16 +147,42 @@ export default function WordForm({
       />
 
       {showScriptureToggle && (
-        <div className="flex flex-col gap-2">
-          <button
-            type="button"
-            onClick={() => setShowScriptureRef((prev) => !prev)}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
-            aria-label="Add scripture reference"
-          >
-            <Plus size={16} weight="regular" />
-            Add verse reference
-          </button>
+        <div className="flex flex-col gap-2" ref={linkPanelRef}>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowScriptureRef((prev) => !prev)}
+              className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
+              aria-label="Add scripture reference"
+            >
+              <Plus size={16} weight="regular" />
+              Add verse reference
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowYoutubeInput((prev) => !prev);
+                setShowSpotifyInput(false);
+              }}
+              className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
+              aria-label="Add YouTube link"
+            >
+              <YoutubeLogo size={16} weight="regular" />
+              YouTube
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowSpotifyInput((prev) => !prev);
+                setShowYoutubeInput(false);
+              }}
+              className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
+              aria-label="Add Spotify link"
+            >
+              <SpotifyLogo size={16} weight="regular" />
+              Spotify
+            </button>
+          </div>
           {showScriptureRef && (
             <input
               type="text"
@@ -135,6 +190,24 @@ export default function WordForm({
               placeholder="Scripture reference"
               value={scriptureRef}
               onChange={(event) => setScriptureRef(event.target.value)}
+            />
+          )}
+          {showYoutubeInput && (
+            <input
+              type="url"
+              className="bg-transparent text-sm text-[color:var(--ink)] outline-none border-b border-[color:var(--panel-border)] pb-1 focus:outline-none focus:ring-0"
+              placeholder="Paste YouTube link"
+              value={youtubeUrl}
+              onChange={(event) => setYoutubeUrl(event.target.value)}
+            />
+          )}
+          {showSpotifyInput && (
+            <input
+              type="url"
+              className="bg-transparent text-sm text-[color:var(--ink)] outline-none border-b border-[color:var(--panel-border)] pb-1 focus:outline-none focus:ring-0"
+              placeholder="Paste Spotify link"
+              value={spotifyUrl}
+              onChange={(event) => setSpotifyUrl(event.target.value)}
             />
           )}
         </div>

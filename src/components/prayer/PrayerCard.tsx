@@ -156,6 +156,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
   const commentEditRef = useRef<HTMLDivElement | null>(null);
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -512,6 +513,8 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     },
     onSuccess: async () => {
       setShowMenu(false);
+      setIsRemoving(true);
+      await new Promise((resolve) => setTimeout(resolve, 260));
       await queryClient.invalidateQueries({ queryKey: ["prayers"] });
       if (defaultShowComments) {
         router.back();
@@ -695,7 +698,12 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
       : `${cleaned.slice(0, 320).trimEnd()}…`;
 
   return (
-    <article className="wall-card flex flex-col gap-3 rounded-none cursor-pointer" onClick={handleCardClick}>
+    <article
+      className={`wall-card flex flex-col gap-3 rounded-none cursor-pointer transition-card ${
+        isRemoving ? "fade-out-card" : ""
+      }`}
+      onClick={handleCardClick}
+    >
       <div className="flex items-start gap-3">
         <div className="avatar-ring">
           {prayer.isAnonymous ? (

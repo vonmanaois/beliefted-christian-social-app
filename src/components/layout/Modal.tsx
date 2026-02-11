@@ -7,6 +7,9 @@ type ModalProps = {
   onClose: () => void;
   children: React.ReactNode;
   align?: "center" | "left";
+  backdrop?: "dim" | "clear";
+  autoFocus?: boolean;
+  lockScroll?: boolean;
 };
 
 export default function Modal({
@@ -15,10 +18,28 @@ export default function Modal({
   onClose,
   children,
   align = "center",
+  backdrop = "dim",
+  autoFocus = true,
+  lockScroll = true,
 }: ModalProps) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const wasOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      wasOpenRef.current = false;
+      return;
+    }
+    if (lockScroll) {
+      const previous = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = previous;
+      };
+    }
+    return;
+  }, [isOpen, lockScroll]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -32,7 +53,7 @@ export default function Modal({
     };
     document.addEventListener("keydown", handleKeyDown);
     let timer: ReturnType<typeof setTimeout> | null = null;
-    if (!wasOpenRef.current) {
+    if (!wasOpenRef.current && autoFocus) {
       timer = setTimeout(() => {
         const dialog = dialogRef.current;
         if (!dialog) return;
@@ -53,9 +74,9 @@ export default function Modal({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex bg-black/40 p-4 cursor-pointer ${
+      className={`fixed inset-0 z-50 flex p-4 cursor-pointer ${
         align === "left" ? "items-start justify-start" : "items-center justify-center"
-      }`}
+      } ${backdrop === "dim" ? "bg-black/40" : "bg-transparent"}`}
       onClick={onClose}
     >
       <div
