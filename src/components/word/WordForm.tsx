@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Plus } from "@phosphor-icons/react";
 import { useSession } from "next-auth/react";
 
 type WordFormProps = {
@@ -9,6 +10,9 @@ type WordFormProps = {
   compact?: boolean;
   flat?: boolean;
   variant?: "modal" | "inline";
+  showHeader?: boolean;
+  showScriptureToggle?: boolean;
+  placeholder?: string;
 };
 
 export default function WordForm({
@@ -17,10 +21,14 @@ export default function WordForm({
   compact = false,
   flat = false,
   variant = "modal",
+  showHeader = true,
+  showScriptureToggle = false,
+  placeholder = "What does God want you to share today?",
 }: WordFormProps) {
   const { data: session } = useSession();
   const [content, setContent] = useState("");
   const [scriptureRef, setScriptureRef] = useState("");
+  const [showScriptureRef, setShowScriptureRef] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -70,6 +78,7 @@ export default function WordForm({
 
       setContent("");
       setScriptureRef("");
+      setShowScriptureRef(false);
       onPosted?.();
       onDirtyChange?.(false);
       if (typeof window !== "undefined") {
@@ -91,24 +100,12 @@ export default function WordForm({
         compact ? "p-3" : "p-4"
       }`}
     >
-      {!compact && (
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--subtle)]">
-            Faith Share
-          </p>
-        </div>
-      )}
 
-      <input
-        type="text"
-        className="soft-input modal-input text-sm"
-        placeholder="Scripture reference (optional)"
-        value={scriptureRef}
-        onChange={(event) => setScriptureRef(event.target.value)}
-      />
       <textarea
-        className={`soft-input modal-input text-sm ${compact ? "min-h-[90px]" : "min-h-[110px]"}`}
-        placeholder="Share a verse or reflection..."
+        className={`bg-transparent text-base text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none ${
+          compact ? "min-h-[28px]" : "min-h-[36px]"
+        }`}
+        placeholder={placeholder}
         value={content}
         ref={textAreaRef}
         onChange={(event) => {
@@ -120,13 +117,35 @@ export default function WordForm({
         }}
       />
 
+      {showScriptureToggle && (
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => setShowScriptureRef((prev) => !prev)}
+            className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
+            aria-label="Add scripture reference"
+          >
+            <Plus size={16} weight="regular" />
+            Add verse reference
+          </button>
+          {showScriptureRef && (
+            <input
+              type="text"
+              className="bg-transparent text-sm text-[color:var(--ink)] outline-none border-b border-[color:var(--panel-border)] pb-1 focus:outline-none focus:ring-0"
+              placeholder="Scripture reference"
+              value={scriptureRef}
+              onChange={(event) => setScriptureRef(event.target.value)}
+            />
+          )}
+        </div>
+      )}
       <div className="flex justify-end">
         <button
           type="submit"
           disabled={isSubmitting || !content.trim()}
-          className="post-button disabled:opacity-60"
+          className="post-button disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isSubmitting ? "Posting..." : !content.trim() ? "⊘ Post" : "Post"}
+          {isSubmitting ? "Posting..." : "Post"}
         </button>
       </div>
       {submitError && (

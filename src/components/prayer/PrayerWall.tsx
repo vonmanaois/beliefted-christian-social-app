@@ -43,58 +43,86 @@ export default function PrayerWall() {
 
   return (
     <section className="feed-surface">
-      <button
-        type="button"
-        onClick={() => {
-          if (!isAuthenticated) {
-            openSignIn();
-            return;
-          }
-          setShowComposer(true);
-        }}
-        className="composer-trigger cursor-pointer"
-      >
-        <span className="inline-flex items-center gap-2">
-          <span className="h-7 w-7 rounded-full bg-[color:var(--surface-strong)] overflow-hidden flex items-center justify-center text-[10px] font-semibold text-[color:var(--subtle)]">
-            {session?.user?.image ? (
-              <Image
-                src={session.user.image}
-                alt="Profile"
-                width={56}
-                height={56}
-                sizes="28px"
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <UserCircle size={20} weight="regular" className="text-[color:var(--subtle)]" />
-            )}
-          </span>
-          {isAuthenticated
-            ? "Write a prayer"
-            : "Sign in to post a prayer"}
-        </span>
-      </button>
-      <PrayerFeed refreshKey={refreshKey} />
-
-      <Modal
-        title="New Prayer"
-        isOpen={showComposer}
-        onClose={() => {
-          if (isPrayerDirty) {
-            setShowDiscardConfirm(true);
-            return;
-          }
-          setShowComposer(false);
-        }}
-      >
-        <PostForm
-          onPosted={() => {
-            setRefreshKey((prev) => prev + 1);
-            setShowComposer(false);
-          }}
-          onDirtyChange={setIsPrayerDirty}
-        />
-      </Modal>
+      {showComposer ? (
+        <div className="panel p-6 sm:p-8 rounded-none border-none shadow-none">
+          <div className="mb-4 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => {
+                if (isPrayerDirty) {
+                  setShowDiscardConfirm(true);
+                  return;
+                }
+                setShowComposer(false);
+              }}
+              className="inline-flex items-center justify-center h-11 w-11 rounded-full text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+              aria-label="Back"
+            >
+              <span className="text-xl font-semibold">⟵</span>
+            </button>
+            <span className="text-sm font-semibold text-[color:var(--ink)]">
+              New Prayer
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                if (isPrayerDirty) {
+                  setShowDiscardConfirm(true);
+                  return;
+                }
+                setShowComposer(false);
+              }}
+              className="text-sm font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
+            >
+              Cancel
+            </button>
+          </div>
+          <PostForm
+            variant="inline"
+            flat
+            onPosted={() => {
+              setRefreshKey((prev) => prev + 1);
+              setShowComposer(false);
+            }}
+            onDirtyChange={setIsPrayerDirty}
+          />
+        </div>
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              if (!isAuthenticated) {
+                openSignIn();
+                return;
+              }
+              setShowComposer(true);
+            }}
+            className="composer-trigger cursor-pointer"
+          >
+            <span className="inline-flex items-center gap-2">
+              <span className="h-7 w-7 rounded-full bg-[color:var(--surface-strong)] overflow-hidden flex items-center justify-center text-[10px] font-semibold text-[color:var(--subtle)]">
+                {session?.user?.image ? (
+                  <Image
+                    src={session.user.image}
+                    alt="Profile"
+                    width={56}
+                    height={56}
+                    sizes="28px"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <UserCircle size={20} weight="regular" className="text-[color:var(--subtle)]" />
+                )}
+              </span>
+              {isAuthenticated
+                ? "Write a prayer"
+                : "Sign in to post a prayer"}
+            </span>
+          </button>
+          <PrayerFeed refreshKey={refreshKey} />
+        </>
+      )}
 
       <Modal
         title="Discard prayer?"

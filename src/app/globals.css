@@ -352,9 +352,25 @@ html[data-theme="banana"] .panel-glass {
 .feed-form {
   background: var(--panel);
   border: none;
-  border-bottom: 1px solid var(--panel-border);
+  border-bottom: none;
   box-shadow: none;
   border-radius: 0;
+}
+
+.feed-form .modal-input {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.feed-form textarea.modal-input {
+  min-height: 24px;
+  line-height: 1.6;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  resize: none;
 }
 
 .composer-trigger {
