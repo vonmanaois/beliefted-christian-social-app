@@ -266,7 +266,7 @@ export default function NotificationsPage() {
                          </>
                        );
                        return href ? (
-                         <Link href={href} className="flex-1 cursor-pointer">
+                         <Link href={href} prefetch={false} className="flex-1 cursor-pointer">
                            {content}
                          </Link>
                        ) : (

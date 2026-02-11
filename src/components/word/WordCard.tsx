@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import Avatar from "@/components/ui/Avatar";
 import Modal from "@/components/layout/Modal";
 import YouTubeEmbed from "@/components/ui/YouTubeEmbed";
+import LazyEmbed from "@/components/ui/LazyEmbed";
 import { useUIStore } from "@/lib/uiStore";
 
 const extractMedia = (value: string) => {
@@ -832,13 +833,15 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                 className="mt-4 w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)] bg-black/5"
                 onClick={(event) => event.stopPropagation()}
               >
-                <iframe
-                  src={spotifyEmbed}
-                  title="Spotify player"
-                  loading="lazy"
-                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                  className="h-[152px] w-full"
-                />
+                <LazyEmbed className="h-[152px] w-full">
+                  <iframe
+                    src={spotifyEmbed}
+                    title="Spotify player"
+                    loading="lazy"
+                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                    className="h-full w-full"
+                  />
+                </LazyEmbed>
               </div>
             )}
             {spotifyUrl && (

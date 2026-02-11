@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const buildYouTubeSrc = (videoId: string) => {
   const params = new URLSearchParams({
@@ -22,7 +22,28 @@ type YouTubeEmbedProps = {
 
 export default function YouTubeEmbed({ videoId, className, title }: YouTubeEmbedProps) {
   const frameRef = useRef<HTMLIFrameElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [visible, setVisible] = useState(false);
   const src = buildYouTubeSrc(videoId);
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const frame = frameRef.current;
@@ -44,17 +65,21 @@ export default function YouTubeEmbed({ videoId, className, title }: YouTubeEmbed
 
     observer.observe(frame);
     return () => observer.disconnect();
-  }, []);
+  }, [visible]);
 
   return (
-    <iframe
-      ref={frameRef}
-      src={src}
-      title={title ?? "YouTube video"}
-      loading="lazy"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-      allowFullScreen
-      className={className}
-    />
+    <div ref={containerRef} className={className}>
+      {visible ? (
+        <iframe
+          ref={frameRef}
+          src={src}
+          title={title ?? "YouTube video"}
+          loading="lazy"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          className="h-full w-full"
+        />
+      ) : null}
+    </div>
   );
 }
