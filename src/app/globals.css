@@ -379,6 +379,15 @@ html[data-theme="banana"] .panel-glass {
   cursor: pointer;
 }
 
+.transition-card {
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.fade-out-card {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
 
 .feed-surface {
   background: var(--panel);

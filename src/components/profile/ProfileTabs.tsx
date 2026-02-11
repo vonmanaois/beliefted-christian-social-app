@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
@@ -12,7 +12,7 @@ import { UserCircle } from "@phosphor-icons/react";
 import { cloudinaryTransform } from "@/lib/cloudinary";
 import Spinner from "@/components/ui/Spinner";
 
-const tabs = ["Faith Share", "Prayers"] as const;
+const tabs = ["Faith Share", "Prayers", "Reprayed", "Saved"] as const;
 
 const PostForm = dynamic(() => import("@/components/prayer/PostForm"), {
   ssr: false,
@@ -51,6 +51,7 @@ export default function ProfileTabs({
 }: ProfileTabsProps) {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const router = useRouter();
+  const pathname = usePathname();
   const [refreshKey, setRefreshKey] = useState(0);
   const [showPrayerComposer, setShowPrayerComposer] = useState(false);
   const [showWordComposer, setShowWordComposer] = useState(false);
@@ -59,6 +60,13 @@ export default function ProfileTabs({
   const [showWordDiscardConfirm, setShowWordDiscardConfirm] = useState(false);
   const [isWordDirty, setIsWordDirty] = useState(false);
   const { data: session } = useSession();
+  const isSelf = Boolean(session?.user?.id && session.user.id === userId);
+  const visibleTabs = tabs.filter((tab) => (tab === "Saved" ? isSelf : true));
+
+  useEffect(() => {
+    if (visibleTabs.includes(activeTab)) return;
+    setActiveTab(visibleTabs[0] ?? "Faith Share");
+  }, [activeTab, visibleTabs]);
 
   useEffect(() => {
     const handleOpenPrayer = () => {
@@ -87,15 +95,33 @@ export default function ProfileTabs({
   return (
     <section className="mt-6 flex flex-col gap-6">
       <div className="w-full px-4 sm:px-0">
-        <div className="grid w-full grid-cols-2 rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-1">
-          {tabs.map((tab) => (
+        <div
+          className="grid w-full rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-1"
+          style={{ gridTemplateColumns: `repeat(${visibleTabs.length}, minmax(0, 1fr))` }}
+        >
+          {visibleTabs.map((tab) => (
             <button
               key={tab}
               type="button"
               onClick={() => {
                 setActiveTab(tab);
                 if (!basePath) return;
-                router.push(tab === "Prayers" ? `${basePath}/prayers` : basePath);
+                if (tab === "Faith Share" && pathname === basePath) {
+                  return;
+                }
+                if (tab === "Prayers") {
+                  router.push(`${basePath}/prayers`);
+                  return;
+                }
+                if (tab === "Reprayed") {
+                  router.push(`${basePath}/reprayed`);
+                  return;
+                }
+                if (tab === "Saved") {
+                  router.push(`${basePath}/saved`);
+                  return;
+                }
+                router.push(basePath);
               }}
               className={`w-full rounded-lg px-4 py-2 text-sm font-semibold transition ${
                 activeTab === tab
@@ -139,7 +165,7 @@ export default function ProfileTabs({
             )}
             <WordFeed refreshKey={refreshKey} userId={userId} />
           </>
-        ) : (
+        ) : activeTab === "Prayers" ? (
           <>
             {showComposer && (
               <button
@@ -168,6 +194,10 @@ export default function ProfileTabs({
             )}
             <PrayerFeed refreshKey={refreshKey} userId={userId} />
           </>
+        ) : activeTab === "Reprayed" ? (
+          <PrayerFeed refreshKey={refreshKey} userId={userId} reprayedOnly />
+        ) : (
+          <WordFeed refreshKey={refreshKey} userId={userId} savedOnly />
         )}
       </div>
 

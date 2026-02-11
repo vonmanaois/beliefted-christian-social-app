@@ -11,9 +11,10 @@ type WordFeedProps = {
   refreshKey: number;
   userId?: string;
   followingOnly?: boolean;
+  savedOnly?: boolean;
 };
 
-export default function WordFeed({ refreshKey, userId, followingOnly }: WordFeedProps) {
+export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly }: WordFeedProps) {
   const {
     data,
     isLoading,
@@ -24,13 +25,20 @@ export default function WordFeed({ refreshKey, userId, followingOnly }: WordFeed
     isError,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ["words", userId, refreshKey, followingOnly ? "following" : "all"],
+    queryKey: [
+      "words",
+      userId,
+      refreshKey,
+      followingOnly ? "following" : "all",
+      savedOnly ? "saved" : "all",
+    ],
     queryFn: async ({ pageParam }: { pageParam?: string | null }) => {
       const params = new URLSearchParams();
       if (userId) params.set("userId", userId);
       if (pageParam) params.set("cursor", pageParam);
       params.set("limit", "6");
       if (followingOnly) params.set("following", "true");
+      if (savedOnly) params.set("saved", "true");
 
       const response = await fetch(`/api/words?${params.toString()}`, {
         cache: "no-store",
@@ -48,6 +56,9 @@ export default function WordFeed({ refreshKey, userId, followingOnly }: WordFeed
           typeof word._id === "string"
             ? word._id
             : String((word._id as { $oid?: string })?.$oid ?? word._id),
+        savedBy: Array.isArray(word.savedBy)
+          ? word.savedBy.map((id) => String(id))
+          : [],
         userId: word.userId ? String(word.userId) : undefined,
       }));
       return { items, nextCursor: data.nextCursor ?? null };
@@ -57,6 +68,7 @@ export default function WordFeed({ refreshKey, userId, followingOnly }: WordFeed
     staleTime: 60000,
     placeholderData: keepPreviousData,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const words = data?.pages.flatMap((page) => page.items) ?? [];
@@ -115,8 +127,12 @@ export default function WordFeed({ refreshKey, userId, followingOnly }: WordFeed
   if (words.length === 0) {
     return (
       <EmptyState
-        title="No words yet."
-        description="Share a verse or encouragement to start."
+        title={savedOnly ? "No saved posts yet." : "No words yet."}
+        description={
+          savedOnly
+            ? "Save a word to keep it here for later."
+            : "Share a verse or encouragement to start."
+        }
         icon={<BookOpenText size={18} weight="regular" />}
       />
     );
@@ -159,7 +175,7 @@ export default function WordFeed({ refreshKey, userId, followingOnly }: WordFeed
         </div>
       )}
       {words.map((word) => (
-        <WordCard key={word._id} word={word} />
+        <WordCard key={word._id} word={word} savedOnly={savedOnly} />
       ))}
       {hasNextPage && (
         <div ref={loadMoreRef} className="flex items-center justify-center py-4">

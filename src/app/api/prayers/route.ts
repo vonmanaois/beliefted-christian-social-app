@@ -16,6 +16,8 @@ export async function GET(req: Request) {
   const userId = searchParams.get("userId");
   const cursor = searchParams.get("cursor");
   const followingOnly = searchParams.get("following") === "true";
+  const reprayedOnly = searchParams.get("reprayed") === "true";
+  const reprayedTargetId = userId ?? session?.user?.id ?? null;
   const limitParam = Number(searchParams.get("limit") ?? 6);
   const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 50) : 6;
 
@@ -39,7 +41,7 @@ export async function GET(req: Request) {
     const isOwnerView = Boolean(viewerId && userId && viewerId === userId);
     const conditions: Record<string, unknown>[] = [];
 
-    if (userId) {
+    if (userId && !reprayedOnly) {
       conditions.push({ userId });
       if (!isOwnerView) {
         conditions.push({ isAnonymous: false });
@@ -47,6 +49,11 @@ export async function GET(req: Request) {
     }
     if (followingOnly) {
       conditions.push({ userId: { $in: followingIds } });
+    }
+    if (reprayedOnly) {
+      if (reprayedTargetId) {
+        conditions.push({ prayedBy: reprayedTargetId });
+      }
     }
 
     if (cursor) {
@@ -141,13 +148,17 @@ export async function GET(req: Request) {
     return { items: sanitized, nextCursor };
   };
 
-  if (!session?.user?.id && !userId && !followingOnly) {
+  if (!session?.user?.id && !userId && !followingOnly && !reprayedOnly) {
     const cached = unstable_cache(
       () => loadPrayers(null),
       ["prayers-feed", cursor ?? "start", String(limit)],
       { revalidate: 10, tags: ["prayers-feed"] }
     );
     return NextResponse.json(await cached());
+  }
+
+  if (reprayedOnly && !reprayedTargetId) {
+    return NextResponse.json({ error: "User is required" }, { status: 400 });
   }
 
   return NextResponse.json(await loadPrayers(session?.user?.id ?? null));

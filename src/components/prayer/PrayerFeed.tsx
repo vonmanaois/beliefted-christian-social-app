@@ -11,9 +11,10 @@ type PrayerFeedProps = {
   refreshKey: number;
   userId?: string;
   followingOnly?: boolean;
+  reprayedOnly?: boolean;
 };
 
-export default function PrayerFeed({ refreshKey, userId, followingOnly }: PrayerFeedProps) {
+export default function PrayerFeed({ refreshKey, userId, followingOnly, reprayedOnly }: PrayerFeedProps) {
   const {
     data,
     isLoading,
@@ -24,13 +25,20 @@ export default function PrayerFeed({ refreshKey, userId, followingOnly }: Prayer
     isError,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ["prayers", userId, refreshKey, followingOnly ? "following" : "all"],
+    queryKey: [
+      "prayers",
+      userId,
+      refreshKey,
+      followingOnly ? "following" : "all",
+      reprayedOnly ? "reprayed" : "all",
+    ],
     queryFn: async ({ pageParam }: { pageParam?: string | null }) => {
       const params = new URLSearchParams();
       if (userId) params.set("userId", userId);
       if (pageParam) params.set("cursor", pageParam);
       params.set("limit", "6");
       if (followingOnly) params.set("following", "true");
+      if (reprayedOnly) params.set("reprayed", "true");
 
       const response = await fetch(`/api/prayers?${params.toString()}`, {
         cache: "no-store",
@@ -60,6 +68,7 @@ export default function PrayerFeed({ refreshKey, userId, followingOnly }: Prayer
     staleTime: 60000,
     placeholderData: keepPreviousData,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const pullStartRef = useRef<number | null>(null);
@@ -118,8 +127,12 @@ export default function PrayerFeed({ refreshKey, userId, followingOnly }: Prayer
   if (prayers.length === 0) {
     return (
       <EmptyState
-        title="No prayers yet."
-        description="Be the first to share something uplifting."
+        title={reprayedOnly ? "No reprayed prayers yet." : "No prayers yet."}
+        description={
+          reprayedOnly
+            ? "Repray a prayer to show it here."
+            : "Be the first to share something uplifting."
+        }
         icon={<HandsClapping size={18} weight="regular" />}
       />
     );

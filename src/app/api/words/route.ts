@@ -16,6 +16,7 @@ export async function GET(req: Request) {
   const userId = searchParams.get("userId");
   const cursor = searchParams.get("cursor");
   const followingOnly = searchParams.get("following") === "true";
+  const savedOnly = searchParams.get("saved") === "true";
   const limitParam = Number(searchParams.get("limit") ?? 6);
   const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 50) : 6;
 
@@ -35,13 +36,25 @@ export async function GET(req: Request) {
       .filter(Boolean);
   }
 
+  if (savedOnly) {
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (userId && userId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
+
   const loadWords = async (viewerId: string | null) => {
     const conditions: Record<string, unknown>[] = [];
-    if (userId) {
+    if (userId && !savedOnly) {
       conditions.push({ userId });
     }
     if (followingOnly) {
       conditions.push({ userId: { $in: followingIds } });
+    }
+    if (savedOnly) {
+      conditions.push({ savedBy: session?.user?.id });
     }
 
     if (cursor) {
@@ -116,6 +129,9 @@ export async function GET(req: Request) {
           commentCount,
           userId: userIdString,
           scriptureRef: word.scriptureRef ?? null,
+          savedBy: Array.isArray(word.savedBy)
+            ? word.savedBy.map((id) => String(id))
+            : [],
           isOwner: Boolean(viewerId && userIdString && viewerId === userIdString),
         };
       })
@@ -129,7 +145,7 @@ export async function GET(req: Request) {
     return { items: sanitized, nextCursor };
   };
 
-  if (!session?.user?.id && !userId && !followingOnly) {
+  if (!session?.user?.id && !userId && !followingOnly && !savedOnly) {
     const cached = unstable_cache(
       () => loadWords(null),
       ["words-feed", cursor ?? "start", String(limit)],

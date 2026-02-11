@@ -70,28 +70,6 @@ export default function WhyBelieftedClient() {
 
             <section className="mt-10 border-t border-[color:var(--panel-border)] pt-8">
               <h2 className="text-lg font-semibold text-[color:var(--ink)]">
-                Keep Beliefted Free
-              </h2>
-              <p className="mt-3 text-sm text-[color:var(--subtle)] leading-relaxed">
-                Beliefted is free to use, and donations are never required. If
-                this project blesses you and you want to help keep it running,
-                your support makes a real difference.
-              </p>
-              <a
-                href="https://buy.stripe.com/test_28E28teaRgXcaIK72TfMA00"
-                target="_blank"
-                rel="noreferrer"
-                className="mt-4 post-button inline-flex items-center justify-center bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
-              >
-                Support via Stripe
-              </a>
-              <p className="mt-3 text-xs text-[color:var(--subtle)]">
-                Donations are optional and not required to use Beliefted.
-              </p>
-            </section>
-
-            <section className="mt-10 border-t border-[color:var(--panel-border)] pt-8">
-              <h2 className="text-lg font-semibold text-[color:var(--ink)]">
                 Partnerships & Sponsorships
               </h2>
               <p className="mt-3 text-sm text-[color:var(--subtle)] leading-relaxed">

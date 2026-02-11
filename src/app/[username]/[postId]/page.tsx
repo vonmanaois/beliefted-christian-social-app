@@ -88,6 +88,7 @@ export default async function PostDetailPage({ params }: PageProps) {
                     description: point.description ?? "",
                   })),
                   commentCount,
+                  savedBy: [],
                   user: prayer.isAnonymous
                     ? null
                     : {
@@ -140,6 +141,7 @@ export default async function PostDetailPage({ params }: PageProps) {
                     session?.user?.id && String(word.userId) === String(session.user.id)
                   ),
                   likedBy: (word.likedBy ?? []).map((id) => id.toString()),
+                  savedBy: (word.savedBy ?? []).map((id) => id.toString()),
                   commentCount,
                   user: {
                     name: user?.name ?? word.authorName,

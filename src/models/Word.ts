@@ -9,6 +9,7 @@ const WordSchema = new Schema(
     authorImage: { type: String, trim: true },
     scriptureRef: { type: String, trim: true, maxlength: 80 },
     likedBy: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    savedBy: [{ type: Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: true }
 );
@@ -16,6 +17,7 @@ const WordSchema = new Schema(
 WordSchema.index({ createdAt: -1 });
 WordSchema.index({ userId: 1, createdAt: -1 });
 WordSchema.index({ likedBy: 1 });
+WordSchema.index({ savedBy: 1 });
 
 export type Word = InferSchemaType<typeof WordSchema>;
 

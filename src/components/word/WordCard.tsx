@@ -3,7 +3,7 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpenText, ChatCircle, DotsThreeOutline, Heart } from "@phosphor-icons/react";
+import { BookOpenText, BookmarkSimple, ChatCircle, DotsThreeOutline, Heart } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import Avatar from "@/components/ui/Avatar";
 import Modal from "@/components/layout/Modal";
@@ -20,6 +20,7 @@ export type Word = {
   content: string;
   createdAt: string | Date;
   likedBy?: string[];
+  savedBy?: string[];
   commentCount?: number;
   user?: WordUser | null;
   userId?: string | null;
@@ -44,6 +45,7 @@ type CommentUser = {
 type WordCardProps = {
   word: Word;
   defaultShowComments?: boolean;
+  savedOnly?: boolean;
 };
 
 const formatPostTime = (timestamp: string) => {
@@ -72,7 +74,7 @@ const formatPostTime = (timestamp: string) => {
   return new Intl.DateTimeFormat("en-US", options).format(createdAt);
 };
 
-const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
+const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: WordCardProps) => {
   const { data: session } = useSession();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -89,8 +91,13 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
   const createdAtValue =
     word.createdAt instanceof Date ? word.createdAt : new Date(word.createdAt);
   const likedBy = Array.isArray(word.likedBy) ? word.likedBy : [];
+  const savedBy = Array.isArray(word.savedBy) ? word.savedBy : [];
+  const savedCount = savedBy.length;
   const hasLiked = session?.user?.id
     ? likedBy.includes(String(session.user.id))
+    : false;
+  const hasSaved = session?.user?.id
+    ? savedBy.includes(String(session.user.id))
     : false;
   const [likeBurst, setLikeBurst] = useState(false);
   const [showComments, setShowComments] = useState(defaultShowComments);
@@ -107,12 +114,14 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
   const commentInputRef = useRef<HTMLTextAreaElement | null>(null);
   const commentButtonRef = useRef<HTMLButtonElement | null>(null);
   const [isLiking, setIsLiking] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
   const [showCommentConfirm, setShowCommentConfirm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(word.content);
+  const [isRemoving, setIsRemoving] = useState(false);
   const [likeError, setLikeError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const editRef = useRef<HTMLDivElement | null>(null);
@@ -136,6 +145,22 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
             items: page.items.map((item) =>
               normalizeId(item._id) === wordId ? updater(item) : item
             ),
+          })),
+        };
+      }
+    );
+  };
+
+  const removeFromSavedCache = () => {
+    queryClient.setQueriesData<{ pages: { items: Word[] }[]; pageParams: unknown[] }>(
+      { queryKey: ["words"] },
+      (data) => {
+        if (!data) return data;
+        return {
+          ...data,
+          pages: data.pages.map((page) => ({
+            ...page,
+            items: page.items.filter((item) => normalizeId(item._id) !== wordId),
           })),
         };
       }
@@ -273,6 +298,36 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("notifications:refresh"));
       }
+    },
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/words/${wordId}/save`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to save word");
+      }
+      return (await response.json()) as { saved: boolean };
+    },
+    onSuccess: (data) => {
+      const viewerId = session?.user?.id ? String(session.user.id) : null;
+      if (!viewerId) return;
+      if (savedOnly && !data.saved) {
+        setIsRemoving(true);
+        setTimeout(() => {
+          removeFromSavedCache();
+        }, 260);
+        return;
+      }
+      updateWordCache((item) => {
+        const currentSaved = Array.isArray(item.savedBy) ? item.savedBy : [];
+        const nextSavedBy = data.saved
+          ? [...new Set([...currentSaved, viewerId])]
+          : currentSaved.filter((id) => id !== viewerId);
+        return { ...item, savedBy: nextSavedBy };
+      });
     },
   });
 
@@ -449,6 +504,13 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
       if (defaultShowComments) {
         router.back();
       }
+      if (data.saved) {
+        queryClient.invalidateQueries({
+          queryKey: ["words"],
+          predicate: (query) =>
+            Array.isArray(query.queryKey) && query.queryKey.includes("saved"),
+        });
+      }
     },
   });
   const isDeleting = deleteMutation.isPending;
@@ -482,6 +544,21 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
       console.error(error);
     } finally {
       setIsLiking(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!session?.user?.id) {
+      openSignIn();
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await saveMutation.mutateAsync();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -556,7 +633,10 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
   };
 
   return (
-    <article className="wall-card flex flex-col gap-3 rounded-none cursor-pointer" onClick={handleCardClick}>
+    <article
+      className={`wall-card flex flex-col gap-3 rounded-none cursor-pointer transition-card ${isRemoving ? "fade-out-card" : ""}`}
+      onClick={handleCardClick}
+    >
       <div className="flex items-start gap-3">
         <div className="avatar-ring">
           <Avatar
@@ -717,6 +797,26 @@ const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
               {displayedCommentCount > 0 && (
                 <span className="text-xs font-semibold text-[color:var(--ink)] transition-all duration-200">
                   {displayedCommentCount}
+                </span>
+              )}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving}
+            aria-label={hasSaved ? "Unsave word" : "Save word"}
+            className={`pill-button cursor-pointer transition-colors ${
+              hasSaved
+                ? "text-[color:var(--accent-strong)]"
+                : "text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
+            }`}
+          >
+            <span className="inline-flex items-center gap-2">
+              <BookmarkSimple size={22} weight={hasSaved ? "fill" : "regular"} />
+              {savedCount > 0 && (
+                <span className="text-xs font-semibold text-[color:var(--ink)] transition-all duration-200">
+                  {savedCount}
                 </span>
               )}
             </span>

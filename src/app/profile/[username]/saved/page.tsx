@@ -17,7 +17,7 @@ import PanelMotion from "@/components/layout/PanelMotion";
 
 export const dynamic = "force-dynamic";
 
-export default async function PublicProfilePrayersPage({
+export default async function PublicProfileSavedPage({
   params,
 }: {
   params: Promise<{ username: string }>;
@@ -37,6 +37,10 @@ export default async function PublicProfilePrayersPage({
   const prayedCount = user?.prayersLiftedCount ?? 0;
 
   const isSelf = session?.user?.id === user._id.toString();
+  if (!isSelf) {
+    redirect(`/profile/${user.username}`);
+  }
+
   const isFollowing = Boolean(
     session?.user?.id &&
       Array.isArray(user.followers) &&
@@ -114,7 +118,7 @@ export default async function PublicProfilePrayersPage({
           <ProfileTabs
             userId={user._id.toString()}
             showComposer={isSelf}
-            initialTab="Prayers"
+            initialTab="Saved"
             basePath={`/profile/${user.username}`}
           />
         </PanelMotion>

@@ -884,7 +884,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
                   ? "cursor-not-allowed text-[color:var(--accent-strong)] opacity-60"
                   : "cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
               }`}
-              aria-label={hasPrayed ? "Prayed" : "Pray"}
+              aria-label={hasPrayed ? "Reprayed" : "Repray"}
             >
               <HandsClapping
                 size={22}
@@ -892,7 +892,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
                 className={hasPrayed ? "text-[color:var(--accent-strong)]" : undefined}
               />
               <span className="text-xs font-semibold">
-                {hasPrayed ? "Prayed" : "Pray"}
+                {hasPrayed ? "Reprayed" : "Repray"}
               </span>
             </button>
           )}

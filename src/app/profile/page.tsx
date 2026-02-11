@@ -36,7 +36,7 @@ export default async function ProfilePage() {
     <main className="container">
       <div className="page-grid">
         <Sidebar />
-        <PanelMotion className="panel rounded-none p-0 sm:p-8">
+        <PanelMotion className="panel rounded-none p-0 sm:p-8" motion="none">
           <div className="px-4 pt-6 sm:px-0 sm:pt-0">
             {!user?.username && (
               <div className="mb-6">

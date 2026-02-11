@@ -17,7 +17,7 @@ import PanelMotion from "@/components/layout/PanelMotion";
 
 export const dynamic = "force-dynamic";
 
-export default async function PublicProfilePrayersPage({
+export default async function PublicProfileReprayedPage({
   params,
 }: {
   params: Promise<{ username: string }>;
@@ -114,7 +114,7 @@ export default async function PublicProfilePrayersPage({
           <ProfileTabs
             userId={user._id.toString()}
             showComposer={isSelf}
-            initialTab="Prayers"
+            initialTab="Reprayed"
             basePath={`/profile/${user.username}`}
           />
         </PanelMotion>
