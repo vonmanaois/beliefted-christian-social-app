@@ -31,8 +31,10 @@ export default function WordForm({
   const [showScriptureRef, setShowScriptureRef] = useState(false);
   const [showYoutubeInput, setShowYoutubeInput] = useState(false);
   const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [youtubeError, setYoutubeError] = useState<string | null>(null);
   const [showSpotifyInput, setShowSpotifyInput] = useState(false);
   const [spotifyUrl, setSpotifyUrl] = useState("");
+  const [spotifyError, setSpotifyError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -59,9 +61,9 @@ export default function WordForm({
     const handlePointer = (event: MouseEvent) => {
       if (!linkPanelRef.current) return;
       if (!linkPanelRef.current.contains(event.target as Node)) {
-        setShowYoutubeInput(false);
-        setShowSpotifyInput(false);
-        setShowScriptureRef(false);
+        if (!youtubeUrl.trim()) setShowYoutubeInput(false);
+        if (!spotifyUrl.trim()) setShowSpotifyInput(false);
+        if (!scriptureRef.trim()) setShowScriptureRef(false);
       }
     };
     document.addEventListener("mousedown", handlePointer);
@@ -71,6 +73,8 @@ export default function WordForm({
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setSubmitError(null);
+    setYoutubeError(null);
+    setSpotifyError(null);
 
     if (!session?.user) {
       if (typeof window !== "undefined") {
@@ -80,6 +84,26 @@ export default function WordForm({
     }
 
     if (!content.trim() && !youtubeUrl.trim() && !spotifyUrl.trim()) return;
+
+    const isValidYoutube = youtubeUrl.trim()
+      ? /https?:\/\/(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([A-Za-z0-9_-]{6,})/i.test(
+          youtubeUrl.trim()
+        )
+      : true;
+    const isValidSpotify = spotifyUrl.trim()
+      ? /https?:\/\/open\.spotify\.com\/(track|album|playlist|episode|show)\/[A-Za-z0-9]+/i.test(
+          spotifyUrl.trim()
+        )
+      : true;
+
+    if (!isValidYoutube) {
+      setYoutubeError("Invalid YouTube link.");
+      return;
+    }
+    if (!isValidSpotify) {
+      setSpotifyError("Invalid Spotify link.");
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -161,10 +185,14 @@ export default function WordForm({
             <button
               type="button"
               onClick={() => {
+                if (youtubeUrl.trim()) {
+                  setShowYoutubeInput(true);
+                  return;
+                }
                 setShowYoutubeInput((prev) => !prev);
-                setShowSpotifyInput(false);
               }}
-              className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
+              disabled={Boolean(spotifyUrl.trim())}
+              className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)] disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label="Add YouTube link"
             >
               <YoutubeLogo size={16} weight="regular" />
@@ -173,10 +201,14 @@ export default function WordForm({
             <button
               type="button"
               onClick={() => {
+                if (spotifyUrl.trim()) {
+                  setShowSpotifyInput(true);
+                  return;
+                }
                 setShowSpotifyInput((prev) => !prev);
-                setShowYoutubeInput(false);
               }}
-              className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
+              disabled={Boolean(youtubeUrl.trim())}
+              className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)] disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label="Add Spotify link"
             >
               <SpotifyLogo size={16} weight="regular" />
@@ -198,8 +230,14 @@ export default function WordForm({
               className="bg-transparent text-sm text-[color:var(--ink)] outline-none border-b border-[color:var(--panel-border)] pb-1 focus:outline-none focus:ring-0"
               placeholder="Paste YouTube link"
               value={youtubeUrl}
-              onChange={(event) => setYoutubeUrl(event.target.value)}
+              onChange={(event) => {
+                setYoutubeUrl(event.target.value);
+                if (youtubeError) setYoutubeError(null);
+              }}
             />
+          )}
+          {youtubeError && (
+            <p className="text-xs text-[color:var(--danger)]">{youtubeError}</p>
           )}
           {showSpotifyInput && (
             <input
@@ -207,15 +245,29 @@ export default function WordForm({
               className="bg-transparent text-sm text-[color:var(--ink)] outline-none border-b border-[color:var(--panel-border)] pb-1 focus:outline-none focus:ring-0"
               placeholder="Paste Spotify link"
               value={spotifyUrl}
-              onChange={(event) => setSpotifyUrl(event.target.value)}
+              onChange={(event) => {
+                setSpotifyUrl(event.target.value);
+                if (spotifyError) setSpotifyError(null);
+              }}
             />
+          )}
+          {spotifyError && (
+            <p className="text-xs text-[color:var(--danger)]">{spotifyError}</p>
+          )}
+          {(youtubeUrl.trim() || spotifyUrl.trim()) && (
+            <p className="text-[11px] text-[color:var(--subtle)]">
+              Only one link is allowed per post.
+            </p>
           )}
         </div>
       )}
       <div className="flex justify-end">
         <button
           type="submit"
-          disabled={isSubmitting || !content.trim()}
+          disabled={
+            isSubmitting ||
+            (!content.trim() && !youtubeUrl.trim() && !spotifyUrl.trim())
+          }
           className="post-button disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? "Posting..." : "Post"}

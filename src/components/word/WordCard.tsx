@@ -3,7 +3,7 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpenText, BookmarkSimple, ChatCircle, DotsThreeOutline, Heart } from "@phosphor-icons/react";
+import { BookOpenText, BookmarkSimple, ChatCircle, DotsThreeOutline, Heart, SpotifyLogo } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import Avatar from "@/components/ui/Avatar";
 import Modal from "@/components/layout/Modal";
@@ -13,6 +13,7 @@ import { useUIStore } from "@/lib/uiStore";
 const extractMedia = (value: string) => {
   let videoId: string | null = null;
   let spotifyEmbed: string | null = null;
+  let spotifyUrl: string | null = null;
   let cleaned = value;
   const urlMatches = value.match(/https?:\/\/\S+/gi) ?? [];
 
@@ -41,6 +42,7 @@ const extractMedia = (value: string) => {
     }
 
     if (candidate) {
+      candidate = encodeURIComponent(candidate);
       if (!videoId) videoId = candidate;
       cleaned = cleaned.replace(rawUrl, "").trim();
       continue;
@@ -51,15 +53,18 @@ const extractMedia = (value: string) => {
       const type = parts[0];
       const id = parts[1];
       if (type && id) {
+        const safeType = encodeURIComponent(type);
+        const safeId = encodeURIComponent(id);
         if (!spotifyEmbed) {
-          spotifyEmbed = `https://open.spotify.com/embed/${type}/${id}`;
+          spotifyEmbed = `https://open.spotify.com/embed/${safeType}/${safeId}`;
+          spotifyUrl = `https://open.spotify.com/${safeType}/${safeId}`;
         }
         cleaned = cleaned.replace(rawUrl, "").trim();
       }
     }
   }
 
-  return { videoId, spotifyEmbed, cleaned };
+  return { videoId, spotifyEmbed, spotifyUrl, cleaned };
 };
 
 export type WordUser = {
@@ -685,7 +690,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
     }
   };
 
-  const { videoId, spotifyEmbed, cleaned } = extractMedia(word.content);
+  const { videoId, spotifyEmbed, spotifyUrl, cleaned } = extractMedia(word.content);
   const displayContent =
     showFullContent || cleaned.length <= 320
       ? cleaned
@@ -835,6 +840,18 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                   className="h-[152px] w-full"
                 />
               </div>
+            )}
+            {spotifyUrl && (
+              <a
+                href={spotifyUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <SpotifyLogo size={16} weight="regular" />
+                Play on Spotify
+              </a>
             )}
           </>
         )}
