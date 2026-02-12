@@ -1003,11 +1003,15 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
             {session?.user?.id && (
               <form onSubmit={handleCommentSubmit} className="flex flex-col gap-2">
                 <textarea
-                  className="soft-input comment-input min-h-[56px] sm:min-h-[64px] text-sm"
+                  className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none"
                   placeholder="Write encouragement..."
                   value={commentText}
                   ref={commentInputRef}
-                  onChange={(event) => setCommentText(event.target.value)}
+                  onChange={(event) => {
+                    setCommentText(event.target.value);
+                    event.currentTarget.style.height = "auto";
+                    event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
+                  }}
                 />
                 <div className="flex justify-end">
                   <button type="submit" className="post-button">
@@ -1143,9 +1147,13 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
                       {editingCommentId === comment._id ? (
                         <div ref={commentEditRef} className="mt-2 flex flex-col gap-2">
                           <textarea
-                            className="soft-input comment-input min-h-[56px] sm:min-h-[60px] text-sm"
+                            className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none"
                             value={editingCommentText}
-                            onChange={(event) => setEditingCommentText(event.target.value)}
+                            onChange={(event) => {
+                              setEditingCommentText(event.target.value);
+                              event.currentTarget.style.height = "auto";
+                              event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
+                            }}
                           />
                           <div className="flex items-center gap-2">
                             <button

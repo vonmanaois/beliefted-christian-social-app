@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import { cloudinaryTransform } from "@/lib/cloudinary";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChatCircle, DotsThreeOutline, Heart, UserCircle } from "@phosphor-icons/react";
 import { useSession } from "next-auth/react";
@@ -255,6 +257,16 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
       }
     },
     onSuccess: () => {
+      queryClient.setQueriesData(
+        {
+          queryKey: ["faith-stories"],
+        },
+        (current: FaithStoryDetailProps["story"][] | undefined) => {
+          if (!Array.isArray(current)) return current;
+          return current.filter((item) => item._id !== story._id);
+        }
+      );
+      queryClient.invalidateQueries({ queryKey: ["faith-stories"] });
       router.push("/faith-stories");
     },
   });
@@ -307,9 +319,14 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
         {!isEditing ? (
           <div className="mt-6 flex flex-col gap-6">
             {story.coverImage && (
-              <div className="h-52 w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={story.coverImage} alt="" className="h-full w-full object-cover" />
+              <div className="relative h-52 w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)]">
+                <Image
+                  src={cloudinaryTransform(story.coverImage, { width: 1200, height: 520 })}
+                  alt=""
+                  fill
+                  sizes="(min-width: 768px) 720px, 100vw"
+                  className="object-cover"
+                />
               </div>
             )}
             <div className="text-center">
@@ -425,10 +442,14 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
             }}
           >
             <textarea
-              className="soft-input comment-input min-h-[80px] text-sm"
+              className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none"
               placeholder="Write a comment..."
               value={commentText}
-              onChange={(event) => setCommentText(event.target.value)}
+              onChange={(event) => {
+                setCommentText(event.target.value);
+                event.currentTarget.style.height = "auto";
+                event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
+              }}
             />
             <div className="flex justify-end">
               <button type="submit" className="post-button">
@@ -522,9 +543,13 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
                     {editingCommentId === comment._id ? (
                       <div ref={commentEditRef} className="mt-2 flex flex-col gap-2">
                         <textarea
-                          className="soft-input comment-input min-h-[56px] text-sm"
+                          className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none"
                           value={editingCommentText}
-                          onChange={(event) => setEditingCommentText(event.target.value)}
+                          onChange={(event) => {
+                            setEditingCommentText(event.target.value);
+                            event.currentTarget.style.height = "auto";
+                            event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
+                          }}
                         />
                         <div className="flex items-center gap-2">
                           <button

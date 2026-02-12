@@ -7,6 +7,7 @@ import FaithStoryCommentModel from "@/models/FaithStoryComment";
 import UserModel from "@/models/User";
 import { z } from "zod";
 import { rateLimit } from "@/lib/rateLimit";
+import { revalidateTag, unstable_cache } from "next/cache";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -19,10 +20,20 @@ export async function GET(req: Request) {
       ? { $text: { $search: query } }
       : {};
 
-  const stories = await FaithStoryModel.find(filter)
-    .sort({ createdAt: -1, _id: -1 })
-    .limit(100)
-    .lean();
+  const loadStories = async () =>
+    FaithStoryModel.find(filter)
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(100)
+      .lean();
+
+  const stories =
+    query.length > 0
+      ? await loadStories()
+      : await unstable_cache(
+          () => loadStories(),
+          ["faith-stories-list"],
+          { revalidate: 300, tags: ["faith-stories"] }
+        )();
 
   const userIds = stories
     .filter((story) => story.userId)
@@ -109,5 +120,6 @@ export async function POST(req: Request) {
     likedBy: [],
   });
 
+  revalidateTag("faith-stories");
   return NextResponse.json(story, { status: 201 });
 }

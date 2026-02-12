@@ -139,6 +139,10 @@ export default function FaithStoryForm({
       setError("Title and story are required.");
       return;
     }
+    if (!coverImage) {
+      setError("Please add a cover image to publish your story.");
+      return;
+    }
     setIsSaving(true);
     try {
       let coverUrl: string | null = null;
@@ -180,8 +184,15 @@ export default function FaithStoryForm({
           setError("Failed to upload cover image.");
           return;
         }
-        const uploaded = (await uploadResponse.json()) as { secure_url?: string };
-        coverUrl = uploaded.secure_url ?? null;
+        const uploaded = (await uploadResponse.json()) as {
+          secure_url?: string;
+          url?: string;
+        };
+        coverUrl = uploaded.secure_url ?? uploaded.url ?? null;
+        if (!coverUrl) {
+          setError("Upload succeeded but no image URL returned.");
+          return;
+        }
       }
 
       await onSubmit(title.trim(), content.trim(), isAnonymous, coverUrl);

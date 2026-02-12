@@ -4,8 +4,8 @@
   "description": "A Christian prayer wall and social journal.",
   "start_url": "/?source=pwa",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#3aa0f6",
+  "background_color": "#f3f4f6",
+  "theme_color": "#f3f4f6",
   "icons": [
     {
       "src": "/icon-192.png",

@@ -78,6 +78,7 @@ export default function UserSearch() {
               <Link
                 key={user.id}
                 href={user.username ? `/profile/${user.username}` : "/profile"}
+                prefetch={false}
                 className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-[color:var(--surface-strong)]"
               >
                 <div className="h-7 w-7 rounded-full bg-slate-200 overflow-hidden">

@@ -58,7 +58,7 @@ export default function Avatar({
 
   if (href) {
     return (
-      <Link href={href} className={baseClass}>
+      <Link href={href} prefetch={false} className={baseClass}>
         {content}
       </Link>
     );

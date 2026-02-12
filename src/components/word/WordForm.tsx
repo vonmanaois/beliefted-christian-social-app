@@ -336,20 +336,20 @@ export default function WordForm({
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
-            aria-label="Add images"
-          >
-            <ImageSquare size={16} weight="regular" />
-          </button>
-          <button
-            type="button"
             onClick={() => setShowScriptureRef((prev) => !prev)}
             className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
             aria-label="Add verse reference"
           >
             <Plus size={14} weight="regular" />
             Verse
+          </button>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
+            aria-label="Add images"
+          >
+            <ImageSquare size={16} weight="regular" />
           </button>
           <button
             type="button"

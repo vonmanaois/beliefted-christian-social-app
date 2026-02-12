@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#3aa0f6",
+  themeColor: "#f3f4f6",
 };
 
 export default function RootLayout({
@@ -45,6 +45,7 @@ export default function RootLayout({
       <body
         suppressHydrationWarning
         className={`${inter.variable}`}
+        style={{ backgroundColor: "#f3f4f6" }}
       >
         <PWARegistration />
         <Providers>{children}</Providers>

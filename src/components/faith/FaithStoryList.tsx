@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MagnifyingGlass, Plus, UserCircle } from "@phosphor-icons/react";
+import Image from "next/image";
+import { cloudinaryTransform } from "@/lib/cloudinary";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
@@ -67,6 +69,7 @@ export default function FaithStoryList() {
       return data.map((item) => ({
         ...item,
         _id: typeof item._id === "string" ? item._id : String(item._id),
+        coverImage: item.coverImage ?? null,
       }));
     },
     staleTime: 120000,
@@ -79,6 +82,7 @@ export default function FaithStoryList() {
       title,
       content,
       isAnonymous,
+      coverImage,
     }: {
       title: string;
       content: string;
@@ -253,12 +257,13 @@ export default function FaithStoryList() {
                   </span>
                 </div>
                 {story.coverImage && (
-                  <div className="h-36 w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)]">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={story.coverImage}
+                  <div className="relative h-36 w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)]">
+                    <Image
+                      src={cloudinaryTransform(story.coverImage, { width: 900, height: 360 })}
                       alt=""
-                      className="h-full w-full object-cover"
+                      fill
+                      sizes="(min-width: 768px) 640px, 100vw"
+                      className="object-cover"
                     />
                   </div>
                 )}
