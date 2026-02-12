@@ -78,6 +78,7 @@ export default function HomeTabs() {
                     ? "rounded-lg bg-[color:var(--accent)] !text-[color:var(--accent-contrast)] hover:!text-[color:var(--accent-contrast)]"
                     : "rounded-lg text-[color:var(--ink)] hover:text-[color:var(--accent)]"
                 }`}
+                data-active={activeTab === tab ? "true" : "false"}
               >
                 <span className="relative z-10 inline-flex items-center gap-1">
                   {tab}
@@ -121,6 +122,7 @@ export default function HomeTabs() {
                     ? "bg-[color:var(--accent)] !text-[color:var(--accent-contrast)] hover:!text-[color:var(--accent-contrast)]"
                     : "text-[color:var(--ink)] hover:text-[color:var(--accent)]"
                 }`}
+                data-active={activeTab === tab ? "true" : "false"}
               >
                 <span className="relative z-10 inline-flex items-center gap-1">
                   {tab}

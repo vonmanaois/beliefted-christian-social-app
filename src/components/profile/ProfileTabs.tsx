@@ -112,6 +112,7 @@ export default function ProfileTabs({
                   ? "bg-[color:var(--accent)] !text-[color:var(--accent-contrast)] hover:!text-[color:var(--accent-contrast)]"
                   : "text-[color:var(--ink)] hover:text-[color:var(--accent)]"
               }`}
+              data-active={resolvedTab === tab ? "true" : "false"}
             >
               <span className="relative z-10">{tab}</span>
             </button>

@@ -4,10 +4,15 @@ import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import PrayerModel from "@/models/Prayer";
 import CommentModel from "@/models/Comment";
+import NotificationModel from "@/models/Notification";
+import ModerationLogModel from "@/models/ModerationLog";
+import { isAdminEmail } from "@/lib/admin";
 import { revalidateTag } from "next/cache";
 
+const ADMIN_REASONS = ["Off-topic", "Inappropriate", "Spam", "Asking money"] as const;
+
 export async function DELETE(
-  _req: Request,
+  req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   const { id } = await context.params;
@@ -17,6 +22,19 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const isAdmin = isAdminEmail(session.user.email ?? null);
+  let reason: (typeof ADMIN_REASONS)[number] | null = null;
+  if (isAdmin) {
+    try {
+      const body = (await req.json()) as { reason?: string };
+      if (body?.reason && ADMIN_REASONS.includes(body.reason as typeof reason)) {
+        reason = body.reason as typeof reason;
+      }
+    } catch {
+      // ignore missing body
+    }
+  }
+
   await dbConnect();
 
   const prayer = await PrayerModel.findById(id);
@@ -24,12 +42,36 @@ export async function DELETE(
     return NextResponse.json({ error: "Prayer not found" }, { status: 404 });
   }
 
-  if (!prayer.userId || prayer.userId.toString() !== session.user.id) {
+  const isOwner = prayer.userId && prayer.userId.toString() === session.user.id;
+  if (!isOwner && !isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (isAdmin && !isOwner && !reason) {
+    return NextResponse.json({ error: "Moderation reason is required" }, { status: 400 });
   }
 
   await CommentModel.deleteMany({ prayerId: prayer._id });
   await PrayerModel.deleteOne({ _id: prayer._id });
+
+  if (isAdmin && reason && prayer.userId) {
+    await ModerationLogModel.create({
+      targetType: "prayer",
+      targetId: prayer._id,
+      authorId: prayer.userId,
+      moderatorId: session.user.id,
+      reason,
+    });
+    if (prayer.userId.toString() !== session.user.id) {
+      await NotificationModel.create({
+        userId: prayer.userId,
+        actorId: session.user.id,
+        prayerId: prayer._id,
+        type: "moderation",
+        moderationReason: reason,
+        moderationTarget: "prayer",
+      });
+    }
+  }
 
   revalidateTag("prayers-feed", "max");
   return NextResponse.json({ ok: true });

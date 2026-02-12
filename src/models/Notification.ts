@@ -16,10 +16,16 @@ const NotificationSchema = new Schema(
         "follow",
         "faith_like",
         "faith_comment",
+        "moderation",
       ],
       required: true,
     },
     faithStoryId: { type: Schema.Types.ObjectId, ref: "FaithStory" },
+    moderationReason: { type: String },
+    moderationTarget: {
+      type: String,
+      enum: ["word", "prayer", "faith_story"],
+    },
     readAt: { type: Date, default: null },
   },
   { timestamps: { createdAt: true, updatedAt: false } }

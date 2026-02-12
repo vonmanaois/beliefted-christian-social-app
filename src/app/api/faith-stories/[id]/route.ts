@@ -7,6 +7,9 @@ import { Types } from "mongoose";
 import { z } from "zod";
 import crypto from "crypto";
 import { revalidateTag } from "next/cache";
+import NotificationModel from "@/models/Notification";
+import ModerationLogModel from "@/models/ModerationLog";
+import { isAdminEmail } from "@/lib/admin";
 
 const extractCloudinaryPublicId = (url: string) => {
   try {
@@ -53,6 +56,7 @@ const destroyCloudinaryImage = async (publicId: string) => {
 };
 
 const normalizeId = (raw: string) => raw.replace(/^ObjectId\(\"(.+)\"\)$/, "$1");
+const ADMIN_REASONS = ["Off-topic", "Inappropriate", "Spam", "Asking money"] as const;
 
 export async function PUT(
   req: Request,
@@ -99,12 +103,25 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const isAdmin = isAdminEmail(session.user.email ?? null);
+  let reason: (typeof ADMIN_REASONS)[number] | null = null;
+  if (isAdmin) {
+    try {
+      const body = (await req.json()) as { reason?: string };
+      if (body?.reason && ADMIN_REASONS.includes(body.reason as typeof reason)) {
+        reason = body.reason as typeof reason;
+      }
+    } catch {
+      // ignore missing body
+    }
   }
 
   const { id } = await params;
@@ -119,8 +136,12 @@ export async function DELETE(
     return NextResponse.json({ error: "Story not found" }, { status: 404 });
   }
 
-  if (!story.userId || story.userId.toString() !== session.user.id) {
+  const isOwner = story.userId && story.userId.toString() === session.user.id;
+  if (!isOwner && !isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (isAdmin && !isOwner && !reason) {
+    return NextResponse.json({ error: "Moderation reason is required" }, { status: 400 });
   }
 
   await story.deleteOne();
@@ -128,6 +149,25 @@ export async function DELETE(
     const publicId = extractCloudinaryPublicId(story.coverImage);
     if (publicId) {
       await destroyCloudinaryImage(publicId);
+    }
+  }
+  if (isAdmin && reason && story.userId) {
+    await ModerationLogModel.create({
+      targetType: "faith_story",
+      targetId: story._id,
+      authorId: story.userId,
+      moderatorId: session.user.id,
+      reason,
+    });
+    if (story.userId.toString() !== session.user.id) {
+      await NotificationModel.create({
+        userId: story.userId,
+        actorId: session.user.id,
+        faithStoryId: story._id,
+        type: "moderation",
+        moderationReason: reason,
+        moderationTarget: "faith_story",
+      });
     }
   }
   revalidateTag("faith-stories", "max");

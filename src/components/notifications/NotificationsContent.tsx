@@ -23,13 +23,16 @@ type NotificationItem = {
     | "word_comment"
     | "follow"
     | "faith_like"
-    | "faith_comment";
+    | "faith_comment"
+    | "moderation";
   createdAt: string;
   actorId?: NotificationActor | null;
   userId?: NotificationRecipient | null;
   prayerId?: { _id?: string; content?: string; authorUsername?: string | null } | null;
   wordId?: { _id?: string; content?: string; authorUsername?: string | null } | null;
   faithStoryId?: { _id?: string; title?: string; authorUsername?: string | null } | null;
+  moderationReason?: string | null;
+  moderationTarget?: "word" | "prayer" | "faith_story" | null;
   isFollowing?: boolean;
 };
 
@@ -161,6 +164,12 @@ export default function NotificationsContent({ active = false }: NotificationsCo
     return null;
   };
 
+  const getModerationLabel = (target?: NotificationItem["moderationTarget"]) => {
+    if (target === "prayer") return "prayer";
+    if (target === "faith_story") return "faith story";
+    return "word";
+  };
+
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -223,22 +232,35 @@ export default function NotificationsContent({ active = false }: NotificationsCo
                   const content = (
                     <>
                       <p className="text-sm text-[color:var(--ink)]">
-                        <span className="font-semibold">
-                          {note.actorId?.name ?? "Someone"}
-                        </span>{" "}
-                        {note.type === "pray"
-                          ? "prayed for your prayer."
-                          : note.type === "comment"
-                            ? "posted encouragement on your prayer."
-                            : note.type === "word_like"
-                              ? "liked your word."
-                              : note.type === "word_comment"
-                                ? "posted reflection on your word."
-                                : note.type === "faith_like"
-                                  ? "liked your faith story."
-                                  : note.type === "faith_comment"
-                                    ? "posted reflection on your faith story."
-                                    : "followed you."}
+                        {note.type === "moderation" ? (
+                          <>
+                            <span className="font-semibold">Beliefted Team</span>{" "}
+                            removed your {getModerationLabel(note.moderationTarget)} for{" "}
+                            <span className="font-semibold">
+                              {note.moderationReason ?? "Community Guidelines"}
+                            </span>
+                            .
+                          </>
+                        ) : (
+                          <>
+                            <span className="font-semibold">
+                              {note.actorId?.name ?? "Someone"}
+                            </span>{" "}
+                            {note.type === "pray"
+                              ? "prayed for your prayer."
+                              : note.type === "comment"
+                                ? "posted encouragement on your prayer."
+                                : note.type === "word_like"
+                                  ? "liked your word."
+                                  : note.type === "word_comment"
+                                    ? "posted reflection on your word."
+                                    : note.type === "faith_like"
+                                      ? "liked your faith story."
+                                      : note.type === "faith_comment"
+                                        ? "posted reflection on your faith story."
+                                        : "followed you."}
+                          </>
+                        )}
                       </p>
                     </>
                   );

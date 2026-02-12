@@ -648,6 +648,12 @@ a:hover {
   opacity: 0.85;
 }
 
+button[data-active="true"]:hover,
+[role="button"][data-active="true"]:hover {
+  color: var(--accent-contrast);
+  opacity: 1;
+}
+
 button:not(:disabled):hover svg,
 [role="button"]:not([aria-disabled="true"]):hover svg,
 a:hover svg {

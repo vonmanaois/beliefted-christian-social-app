@@ -9,6 +9,7 @@ import Avatar from "@/components/ui/Avatar";
 import Modal from "@/components/layout/Modal";
 import { useUIStore } from "@/lib/uiStore";
 import YouTubeEmbed from "@/components/ui/YouTubeEmbed";
+import { useAdmin } from "@/hooks/useAdmin";
 
 const extractYouTube = (value: string) => {
   let videoId: string | null = null;
@@ -47,6 +48,8 @@ const extractYouTube = (value: string) => {
 
   return { videoId, cleaned };
 };
+
+const ADMIN_REASONS = ["Off-topic", "Inappropriate", "Spam", "Asking money"] as const;
 
 const extractSpotify = (value: string) => {
   let embedUrl: string | null = null;
@@ -146,6 +149,8 @@ const formatPostTime = (timestamp: string) => {
 
 const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: WordCardProps) => {
   const { data: session } = useSession();
+  const { data: adminData } = useAdmin();
+  const isAdmin = Boolean(adminData?.isAdmin);
   const router = useRouter();
   const queryClient = useQueryClient();
   const normalizeId = (raw: Word["_id"]) => {
@@ -188,6 +193,8 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
+  const [showAdminDeleteConfirm, setShowAdminDeleteConfirm] = useState(false);
+  const [adminReason, setAdminReason] = useState<string>("");
   const [showCommentConfirm, setShowCommentConfirm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(word.content ?? "");
@@ -582,9 +589,11 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (reason?: string) => {
       const response = await fetch(`/api/words/${wordId}`, {
         method: "DELETE",
+        headers: reason ? { "Content-Type": "application/json" } : undefined,
+        body: reason ? JSON.stringify({ reason }) : undefined,
       });
       if (!response.ok) {
         let message = "Failed to delete post";
@@ -734,6 +743,15 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
     }
   };
 
+  const handleAdminDelete = async () => {
+    if (!isAdmin || !adminReason) return;
+    try {
+      await deleteMutation.mutateAsync(adminReason);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   const { videoId: youtubeId, cleaned: youtubeCleaned } = extractYouTube(word.content ?? "");
   const { embedUrl: spotifyEmbed, cleaned: cleaned } = extractSpotify(youtubeCleaned);
   const displayContent =
@@ -775,7 +793,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
               <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
                 {formatPostTime(createdAtValue.toISOString())}
               </p>
-              {isOwner && (
+              {(isOwner || isAdmin) && (
                 <div className="relative" ref={menuRef}>
                   <button
                     type="button"
@@ -787,23 +805,40 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                   </button>
                   {showMenu && (
                     <div className="absolute right-0 top-10 z-10 min-w-[200px] rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-2 shadow-lg">
-                      <button
-                        type="button"
-                        onClick={handleEditStart}
-                        className="mb-1 w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
-                      >
-                        Edit Post
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowMenu(false);
-                          setShowDeleteConfirm(true);
-                        }}
-                        className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
-                      >
-                        Delete Post
-                      </button>
+                      {isOwner && (
+                        <button
+                          type="button"
+                          onClick={handleEditStart}
+                          className="mb-1 w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
+                        >
+                          Edit Post
+                        </button>
+                      )}
+                      {isOwner && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowMenu(false);
+                            setShowDeleteConfirm(true);
+                          }}
+                          className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
+                        >
+                          Delete Post
+                        </button>
+                      )}
+                      {isAdmin && !isOwner && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowMenu(false);
+                            setAdminReason("");
+                            setShowAdminDeleteConfirm(true);
+                          }}
+                          className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
+                        >
+                          Admin Delete
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1209,6 +1244,54 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
               setShowDeleteConfirm(false);
             }}
             disabled={isDeleting}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer pointer-events-auto hover:opacity-90 active:translate-y-[1px] disabled:opacity-60"
+          >
+            {isDeleting ? "Deleting..." : "Delete"}
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        title="Admin Delete"
+        isOpen={showAdminDeleteConfirm}
+        onClose={() => setShowAdminDeleteConfirm(false)}
+        autoFocus={false}
+      >
+        <p className="text-sm text-[color:var(--subtle)]">
+          Choose a reason for removing this post. The author will be notified.
+        </p>
+        <div className="mt-4 grid gap-2">
+          {ADMIN_REASONS.map((reason) => (
+            <button
+              key={reason}
+              type="button"
+              onClick={() => setAdminReason(reason)}
+              className={`w-full rounded-lg px-3 py-2 text-left text-sm font-semibold border ${
+                adminReason === reason
+                  ? "border-transparent bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
+                  : "border-[color:var(--panel-border)] text-[color:var(--ink)] hover:border-[color:var(--accent)]"
+              }`}
+            >
+              {reason}
+            </button>
+          ))}
+        </div>
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setShowAdminDeleteConfirm(false)}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer pointer-events-auto hover:text-[color:var(--accent)] active:translate-y-[1px]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              if (isDeleting || !adminReason) return;
+              await handleAdminDelete();
+              setShowAdminDeleteConfirm(false);
+            }}
+            disabled={isDeleting || !adminReason}
             className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer pointer-events-auto hover:opacity-90 active:translate-y-[1px] disabled:opacity-60"
           >
             {isDeleting ? "Deleting..." : "Delete"}

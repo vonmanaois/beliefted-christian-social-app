@@ -4,6 +4,9 @@ import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import WordModel from "@/models/Word";
 import WordCommentModel from "@/models/WordComment";
+import NotificationModel from "@/models/Notification";
+import ModerationLogModel from "@/models/ModerationLog";
+import { isAdminEmail } from "@/lib/admin";
 import { revalidateTag } from "next/cache";
 import crypto from "crypto";
 
@@ -51,8 +54,10 @@ const destroyCloudinaryImage = async (publicId: string) => {
   });
 };
 
+const ADMIN_REASONS = ["Off-topic", "Inappropriate", "Spam", "Asking money"] as const;
+
 export async function DELETE(
-  _req: Request,
+  req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   const { id } = await context.params;
@@ -62,6 +67,19 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const isAdmin = isAdminEmail(session.user.email ?? null);
+  let reason: (typeof ADMIN_REASONS)[number] | null = null;
+  if (isAdmin) {
+    try {
+      const body = (await req.json()) as { reason?: string };
+      if (body?.reason && ADMIN_REASONS.includes(body.reason as typeof reason)) {
+        reason = body.reason as typeof reason;
+      }
+    } catch {
+      // ignore missing body
+    }
+  }
+
   await dbConnect();
 
   const word = await WordModel.findById(id);
@@ -69,8 +87,12 @@ export async function DELETE(
     return NextResponse.json({ error: "Post not found" }, { status: 404 });
   }
 
-  if (!word.userId || word.userId.toString() !== session.user.id) {
+  const isOwner = word.userId && word.userId.toString() === session.user.id;
+  if (!isOwner && !isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (isAdmin && !isOwner && !reason) {
+    return NextResponse.json({ error: "Moderation reason is required" }, { status: 400 });
   }
 
   await WordCommentModel.deleteMany({ wordId: word._id });
@@ -87,6 +109,26 @@ export async function DELETE(
       }
     })
   );
+
+  if (isAdmin && reason && word.userId) {
+    await ModerationLogModel.create({
+      targetType: "word",
+      targetId: word._id,
+      authorId: word.userId,
+      moderatorId: session.user.id,
+      reason,
+    });
+    if (word.userId.toString() !== session.user.id) {
+      await NotificationModel.create({
+        userId: word.userId,
+        actorId: session.user.id,
+        wordId: word._id,
+        type: "moderation",
+        moderationReason: reason,
+        moderationTarget: "word",
+      });
+    }
+  }
 
   revalidateTag("words-feed", "max");
   return NextResponse.json({ ok: true });

@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import Avatar from "@/components/ui/Avatar";
 import Modal from "@/components/layout/Modal";
 import PostBackHeader from "@/components/ui/PostBackHeader";
+import { useAdmin } from "@/hooks/useAdmin";
 
 type FaithStoryDetailProps = {
   story: {
@@ -44,12 +45,18 @@ const formatFullDate = (iso: string) =>
     year: "numeric",
   });
 
+const ADMIN_REASONS = ["Off-topic", "Inappropriate", "Spam", "Asking money"] as const;
+
 export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
   const { data: session } = useSession();
+  const { data: adminData } = useAdmin();
+  const isAdmin = Boolean(adminData?.isAdmin);
   const router = useRouter();
   const queryClient = useQueryClient();
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAdminDeleteConfirm, setShowAdminDeleteConfirm] = useState(false);
+  const [adminReason, setAdminReason] = useState<string>("");
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(story.title);
   const [editContent, setEditContent] = useState(story.content);
@@ -249,9 +256,11 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (reason?: string) => {
       const response = await fetch(`/api/faith-stories/${story._id}`, {
         method: "DELETE",
+        headers: reason ? { "Content-Type": "application/json" } : undefined,
+        body: reason ? JSON.stringify({ reason }) : undefined,
       });
       if (!response.ok) {
         throw new Error("Failed to delete story");
@@ -273,13 +282,22 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
   });
   const isDeleting = deleteMutation.isPending;
 
+  const handleAdminDelete = async () => {
+    if (!isAdmin || !adminReason) return;
+    try {
+      await deleteMutation.mutateAsync(adminReason);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   return (
     <div>
       <PostBackHeader label="Faith Story" />
       <div className="panel p-6 sm:p-8 rounded-none">
         <div className="flex items-center justify-between text-xs text-[color:var(--subtle)]">
           <span>{formatFullDate(story.createdAt)}</span>
-          {isOwner && (
+          {(isOwner || isAdmin) && (
             <div className="relative" ref={menuRef}>
               <button
                 type="button"
@@ -291,26 +309,43 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
               </button>
               {showMenu && (
                 <div className="absolute right-0 top-9 z-10 min-w-[160px] rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-2 shadow-lg">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowMenu(false);
-                      setIsEditing(true);
-                    }}
-                    className="mb-1 w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowMenu(false);
-                      setShowDeleteConfirm(true);
-                    }}
-                    className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
-                  >
-                    Delete
-                  </button>
+                  {isOwner && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMenu(false);
+                        setIsEditing(true);
+                      }}
+                      className="mb-1 w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
+                    >
+                      Edit
+                    </button>
+                  )}
+                  {isOwner && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMenu(false);
+                        setShowDeleteConfirm(true);
+                      }}
+                      className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
+                    >
+                      Delete
+                    </button>
+                  )}
+                  {isAdmin && !isOwner && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMenu(false);
+                        setAdminReason("");
+                        setShowAdminDeleteConfirm(true);
+                      }}
+                      className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
+                    >
+                      Admin Delete
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -616,6 +651,54 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
               await deleteMutation.mutateAsync();
             }}
             disabled={isDeleting}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer disabled:opacity-60"
+          >
+            {isDeleting ? "Deleting..." : "Delete"}
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        title="Admin Delete"
+        isOpen={showAdminDeleteConfirm}
+        onClose={() => setShowAdminDeleteConfirm(false)}
+        autoFocus={false}
+      >
+        <p className="text-sm text-[color:var(--subtle)]">
+          Choose a reason for removing this story. The author will be notified.
+        </p>
+        <div className="mt-4 grid gap-2">
+          {ADMIN_REASONS.map((reason) => (
+            <button
+              key={reason}
+              type="button"
+              onClick={() => setAdminReason(reason)}
+              className={`w-full rounded-lg px-3 py-2 text-left text-sm font-semibold border ${
+                adminReason === reason
+                  ? "border-transparent bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
+                  : "border-[color:var(--panel-border)] text-[color:var(--ink)] hover:border-[color:var(--accent)]"
+              }`}
+            >
+              {reason}
+            </button>
+          ))}
+        </div>
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setShowAdminDeleteConfirm(false)}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              if (isDeleting || !adminReason) return;
+              await handleAdminDelete();
+              setShowAdminDeleteConfirm(false);
+            }}
+            disabled={isDeleting || !adminReason}
             className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer disabled:opacity-60"
           >
             {isDeleting ? "Deleting..." : "Delete"}
