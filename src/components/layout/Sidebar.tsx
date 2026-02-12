@@ -335,6 +335,9 @@ export default function Sidebar() {
       if (notificationsOpen && delta > 60) {
         closeNotifications();
       }
+      if (infoPanel && delta > 60) {
+        closeInfoPanel();
+      }
       touchStartX.current = null;
     };
     window.addEventListener("touchstart", handleTouchStart, { passive: true });
@@ -647,7 +650,7 @@ export default function Sidebar() {
                 onClick={closeInfoPanel}
               />
               <div
-                data-state={infoPanel ? "open" : "closing"}
+                data-state={infoClosing ? "closing" : "open"}
                 className="info-drawer-panel absolute right-0 top-0 h-full w-full border-l border-[color:var(--panel-border)] bg-[color:var(--surface)] shadow-2xl"
               >
                 <div className="panel h-full rounded-none border-0 bg-transparent p-6 panel-scroll-mobile">
