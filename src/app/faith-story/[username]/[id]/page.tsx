@@ -43,6 +43,7 @@ export async function generateMetadata({ params }: PageProps) {
 
   const canonical = `${siteUrl}/faith-story/${authorUsername ?? username}/${id}`;
   const description = toSnippet(story.content ?? "");
+  const ogImage = story.coverImage ?? author?.image ?? undefined;
 
   return {
     title: `${story.title} · ${authorName} @${authorUsername ?? "user"}`,
@@ -55,13 +56,13 @@ export async function generateMetadata({ params }: PageProps) {
       description,
       siteName: "Beliefted",
       authors: [authorName],
-      images: author?.image ? [{ url: author.image }] : undefined,
+      images: ogImage ? [{ url: ogImage }] : undefined,
     },
     twitter: {
       card: "summary",
       title: story.title,
       description,
-      images: author?.image ? [author.image] : undefined,
+      images: ogImage ? [ogImage] : undefined,
     },
   };
 }
@@ -117,6 +118,7 @@ export default async function FaithStoryDetailPage({ params }: PageProps) {
               createdAt: story.createdAt.toISOString(),
               likedBy: (story.likedBy ?? []).map((id) => id.toString()),
               isAnonymous: story.isAnonymous ?? false,
+              coverImage: story.coverImage ?? null,
               userId: story.userId?.toString() ?? null,
               user: {
                 name: author?.name ?? story.authorName ?? "User",

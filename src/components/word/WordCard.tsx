@@ -3,18 +3,15 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpenText, BookmarkSimple, ChatCircle, DotsThreeOutline, Heart, SpotifyLogo } from "@phosphor-icons/react";
+import { BookOpenText, BookmarkSimple, ChatCircle, DotsThreeOutline, Heart } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import Avatar from "@/components/ui/Avatar";
 import Modal from "@/components/layout/Modal";
-import YouTubeEmbed from "@/components/ui/YouTubeEmbed";
-import LazyEmbed from "@/components/ui/LazyEmbed";
 import { useUIStore } from "@/lib/uiStore";
+import YouTubeEmbed from "@/components/ui/YouTubeEmbed";
 
-const extractMedia = (value: string) => {
+const extractYouTube = (value: string) => {
   let videoId: string | null = null;
-  let spotifyEmbed: string | null = null;
-  let spotifyUrl: string | null = null;
   let cleaned = value;
   const urlMatches = value.match(/https?:\/\/\S+/gi) ?? [];
 
@@ -43,29 +40,42 @@ const extractMedia = (value: string) => {
     }
 
     if (candidate) {
-      candidate = encodeURIComponent(candidate);
       if (!videoId) videoId = candidate;
       cleaned = cleaned.replace(rawUrl, "").trim();
-      continue;
-    }
-
-    if (host === "open.spotify.com") {
-      const parts = parsed.pathname.split("/").filter(Boolean);
-      const type = parts[0];
-      const id = parts[1];
-      if (type && id) {
-        const safeType = encodeURIComponent(type);
-        const safeId = encodeURIComponent(id);
-        if (!spotifyEmbed) {
-          spotifyEmbed = `https://open.spotify.com/embed/${safeType}/${safeId}`;
-          spotifyUrl = `https://open.spotify.com/${safeType}/${safeId}`;
-        }
-        cleaned = cleaned.replace(rawUrl, "").trim();
-      }
     }
   }
 
-  return { videoId, spotifyEmbed, spotifyUrl, cleaned };
+  return { videoId, cleaned };
+};
+
+const extractSpotify = (value: string) => {
+  let embedUrl: string | null = null;
+  let cleaned = value;
+  const urlMatches = value.match(/https?:\/\/\S+/gi) ?? [];
+
+  for (const rawUrl of urlMatches) {
+    let parsed: URL | null = null;
+    try {
+      parsed = new URL(rawUrl);
+    } catch {
+      parsed = null;
+    }
+    if (!parsed) continue;
+    const host = parsed.hostname.replace(/^www\./, "");
+    if (host !== "open.spotify.com") continue;
+
+    const parts = parsed.pathname.split("/").filter(Boolean);
+    if (parts.length >= 2) {
+      const type = parts[0];
+      const id = parts[1];
+      if (!embedUrl) {
+        embedUrl = `https://open.spotify.com/embed/${type}/${id}`;
+      }
+      cleaned = cleaned.replace(rawUrl, "").trim();
+    }
+  }
+
+  return { embedUrl, cleaned };
 };
 
 export type WordUser = {
@@ -85,6 +95,7 @@ export type Word = {
   userId?: string | null;
   isOwner?: boolean;
   scriptureRef?: string | null;
+  images?: string[];
 };
 
 type WordCommentData = {
@@ -179,8 +190,9 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
   const [showEditConfirm, setShowEditConfirm] = useState(false);
   const [showCommentConfirm, setShowCommentConfirm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editText, setEditText] = useState(word.content);
+  const [editText, setEditText] = useState(word.content ?? "");
   const [isRemoving, setIsRemoving] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [likeError, setLikeError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const editRef = useRef<HTMLDivElement | null>(null);
@@ -270,7 +282,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
 
   useEffect(() => {
     if (!isEditing) {
-      setEditText(word.content);
+      setEditText(word.content ?? "");
     }
   }, [word.content, isEditing]);
 
@@ -693,14 +705,14 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
   }, [showComments, commentText]);
 
   const handleEditStart = () => {
-    setEditText(word.content);
+    setEditText(word.content ?? "");
     setIsEditing(true);
     setShowMenu(false);
   };
 
   const handleEditCancel = () => {
     setIsEditing(false);
-    setEditText(word.content);
+    setEditText(word.content ?? "");
   };
 
   const handleEditSave = async () => {
@@ -721,7 +733,8 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
     }
   };
 
-  const { videoId, spotifyEmbed, spotifyUrl, cleaned } = extractMedia(word.content);
+  const { videoId: youtubeId, cleaned: youtubeCleaned } = extractYouTube(word.content ?? "");
+  const { embedUrl: spotifyEmbed, cleaned: cleaned } = extractSpotify(youtubeCleaned);
   const displayContent =
     showFullContent || cleaned.length <= 320
       ? cleaned
@@ -850,41 +863,46 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                   {showFullContent ? "Done" : "Continue"}
                 </button>
               )}
-            {videoId && (
+            {youtubeId && (
               <div
-                className="mt-4 aspect-video w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)] bg-black/5"
+                className="mt-3 aspect-video w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)]"
                 onClick={(event) => event.stopPropagation()}
               >
-                <YouTubeEmbed videoId={videoId} className="h-full w-full" />
+                <YouTubeEmbed videoId={youtubeId} className="h-full w-full" />
               </div>
             )}
             {spotifyEmbed && (
               <div
-                className="mt-4 w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)] bg-black/5"
+                className="mt-3 w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)]"
                 onClick={(event) => event.stopPropagation()}
               >
-                <LazyEmbed className="h-[152px] w-full">
-                  <iframe
-                    src={spotifyEmbed}
-                    title="Spotify player"
-                    loading="lazy"
-                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                    className="h-full w-full"
-                  />
-                </LazyEmbed>
+                <iframe
+                  src={spotifyEmbed}
+                  width="100%"
+                  height="152"
+                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                  loading="lazy"
+                  className="border-0"
+                  title="Spotify embed"
+                />
               </div>
             )}
-            {spotifyUrl && (
-              <a
-                href={spotifyUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <SpotifyLogo size={16} weight="regular" />
-                Play on Spotify
-              </a>
+            {Array.isArray(word.images) && word.images.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {word.images.map((src, index) => (
+                  <div
+                    key={`${src}-${index}`}
+                    className="h-32 w-32 sm:h-36 sm:w-36 overflow-hidden rounded-xl border border-[color:var(--panel-border)]"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setLightboxSrc(src);
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={src} alt="" className="h-full w-full object-cover" />
+                  </div>
+                ))}
+              </div>
             )}
           </>
         )}
@@ -1320,6 +1338,23 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
             Discard
           </button>
         </div>
+      </Modal>
+
+      <Modal
+        title="Photo"
+        isOpen={Boolean(lightboxSrc)}
+        onClose={() => setLightboxSrc(null)}
+      >
+        {lightboxSrc && (
+          <div className="w-full">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={lightboxSrc}
+              alt="Word image"
+              className="w-full max-h-[70vh] object-contain rounded-xl border border-[color:var(--panel-border)]"
+            />
+          </div>
+        )}
       </Modal>
     </article>
   );

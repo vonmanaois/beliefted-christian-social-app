@@ -129,6 +129,7 @@ export async function GET(req: Request) {
           commentCount,
           userId: userIdString,
           scriptureRef: word.scriptureRef ?? null,
+          images: Array.isArray(word.images) ? word.images : [],
           savedBy: Array.isArray(word.savedBy)
             ? word.savedBy.map((id) => String(id))
             : [],
@@ -170,8 +171,9 @@ export async function POST(req: Request) {
   }
 
   const WordSchema = z.object({
-    content: z.string().trim().min(1).max(2000),
+    content: z.string().trim().max(2000).optional().or(z.literal("")),
     scriptureRef: z.string().trim().max(80).optional().or(z.literal("")),
+    images: z.array(z.string().url()).max(3).optional(),
   });
 
   const body = WordSchema.safeParse(await req.json());
@@ -179,11 +181,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid word data" }, { status: 400 });
   }
 
-  const content = body.data.content.trim();
+  const content = (body.data.content ?? "").trim();
   const scriptureRef = (body.data.scriptureRef ?? "").trim();
+  const images = Array.isArray(body.data.images) ? body.data.images : [];
 
-  if (!content) {
-    return NextResponse.json({ error: "Content is required" }, { status: 400 });
+  if (!content && images.length === 0) {
+    return NextResponse.json({ error: "Content or images are required" }, { status: 400 });
   }
 
   await dbConnect();
@@ -199,6 +202,7 @@ export async function POST(req: Request) {
     authorUsername: author?.username ?? null,
     authorImage: author?.image ?? null,
     scriptureRef: scriptureRef || undefined,
+    images,
   });
 
   revalidateTag("words-feed");

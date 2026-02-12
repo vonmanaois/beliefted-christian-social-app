@@ -58,6 +58,7 @@ export async function GET(req: Request) {
         userId: userIdString,
         user,
         commentCount,
+        coverImage: story.coverImage ?? null,
       };
     })
   );
@@ -81,6 +82,7 @@ export async function POST(req: Request) {
     title: z.string().trim().min(1).max(160),
     content: z.string().trim().min(1).max(10000),
     isAnonymous: z.boolean().optional(),
+    coverImage: z.string().url().optional(),
   });
 
   const body = StorySchema.safeParse(await req.json());
@@ -103,6 +105,7 @@ export async function POST(req: Request) {
     authorUsername: author?.username ?? null,
     authorImage: author?.image ?? null,
     isAnonymous,
+    coverImage: body.data.coverImage?.trim() || undefined,
     likedBy: [],
   });
 

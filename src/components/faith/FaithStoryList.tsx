@@ -31,6 +31,7 @@ type FaithStory = {
   commentCount?: number;
   authorUsername?: string | null;
   isAnonymous?: boolean;
+  coverImage?: string | null;
 };
 
 export default function FaithStoryList() {
@@ -82,11 +83,12 @@ export default function FaithStoryList() {
       title: string;
       content: string;
       isAnonymous: boolean;
+      coverImage?: string | null;
     }) => {
       const response = await fetch("/api/faith-stories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, content, isAnonymous }),
+        body: JSON.stringify({ title, content, isAnonymous, coverImage }),
       });
       if (!response.ok) {
         throw new Error("Failed to create story");
@@ -171,8 +173,13 @@ export default function FaithStoryList() {
         <div ref={createRef} className="panel p-6 sm:p-8 rounded-none">
           <FaithStoryForm
             submitLabel="Publish"
-            onSubmit={async (title, content, isAnonymous) => {
-              await createMutation.mutateAsync({ title, content, isAnonymous });
+            onSubmit={async (title, content, isAnonymous, coverImage) => {
+              await createMutation.mutateAsync({
+                title,
+                content,
+                isAnonymous,
+                coverImage,
+              });
             }}
             onCancel={() => {
               if (isDirty) {
@@ -245,6 +252,16 @@ export default function FaithStoryList() {
                     })}
                   </span>
                 </div>
+                {story.coverImage && (
+                  <div className="h-36 w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={story.coverImage}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                )}
                 <h2 className="text-lg font-semibold text-[color:var(--ink)] text-center">
                   {story.title}
                 </h2>

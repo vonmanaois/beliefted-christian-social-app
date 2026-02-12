@@ -132,7 +132,7 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
         description={
           savedOnly
             ? "Save a word to keep it here for later."
-            : "Share a verse or encouragement to start."
+            : "Share a word or encouragement to start."
         }
         icon={<BookOpenText size={18} weight="regular" />}
       />

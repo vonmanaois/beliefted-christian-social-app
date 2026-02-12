@@ -17,6 +17,7 @@ type FaithStoryDetailProps = {
     createdAt: string;
     likedBy: string[];
     isAnonymous?: boolean;
+    coverImage?: string | null;
     user: { name?: string | null; username?: string | null; image?: string | null } | null;
     userId?: string | null;
   };
@@ -305,6 +306,12 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
 
         {!isEditing ? (
           <div className="mt-6 flex flex-col gap-6">
+            {story.coverImage && (
+              <div className="h-52 w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={story.coverImage} alt="" className="h-full w-full object-cover" />
+              </div>
+            )}
             <div className="text-center">
               <h1 className="text-3xl font-semibold text-[color:var(--ink)]">
                 {story.title}

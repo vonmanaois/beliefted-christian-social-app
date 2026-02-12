@@ -81,7 +81,6 @@ export default function WordWall() {
             flat
             compact
             showHeader={false}
-            showScriptureToggle
             placeholder="What does God want you to share today?"
             onPosted={() => {
               setRefreshKey((prev) => prev + 1);

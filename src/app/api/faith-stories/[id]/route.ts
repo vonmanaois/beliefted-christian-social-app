@@ -5,6 +5,51 @@ import dbConnect from "@/lib/db";
 import FaithStoryModel from "@/models/FaithStory";
 import { Types } from "mongoose";
 import { z } from "zod";
+import crypto from "crypto";
+
+const extractCloudinaryPublicId = (url: string) => {
+  try {
+    const cleanUrl = url.split("?")[0] ?? url;
+    const uploadIndex = cleanUrl.indexOf("/upload/");
+    if (uploadIndex === -1) return null;
+    const afterUpload = cleanUrl.slice(uploadIndex + "/upload/".length);
+    const parts = afterUpload.split("/");
+    const versionIndex = parts.findIndex((part) => /^v\\d+$/.test(part));
+    const publicIdParts =
+      versionIndex >= 0 ? parts.slice(versionIndex + 1) : parts;
+    if (publicIdParts.length === 0) return null;
+    const filename = publicIdParts.join("/");
+    return filename.replace(/\\.[^.]+$/, "");
+  } catch {
+    return null;
+  }
+};
+
+const destroyCloudinaryImage = async (publicId: string) => {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  if (!cloudName || !apiKey || !apiSecret) return;
+
+  const timestamp = Math.floor(Date.now() / 1000);
+  const signatureBase = `public_id=${publicId}&timestamp=${timestamp}`;
+  const signature = crypto
+    .createHash("sha1")
+    .update(signatureBase + apiSecret)
+    .digest("hex");
+
+  const params = new URLSearchParams({
+    public_id: publicId,
+    api_key: apiKey,
+    timestamp: String(timestamp),
+    signature,
+  });
+
+  await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`, {
+    method: "POST",
+    body: params,
+  });
+};
 
 const normalizeId = (raw: string) => raw.replace(/^ObjectId\(\"(.+)\"\)$/, "$1");
 
@@ -77,5 +122,11 @@ export async function DELETE(
   }
 
   await story.deleteOne();
+  if (story.coverImage) {
+    const publicId = extractCloudinaryPublicId(story.coverImage);
+    if (publicId) {
+      await destroyCloudinaryImage(publicId);
+    }
+  }
   return NextResponse.json({ ok: true });
 }

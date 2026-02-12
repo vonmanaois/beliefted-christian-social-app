@@ -5,6 +5,51 @@ import dbConnect from "@/lib/db";
 import WordModel from "@/models/Word";
 import WordCommentModel from "@/models/WordComment";
 import { revalidateTag } from "next/cache";
+import crypto from "crypto";
+
+const extractCloudinaryPublicId = (url: string) => {
+  try {
+    const cleanUrl = url.split("?")[0] ?? url;
+    const uploadIndex = cleanUrl.indexOf("/upload/");
+    if (uploadIndex === -1) return null;
+    const afterUpload = cleanUrl.slice(uploadIndex + "/upload/".length);
+    const parts = afterUpload.split("/");
+    const versionIndex = parts.findIndex((part) => /^v\\d+$/.test(part));
+    const publicIdParts =
+      versionIndex >= 0 ? parts.slice(versionIndex + 1) : parts;
+    if (publicIdParts.length === 0) return null;
+    const filename = publicIdParts.join("/");
+    return filename.replace(/\\.[^.]+$/, "");
+  } catch {
+    return null;
+  }
+};
+
+const destroyCloudinaryImage = async (publicId: string) => {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  if (!cloudName || !apiKey || !apiSecret) return;
+
+  const timestamp = Math.floor(Date.now() / 1000);
+  const signatureBase = `public_id=${publicId}&timestamp=${timestamp}`;
+  const signature = crypto
+    .createHash("sha1")
+    .update(signatureBase + apiSecret)
+    .digest("hex");
+
+  const params = new URLSearchParams({
+    public_id: publicId,
+    api_key: apiKey,
+    timestamp: String(timestamp),
+    signature,
+  });
+
+  await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`, {
+    method: "POST",
+    body: params,
+  });
+};
 
 export async function DELETE(
   _req: Request,
@@ -30,6 +75,18 @@ export async function DELETE(
 
   await WordCommentModel.deleteMany({ wordId: word._id });
   await WordModel.deleteOne({ _id: word._id });
+
+  const images = Array.isArray(word.images) ? word.images : [];
+  await Promise.all(
+    images.map(async (url) => {
+      if (typeof url !== "string") return;
+      if (!url.includes("res.cloudinary.com")) return;
+      const publicId = extractCloudinaryPublicId(url);
+      if (publicId) {
+        await destroyCloudinaryImage(publicId);
+      }
+    })
+  );
 
   revalidateTag("words-feed");
   return NextResponse.json({ ok: true });
