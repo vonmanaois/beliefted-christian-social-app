@@ -88,7 +88,6 @@ export default async function PostDetailPage({ params }: PageProps) {
                     description: point.description ?? "",
                   })),
                   commentCount,
-                  savedBy: [],
                   user: prayer.isAnonymous
                     ? null
                     : {
@@ -130,6 +129,7 @@ export default async function PostDetailPage({ params }: PageProps) {
               <WordCard
                 word={{
                   ...word,
+                  content: word.content ?? "",
                   _id: word._id.toString(),
                   userId: word.userId?.toString() ?? null,
                   scriptureRef: word.scriptureRef ?? null,

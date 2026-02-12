@@ -120,6 +120,6 @@ export async function POST(req: Request) {
     likedBy: [],
   });
 
-  revalidateTag("faith-stories");
+  revalidateTag("faith-stories", "max");
   return NextResponse.json(story, { status: 201 });
 }

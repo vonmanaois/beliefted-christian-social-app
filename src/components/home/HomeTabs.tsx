@@ -75,11 +75,11 @@ export default function HomeTabs() {
                 }}
                 className={`flex-1 px-4 py-2 text-sm font-semibold transition ${
                   activeTab === tab
-                    ? "rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
+                    ? "rounded-lg bg-[color:var(--accent)] !text-[color:var(--accent-contrast)] hover:!text-[color:var(--accent-contrast)]"
                     : "rounded-lg text-[color:var(--ink)] hover:text-[color:var(--accent)]"
                 }`}
               >
-                <span className="inline-flex items-center gap-1">
+                <span className="relative z-10 inline-flex items-center gap-1">
                   {tab}
                   {showDot && (
                     <span className="inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--accent)]" />
@@ -118,11 +118,11 @@ export default function HomeTabs() {
                 }}
                 className={`w-full rounded-lg px-3 py-2 text-xs font-semibold transition ${
                   activeTab === tab
-                    ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
+                    ? "bg-[color:var(--accent)] !text-[color:var(--accent-contrast)] hover:!text-[color:var(--accent-contrast)]"
                     : "text-[color:var(--ink)] hover:text-[color:var(--accent)]"
                 }`}
               >
-                <span className="inline-flex items-center gap-1">
+                <span className="relative z-10 inline-flex items-center gap-1">
                   {tab}
                   {showDot && (
                     <span className="inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--accent)]" />

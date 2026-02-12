@@ -88,7 +88,7 @@ export async function DELETE(
     })
   );
 
-  revalidateTag("words-feed");
+  revalidateTag("words-feed", "max");
   return NextResponse.json({ ok: true });
 }
 
@@ -124,6 +124,6 @@ export async function PUT(
   word.content = content;
   await word.save();
 
-  revalidateTag("words-feed");
+  revalidateTag("words-feed", "max");
   return NextResponse.json({ ok: true, content: word.content });
 }

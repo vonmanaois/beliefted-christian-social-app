@@ -109,11 +109,11 @@ export default function ProfileTabs({
               }}
               className={`w-full rounded-lg px-4 py-2 text-sm font-semibold transition ${
                 resolvedTab === tab
-                  ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
+                  ? "bg-[color:var(--accent)] !text-[color:var(--accent-contrast)] hover:!text-[color:var(--accent-contrast)]"
                   : "text-[color:var(--ink)] hover:text-[color:var(--accent)]"
               }`}
             >
-              {tab}
+              <span className="relative z-10">{tab}</span>
             </button>
           ))}
         </div>

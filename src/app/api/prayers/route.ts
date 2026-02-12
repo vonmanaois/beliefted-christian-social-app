@@ -249,6 +249,6 @@ export async function POST(req: Request) {
     expiresAt,
   });
 
-  revalidateTag("prayers-feed");
+  revalidateTag("prayers-feed", "max");
   return NextResponse.json(prayer, { status: 201 });
 }

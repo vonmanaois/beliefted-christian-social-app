@@ -470,7 +470,8 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
               _id: session.user.id,
               name: session.user.name ?? "User",
               image: session.user.image ?? null,
-              username: session.user.username ?? null,
+              username:
+                (session.user as { username?: string | null })?.username ?? null,
             },
           }
         : newComment;

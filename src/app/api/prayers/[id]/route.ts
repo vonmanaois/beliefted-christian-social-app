@@ -31,7 +31,7 @@ export async function DELETE(
   await CommentModel.deleteMany({ prayerId: prayer._id });
   await PrayerModel.deleteOne({ _id: prayer._id });
 
-  revalidateTag("prayers-feed");
+  revalidateTag("prayers-feed", "max");
   return NextResponse.json({ ok: true });
 }
 
@@ -81,7 +81,7 @@ export async function PUT(
     prayer.content = "";
     await prayer.save();
 
-    revalidateTag("prayers-feed");
+    revalidateTag("prayers-feed", "max");
     return NextResponse.json({ ok: true, prayerPoints: prayer.prayerPoints });
   }
 
@@ -93,6 +93,6 @@ export async function PUT(
   prayer.content = content;
   await prayer.save();
 
-  revalidateTag("prayers-feed");
+  revalidateTag("prayers-feed", "max");
   return NextResponse.json({ ok: true, content: prayer.content });
 }

@@ -45,7 +45,6 @@ export default function RootLayout({
       <body
         suppressHydrationWarning
         className={`${inter.variable}`}
-        style={{ backgroundColor: "#f3f4f6" }}
       >
         <PWARegistration />
         <Providers>{children}</Providers>

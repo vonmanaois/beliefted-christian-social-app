@@ -114,21 +114,24 @@ export async function GET(request: Request) {
           const nextPrayerCreatedAt = snapshot.prayerCreatedAt;
           const notificationsCount = snapshot.notificationsCount;
 
-          let wordsChanged =
+          let wordsChanged = Boolean(
             nextWordId &&
-            nextWordCreatedAt !== null &&
-            lastWordCreatedAt !== null &&
-            (nextWordCreatedAt > lastWordCreatedAt ||
-              (nextWordCreatedAt === lastWordCreatedAt && nextWordId !== lastWordId));
-          let prayersChanged =
+              nextWordCreatedAt !== null &&
+              lastWordCreatedAt !== null &&
+              (nextWordCreatedAt > lastWordCreatedAt ||
+                (nextWordCreatedAt === lastWordCreatedAt && nextWordId !== lastWordId))
+          );
+          let prayersChanged = Boolean(
             nextPrayerId &&
-            nextPrayerCreatedAt !== null &&
-            lastPrayerCreatedAt !== null &&
-            (nextPrayerCreatedAt > lastPrayerCreatedAt ||
-              (nextPrayerCreatedAt === lastPrayerCreatedAt && nextPrayerId !== lastPrayerId));
-          let notificationsChanged =
+              nextPrayerCreatedAt !== null &&
+              lastPrayerCreatedAt !== null &&
+              (nextPrayerCreatedAt > lastPrayerCreatedAt ||
+                (nextPrayerCreatedAt === lastPrayerCreatedAt && nextPrayerId !== lastPrayerId))
+          );
+          let notificationsChanged = Boolean(
             typeof notificationsCount === "number" &&
-            notificationsCount !== lastNotificationsCount;
+              notificationsCount !== lastNotificationsCount
+          );
 
           if (lastWordId === null && nextWordId) {
             lastWordId = nextWordId;

@@ -205,6 +205,6 @@ export async function POST(req: Request) {
     images,
   });
 
-  revalidateTag("words-feed");
+  revalidateTag("words-feed", "max");
   return NextResponse.json(word, { status: 201 });
 }

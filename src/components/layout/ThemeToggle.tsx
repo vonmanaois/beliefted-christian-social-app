@@ -109,11 +109,19 @@ export default function ThemeToggle() {
             onClick={() => handleThemeChange(item.value)}
             className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm cursor-pointer ${
               theme === item.value
-                ? "border-transparent bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
-                : "border-[color:var(--panel-border)] text-[color:var(--ink)] hover:border-[color:var(--accent)]"
+                ? "border-transparent bg-[color:var(--accent)] text-[color:var(--accent-contrast)] hover:text-[color:var(--accent-contrast)]"
+                : "border-[color:var(--panel-border)] text-[color:var(--ink)] hover:border-[color:var(--accent)] hover:text-[color:var(--ink)]"
             }`}
           >
-            <span className="font-semibold">{item.label}</span>
+            <span
+              className={`relative z-10 font-semibold ${
+                theme === item.value
+                  ? "text-[color:var(--accent-contrast)]"
+                  : "text-[color:var(--ink)]"
+              }`}
+            >
+              {item.label}
+            </span>
             <span
               className={`relative inline-flex h-5 w-10 items-center rounded-full ${
                 theme === item.value ? "bg-white/30" : "bg-[color:var(--surface-strong)]"

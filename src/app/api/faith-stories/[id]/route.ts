@@ -94,7 +94,7 @@ export async function PUT(
   story.content = body.data.content.trim();
   await story.save();
 
-  revalidateTag("faith-stories");
+  revalidateTag("faith-stories", "max");
   return NextResponse.json({ ok: true, title: story.title, content: story.content });
 }
 
@@ -130,6 +130,6 @@ export async function DELETE(
       await destroyCloudinaryImage(publicId);
     }
   }
-  revalidateTag("faith-stories");
+  revalidateTag("faith-stories", "max");
   return NextResponse.json({ ok: true });
 }
