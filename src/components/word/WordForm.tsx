@@ -401,6 +401,7 @@ export default function WordForm({
               key={`${item.previewUrl}-${index}`}
               className="relative h-20 w-20 overflow-hidden rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--surface-strong)]"
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={item.previewUrl}
                 alt="Selected"

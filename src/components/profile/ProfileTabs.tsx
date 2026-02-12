@@ -66,14 +66,11 @@ export default function ProfileTabs({
   );
 
   const hasInitialized = useRef(false);
-
   useEffect(() => {
     if (!hasInitialized.current) {
       hasInitialized.current = true;
-      return;
     }
-    setRefreshKey((prev) => prev + 1);
-  }, [resolvedTab]);
+  }, []);
 
   useEffect(() => {
     const handleOpenPrayer = () => {
@@ -105,6 +102,9 @@ export default function ProfileTabs({
               key={tab}
               type="button"
               onClick={() => {
+                if (tab !== resolvedTab) {
+                  setRefreshKey((prev) => prev + 1);
+                }
                 setActiveTab(tab);
               }}
               className={`w-full rounded-lg px-4 py-2 text-sm font-semibold transition ${

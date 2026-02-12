@@ -61,7 +61,7 @@ export default function Sidebar() {
   const [notificationsClosing, setNotificationsClosing] = useState(false);
   const [infoPanel, setInfoPanel] = useState<"why" | "how" | "guidelines" | null>(null);
   const [infoClosing, setInfoClosing] = useState(false);
-  const [menuMounted, setMenuMounted] = useState(false);
+  const [menuMounted] = useState(true);
   const touchStartX = useRef<number | null>(null);
   const triggerPanelClose = (target: "search") => {
     if (typeof window !== "undefined") {
@@ -265,10 +265,6 @@ export default function Sidebar() {
     return () => window.removeEventListener("open-signin", handleOpenSignIn);
   }, [openSignIn]);
 
-  useEffect(() => {
-    setMenuMounted(true);
-  }, []);
-
   const closeMenu = useCallback(() => {
     if (!showMobileMenu) return;
     setIsMenuClosing(true);
@@ -346,7 +342,7 @@ export default function Sidebar() {
       window.removeEventListener("touchstart", handleTouchStart);
       window.removeEventListener("touchend", handleTouchEnd);
     };
-  }, [showMobileMenu]);
+  }, [showMobileMenu, notificationsOpen, infoPanel, closeMenu, closeNotifications, closeInfoPanel]);
 
   useEffect(() => {
     if (typeof document === "undefined") return;

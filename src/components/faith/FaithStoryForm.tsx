@@ -125,7 +125,7 @@ export default function FaithStoryForm({
       if (coverPreview) URL.revokeObjectURL(coverPreview);
       setCoverImage(processed);
       setCoverPreview(URL.createObjectURL(processed));
-    } catch (err) {
+    } catch {
       setError("Failed to prepare image.");
     } finally {
       event.target.value = "";
