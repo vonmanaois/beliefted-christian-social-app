@@ -202,10 +202,39 @@ export default function WordForm({
       return;
     }
 
+    const isValidYoutubeUrl = (value: string) => {
+      try {
+        const url = new URL(value);
+        const host = url.hostname.replace(/^www\./, "");
+        if (host === "youtu.be") {
+          const id = url.pathname.split("/").filter(Boolean)[0] ?? "";
+          return id.length >= 6;
+        }
+        if (host === "youtube.com" || host.endsWith(".youtube.com")) {
+          if (url.pathname.startsWith("/watch")) {
+            const id = url.searchParams.get("v") ?? "";
+            return id.length >= 6;
+          }
+          if (url.pathname.startsWith("/shorts/")) {
+            const id = url.pathname.split("/").filter(Boolean)[1] ?? "";
+            return id.length >= 6;
+          }
+          if (url.pathname.startsWith("/embed/") || url.pathname.startsWith("/v/")) {
+            const id = url.pathname.split("/").filter(Boolean)[1] ?? "";
+            return id.length >= 6;
+          }
+          if (url.pathname.startsWith("/live/")) {
+            const id = url.pathname.split("/").filter(Boolean)[1] ?? "";
+            return id.length >= 6;
+          }
+        }
+        return false;
+      } catch {
+        return false;
+      }
+    };
     const isValidYoutube = youtubeUrl.trim()
-      ? /https?:\/\/(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([A-Za-z0-9_-]{6,})/i.test(
-          youtubeUrl.trim()
-        )
+      ? isValidYoutubeUrl(youtubeUrl.trim())
       : true;
     const isValidSpotify = spotifyUrl.trim()
       ? /https?:\/\/open\.spotify\.com\/(track|album|playlist|episode|show)\/[A-Za-z0-9]+/i.test(
