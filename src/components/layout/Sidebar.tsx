@@ -46,6 +46,7 @@ export default function Sidebar() {
     newWordPosts,
     newPrayerPosts,
     activeHomeTab,
+    setActiveHomeTab,
     lastSeenNotificationsCount,
     setLastSeenNotificationsCount,
     setNewWordPosts,
@@ -844,6 +845,7 @@ export default function Sidebar() {
             if (pathname !== "/") {
               router.push("/");
             }
+            setActiveHomeTab("words");
             if (activeHomeTab === "prayers") {
               if (newPrayerPosts) {
                 queryClient.invalidateQueries({ queryKey: ["prayers"] });
@@ -1044,13 +1046,14 @@ export default function Sidebar() {
             type="button"
             className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
             onClick={() => {
-              if (pathname !== "/") {
-                router.push("/");
-              }
-              if (newWordPosts) {
-                queryClient.invalidateQueries({ queryKey: ["words"] });
-              }
-              setNewWordPosts(false);
+            if (pathname !== "/") {
+              router.push("/");
+            }
+            setActiveHomeTab("words");
+            if (newWordPosts) {
+              queryClient.invalidateQueries({ queryKey: ["words"] });
+            }
+            setNewWordPosts(false);
             }}
             aria-label="Home"
           >
