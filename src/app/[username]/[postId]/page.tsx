@@ -110,7 +110,7 @@ export default async function PostDetailPage({ params }: PageProps) {
         <div className="page-grid">
           <Sidebar />
           <div>
-            <PostBackHeader label="Prayer" refreshOnBack />
+            <PostBackHeader label="Prayer" />
             {isOwner && prayer.privacy && prayer.privacy !== "public" && (
               <div className="mt-3 text-xs text-[color:var(--subtle)]">
                 <span className="rounded-full border border-[color:var(--panel-border)] px-2 py-0.5 font-semibold">
@@ -195,7 +195,7 @@ export default async function PostDetailPage({ params }: PageProps) {
         <div className="page-grid">
           <Sidebar />
           <div>
-            <PostBackHeader label="Word" refreshOnBack />
+            <PostBackHeader label="Word" />
             {isOwner && word.privacy && word.privacy !== "public" && (
               <div className="mt-3 text-xs text-[color:var(--subtle)]">
                 <span className="rounded-full border border-[color:var(--panel-border)] px-2 py-0.5 font-semibold">

@@ -185,10 +185,14 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
     word.createdAt instanceof Date ? word.createdAt : new Date(word.createdAt);
   const likedBy = Array.isArray(word.likedBy) ? word.likedBy : [];
   const savedBy = Array.isArray(word.savedBy) ? word.savedBy : [];
+  const [localLikedBy, setLocalLikedBy] = useState<string[]>(likedBy);
   const savedCount = savedBy.length;
-  const hasLiked = session?.user?.id
-    ? likedBy.includes(String(session.user.id))
-    : false;
+  const viewerId = session?.user?.id ? String(session.user.id) : null;
+  const hasLiked = viewerId ? localLikedBy.includes(viewerId) : false;
+
+  useEffect(() => {
+    setLocalLikedBy(likedBy);
+  }, [word.likedBy]);
   const hasSaved = session?.user?.id
     ? savedBy.includes(String(session.user.id))
     : false;
@@ -389,12 +393,16 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
     },
     onMutate: async () => {
       setLikeError(null);
-      if (!session?.user?.id) return null;
+      if (!viewerId) return null;
       const previous = queryClient.getQueriesData({ queryKey: ["words"] });
-      const viewerId = String(session.user.id);
+      const previousLocal = localLikedBy;
+      const already = previousLocal.includes(viewerId);
+      const nextLocal = already
+        ? previousLocal.filter((id) => id !== viewerId)
+        : [...previousLocal, viewerId];
+      setLocalLikedBy(nextLocal);
       updateWordCache((item) => {
         const current = Array.isArray(item.likedBy) ? item.likedBy : [];
-        const already = current.includes(viewerId);
         const nextLikedBy = already
           ? current.filter((id) => id !== viewerId)
           : [...current, viewerId];
@@ -404,13 +412,16 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
         setLikeBurst(true);
         setTimeout(() => setLikeBurst(false), 180);
       }
-      return { previous };
+      return { previous, previousLocal };
     },
     onError: (_error, _variables, context) => {
       if (context?.previous) {
         context.previous.forEach(([key, data]) => {
           queryClient.setQueryData(key, data);
         });
+      }
+      if (context?.previousLocal) {
+        setLocalLikedBy(context.previousLocal);
       }
       setLikeError("Couldn't update like.");
     },
@@ -1032,9 +1043,9 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                 weight={hasLiked ? "fill" : "regular"}
                 className={likeBurst ? "scale-110 transition-transform duration-150" : "transition-transform duration-150"}
               />
-              {likedBy.length > 0 && (
+              {localLikedBy.length > 0 && (
                 <span className="text-xs font-semibold text-[color:var(--ink)] transition-all duration-200">
-                  {likedBy.length}
+                  {localLikedBy.length}
                 </span>
               )}
             </span>
