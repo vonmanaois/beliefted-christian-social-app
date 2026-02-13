@@ -48,7 +48,9 @@ const pushEvent = (payload: StreamPayload) => {
 };
 
 const pushReplayableEvent = (payload: StreamPayload) => {
-  const { notificationsCount: _omit, viewerId: _omitViewer, ...replayable } = payload;
+  const { notificationsCount, viewerId, ...replayable } = payload;
+  void notificationsCount;
+  void viewerId;
   return pushEvent(replayable);
 };
 
