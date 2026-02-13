@@ -7,7 +7,13 @@ import dynamic from "next/dynamic";
 import PrayerFeed from "@/components/prayer/PrayerFeed";
 import WordFeed from "@/components/word/WordFeed";
 import Modal from "@/components/layout/Modal";
-import { UserCircle } from "@phosphor-icons/react";
+import {
+  Book,
+  BookmarkSimple,
+  HandsPraying,
+  HandsClapping,
+  UserCircle,
+} from "@phosphor-icons/react";
 import { cloudinaryTransform } from "@/lib/cloudinary";
 import Spinner from "@/components/ui/Spinner";
 
@@ -34,6 +40,21 @@ const WordForm = dynamic(() => import("@/components/word/WordForm"), {
 });
 
 type Tab = (typeof tabs)[number];
+
+const tabIcon = (tab: Tab) => {
+  switch (tab) {
+    case "Word":
+      return <Book size={18} weight="regular" />;
+    case "Prayers":
+      return <HandsPraying size={18} weight="regular" />;
+    case "Reprayed":
+      return <HandsClapping size={18} weight="fill" />;
+    case "Saved":
+      return <BookmarkSimple size={18} weight="regular" />;
+    default:
+      return null;
+  }
+};
 
 type ProfileTabsProps = {
   userId: string;
@@ -107,14 +128,18 @@ export default function ProfileTabs({
                 }
                 setActiveTab(tab);
               }}
-              className={`w-full rounded-lg px-4 py-2 text-sm font-semibold transition ${
+              className={`w-full rounded-lg px-4 py-2 text-sm font-semibold transition flex items-center justify-center ${
                 resolvedTab === tab
                   ? "bg-[color:var(--accent)] !text-[color:var(--accent-contrast)] hover:!text-[color:var(--accent-contrast)]"
                   : "text-[color:var(--ink)] hover:text-[color:var(--accent)]"
               }`}
               data-active={resolvedTab === tab ? "true" : "false"}
+              aria-label={tab}
             >
-              <span className="relative z-10">{tab}</span>
+              <span className="relative z-10 inline-flex items-center justify-center">
+                {tabIcon(tab)}
+                <span className="sr-only">{tab}</span>
+              </span>
             </button>
           ))}
         </div>

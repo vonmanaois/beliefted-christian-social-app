@@ -7,8 +7,8 @@ import { signIn, signOut, useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import {
+  Article,
   BellSimple,
-  BookOpenText,
   GoogleLogo,
   House,
   Info,
@@ -926,7 +926,7 @@ export default function Sidebar() {
           onClick={() => router.push("/faith-stories")}
         >
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
-            <BookOpenText size={22} weight="regular" />
+            <Article size={22} weight="regular" />
           </span>
           <span className="hidden lg:inline">Faith Story</span>
         </button>
@@ -1117,7 +1117,7 @@ export default function Sidebar() {
             onClick={() => router.push("/faith-stories")}
             aria-label="Faith Stories"
           >
-            <BookOpenText size={24} weight="regular" />
+            <Article size={24} weight="regular" />
           </button>
         </div>
       </nav>
