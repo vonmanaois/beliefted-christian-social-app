@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useQueryClient } from "@tanstack/react-query";
 import PrayerWall from "@/components/prayer/PrayerWall";
@@ -25,48 +25,21 @@ export default function HomeTabs() {
     activeHomeTab,
   } = useUIStore();
 
-  const [activeIndex, setActiveIndex] = useState(() => {
-    if (activeHomeTab === "prayers") return 1;
-    if (activeHomeTab === "following") return 2;
-    return 0;
-  });
-  const activeTab = useMemo<Tab>(() => tabs[activeIndex], [activeIndex]);
+  const activeIndex =
+    activeHomeTab === "prayers" ? 1 : activeHomeTab === "following" ? 2 : 0;
+  const activeTab: Tab = tabs[activeIndex];
 
   useEffect(() => {
-    if (activeHomeTab === "prayers") {
-      setActiveIndex(1);
-      return;
-    }
-    if (activeHomeTab === "following") {
-      setActiveIndex(2);
-      return;
-    }
-    setActiveIndex(0);
-  }, [activeHomeTab]);
-
-  useEffect(() => {
-    const handleOpenPrayer = () => setActiveIndex(1);
+    const handleOpenPrayer = () => setActiveHomeTab("prayers");
     window.addEventListener("open-prayer-composer", handleOpenPrayer);
     return () => window.removeEventListener("open-prayer-composer", handleOpenPrayer);
-  }, []);
+  }, [setActiveHomeTab]);
 
   useEffect(() => {
-    const handleOpenWord = () => setActiveIndex(0);
+    const handleOpenWord = () => setActiveHomeTab("words");
     window.addEventListener("open-word-composer", handleOpenWord);
     return () => window.removeEventListener("open-word-composer", handleOpenWord);
-  }, []);
-
-  useEffect(() => {
-    if (activeTab === "Prayer Wall") {
-      setActiveHomeTab("prayers");
-      return;
-    }
-    if (activeTab === "Following") {
-      setActiveHomeTab("following");
-      return;
-    }
-    setActiveHomeTab("words");
-  }, [activeTab, setActiveHomeTab]);
+  }, [setActiveHomeTab]);
 
   return (
     <div className="flex flex-col gap-6 w-full">
@@ -101,16 +74,16 @@ export default function HomeTabs() {
                   if (tab === "Prayer Wall") {
                     queryClient.invalidateQueries({ queryKey: ["prayers"] });
                     setNewPrayerPosts(false);
-                    setActiveIndex(1);
+                    setActiveHomeTab("prayers");
                     return;
                   }
                   if (tab === "Following") {
-                    setActiveIndex(2);
+                    setActiveHomeTab("following");
                     return;
                   }
                   queryClient.invalidateQueries({ queryKey: ["words"] });
                   setNewWordPosts(false);
-                  setActiveIndex(0);
+                  setActiveHomeTab("words");
                 }}
                 className={`flex-1 px-4 py-2 text-sm font-semibold transition ${
                   activeTab === tab
@@ -149,16 +122,16 @@ export default function HomeTabs() {
                   if (tab === "Prayer Wall") {
                     queryClient.invalidateQueries({ queryKey: ["prayers"] });
                     setNewPrayerPosts(false);
-                    setActiveIndex(1);
+                    setActiveHomeTab("prayers");
                     return;
                   }
                   if (tab === "Following") {
-                    setActiveIndex(2);
+                    setActiveHomeTab("following");
                     return;
                   }
                   queryClient.invalidateQueries({ queryKey: ["words"] });
                   setNewWordPosts(false);
-                  setActiveIndex(0);
+                  setActiveHomeTab("words");
                 }}
                 className={`w-full rounded-lg px-3 py-2 text-xs font-semibold transition ${
                   activeTab === tab

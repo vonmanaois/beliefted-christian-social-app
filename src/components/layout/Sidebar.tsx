@@ -195,7 +195,6 @@ export default function Sidebar() {
 
       unifiedStream.onmessage = (event) => {
         try {
-          const now = Date.now();
           const viewerId = currentUserIdRef.current;
           if (!viewerId) return;
           const payload = JSON.parse(event.data) as {

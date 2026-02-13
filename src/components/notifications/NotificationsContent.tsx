@@ -1,7 +1,6 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
 import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
 import EmptyState from "@/components/ui/EmptyState";

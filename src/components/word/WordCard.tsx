@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -183,7 +183,10 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
   const wordId = normalizeId(word._id);
   const createdAtValue =
     word.createdAt instanceof Date ? word.createdAt : new Date(word.createdAt);
-  const likedBy = Array.isArray(word.likedBy) ? word.likedBy : [];
+  const likedBy = useMemo(
+    () => (Array.isArray(word.likedBy) ? word.likedBy : []),
+    [word.likedBy]
+  );
   const savedBy = Array.isArray(word.savedBy) ? word.savedBy : [];
   const [localLikedBy, setLocalLikedBy] = useState<string[]>(likedBy);
   const savedCount = savedBy.length;
@@ -192,7 +195,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
 
   useEffect(() => {
     setLocalLikedBy(likedBy);
-  }, [word.likedBy]);
+  }, [likedBy]);
   const hasSaved = session?.user?.id
     ? savedBy.includes(String(session.user.id))
     : false;
