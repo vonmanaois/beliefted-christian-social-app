@@ -34,6 +34,7 @@ let unifiedStreamUsers = 0;
 let unifiedStreamRetryDelay = 1000;
 let unifiedStreamRetryTimer: ReturnType<typeof setTimeout> | null = null;
 let unifiedStreamCloseTimer: ReturnType<typeof setTimeout> | null = null;
+let unifiedStreamUserId: string | null = null;
 
 export default function Sidebar() {
   const { data: session, status } = useSession();
@@ -55,6 +56,7 @@ export default function Sidebar() {
   const lastUserIdRef = useRef<string | null>(null);
   const notificationsOpenRef = useRef(false);
   const sseConnectedRef = useRef(false);
+  const currentUserIdRef = useRef<string | null>(null);
   const lastCountRefreshRef = useRef(0);
   const router = useRouter();
   const pathname = usePathname();
@@ -118,6 +120,7 @@ export default function Sidebar() {
 
   useEffect(() => {
     const nextUserId = session?.user?.id ?? null;
+    currentUserIdRef.current = nextUserId;
     if (lastUserIdRef.current === nextUserId) return;
     lastUserIdRef.current = nextUserId;
     setLastSeenNotificationsCount(0);
@@ -183,6 +186,7 @@ export default function Sidebar() {
       if (document.visibilityState === "hidden") return;
       if (unifiedStream) return;
       unifiedStream = new EventSource("/api/stream");
+      unifiedStreamUserId = currentUserIdRef.current ?? null;
 
       unifiedStream.onopen = () => {
         unifiedStreamRetryDelay = 1000;
@@ -192,6 +196,8 @@ export default function Sidebar() {
       unifiedStream.onmessage = (event) => {
         try {
           const now = Date.now();
+          const viewerId = currentUserIdRef.current;
+          if (!viewerId) return;
           const payload = JSON.parse(event.data) as {
             wordsChanged?: boolean;
             prayersChanged?: boolean;
@@ -201,16 +207,6 @@ export default function Sidebar() {
             prayerAuthorIds?: string[];
             notificationsCount?: number;
           };
-          const viewerId = session?.user?.id ?? null;
-          if (!viewerId) {
-            if (typeof payload.notificationsCount === "number") {
-              queryClient.setQueryData(
-                ["notifications", "count", session?.user?.id ?? "guest"],
-                payload.notificationsCount
-              );
-            }
-            return;
-          }
           const wordHasOtherAuthor =
             !payload.wordAuthorId || payload.wordAuthorId !== viewerId;
           const prayerHasOtherAuthor =
@@ -223,17 +219,17 @@ export default function Sidebar() {
           }
           if (typeof payload.notificationsCount === "number") {
             queryClient.setQueryData(
-              ["notifications", "count", session?.user?.id ?? "guest"],
+              ["notifications", "count", viewerId ?? "guest"],
               payload.notificationsCount
             );
             if (payload.notificationsCount > lastSeenNotificationsCount) {
               queryClient.invalidateQueries({
-                queryKey: ["notifications", session?.user?.id ?? "guest"],
+                queryKey: ["notifications", viewerId ?? "guest"],
               });
             }
             if (notificationsOpenRef.current) {
               queryClient.invalidateQueries({
-                queryKey: ["notifications", session?.user?.id ?? "guest"],
+                queryKey: ["notifications", viewerId ?? "guest"],
               });
             }
           }
@@ -290,6 +286,15 @@ export default function Sidebar() {
     setNewWordPosts,
     lastSeenNotificationsCount,
   ]);
+
+  useEffect(() => {
+    const nextUserId = session?.user?.id ?? null;
+    if (unifiedStreamUserId && unifiedStreamUserId !== nextUserId) {
+      unifiedStream?.close();
+      unifiedStream = null;
+      sseConnectedRef.current = false;
+    }
+  }, [session?.user?.id]);
 
   const openNotifications = () => {
     if (!isAuthenticated) {

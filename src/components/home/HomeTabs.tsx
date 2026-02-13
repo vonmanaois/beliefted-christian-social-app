@@ -22,10 +22,27 @@ export default function HomeTabs() {
     setNewWordPosts,
     setNewPrayerPosts,
     setActiveHomeTab,
+    activeHomeTab,
   } = useUIStore();
 
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(() => {
+    if (activeHomeTab === "prayers") return 1;
+    if (activeHomeTab === "following") return 2;
+    return 0;
+  });
   const activeTab = useMemo<Tab>(() => tabs[activeIndex], [activeIndex]);
+
+  useEffect(() => {
+    if (activeHomeTab === "prayers") {
+      setActiveIndex(1);
+      return;
+    }
+    if (activeHomeTab === "following") {
+      setActiveIndex(2);
+      return;
+    }
+    setActiveIndex(0);
+  }, [activeHomeTab]);
 
   useEffect(() => {
     const handleOpenPrayer = () => setActiveIndex(1);

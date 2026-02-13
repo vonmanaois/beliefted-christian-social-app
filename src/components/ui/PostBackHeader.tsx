@@ -24,6 +24,11 @@ export default function PostBackHeader({ label, refreshOnBack }: PostBackHeaderP
             queryClient.invalidateQueries({ queryKey: ["faith-stories"] });
           }
           router.back();
+          if (refreshOnBack && typeof window !== "undefined") {
+            window.setTimeout(() => {
+              window.dispatchEvent(new Event("feed:refresh"));
+            }, 200);
+          }
         }}
         className="inline-flex items-center justify-center h-11 w-11 rounded-full text-[color:var(--ink)] hover:text-[color:var(--accent)]"
         aria-label="Back"
