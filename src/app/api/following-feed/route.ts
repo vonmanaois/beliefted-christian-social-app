@@ -5,6 +5,7 @@ import dbConnect from "@/lib/db";
 import UserModel from "@/models/User";
 import PrayerModel from "@/models/Prayer";
 import WordModel from "@/models/Word";
+import FaithStoryModel from "@/models/FaithStory";
 import CommentModel from "@/models/Comment";
 import WordCommentModel from "@/models/WordComment";
 import { Types } from "mongoose";
@@ -96,6 +97,28 @@ export async function GET(req: Request) {
   const sliced = combined.slice(0, limit + 1);
   const pageItems = sliced.slice(0, limit);
 
+  const sharedStoryIds = pageItems
+    .filter((item) => item.type === "word")
+    .map((item) => (item.data as { sharedFaithStoryId?: unknown }).sharedFaithStoryId)
+    .filter((id): id is Types.ObjectId | string => Boolean(id))
+    .map((id) => String(id));
+  const uniqueSharedStoryIds = Array.from(new Set(sharedStoryIds));
+  const sharedStories = uniqueSharedStoryIds.length
+    ? await FaithStoryModel.find({ _id: { $in: uniqueSharedStoryIds } })
+        .select("title coverImage authorUsername")
+        .lean()
+    : [];
+  const sharedStoryMap = new Map(
+    sharedStories.map((story) => [
+      String(story._id),
+      {
+        title: story.title ?? "",
+        coverImage: story.coverImage ?? null,
+        authorUsername: story.authorUsername ?? null,
+      },
+    ])
+  );
+
   const userIds = pageItems
     .map((item) => String(item.data.userId))
     .filter(Boolean);
@@ -119,6 +142,13 @@ export async function GET(req: Request) {
           username: word.authorUsername,
         };
         const commentCount = await WordCommentModel.countDocuments({ wordId: word._id });
+        const sharedStoryId = word.sharedFaithStoryId
+          ? String(word.sharedFaithStoryId)
+          : null;
+        const fallbackShared =
+          sharedStoryId && sharedStoryMap.has(sharedStoryId)
+            ? sharedStoryMap.get(sharedStoryId) ?? null
+            : null;
         return {
           type: "word",
           word: {
@@ -127,6 +157,23 @@ export async function GET(req: Request) {
             user,
             commentCount,
             userId: String(word.userId),
+            sharedFaithStoryId: sharedStoryId,
+            sharedFaithStory:
+              sharedStoryId &&
+              (word.sharedFaithStoryTitle || fallbackShared)
+                ? {
+                    id: sharedStoryId,
+                    title: word.sharedFaithStoryTitle ?? fallbackShared?.title ?? "",
+                    coverImage:
+                      word.sharedFaithStoryCover ??
+                      fallbackShared?.coverImage ??
+                      null,
+                    authorUsername:
+                      word.sharedFaithStoryAuthorUsername ??
+                      fallbackShared?.authorUsername ??
+                      null,
+                  }
+                : null,
           },
         };
       }

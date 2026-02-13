@@ -108,6 +108,14 @@ body {
   min-height: 100vh;
 }
 
+@media (max-width: 640px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
 html[data-theme="midnight"] body {
   background: var(--surface);
 }

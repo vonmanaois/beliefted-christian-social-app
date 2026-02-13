@@ -65,7 +65,7 @@ export default async function PublicProfilePage({
                   size={80}
                 />
               ) : (
-                <div className="h-20 w-20 rounded-full overflow-hidden border border-slate-200 bg-slate-200">
+                <div className="h-20 w-20 shrink-0 rounded-full overflow-hidden border border-slate-200 bg-slate-200">
                   {user?.image ? (
                     <Image
                       src={cloudinaryTransform(user.image, { width: 160, height: 160 })}
