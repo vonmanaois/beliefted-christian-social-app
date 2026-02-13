@@ -10,6 +10,7 @@ import { revalidateTag } from "next/cache";
 import NotificationModel from "@/models/Notification";
 import ModerationLogModel from "@/models/ModerationLog";
 import { isAdminEmail } from "@/lib/admin";
+import sanitizeHtml from "sanitize-html";
 
 const extractCloudinaryPublicId = (url: string) => {
   try {
@@ -77,7 +78,7 @@ export async function PUT(
 
   const StorySchema = z.object({
     title: z.string().trim().min(1).max(160),
-    content: z.string().trim().min(1).max(10000),
+    content: z.string().trim().min(1).max(50000),
     coverImage: z.string().url().optional().or(z.literal("")),
   });
 
@@ -103,8 +104,56 @@ export async function PUT(
       : null;
 
   const previousCover = story.coverImage ?? null;
+  const rawContent = body.data.content.trim();
+  const decodedContent =
+    rawContent.includes("&lt;") && !rawContent.includes("<")
+      ? rawContent
+          .replace(/&lt;/g, "<")
+          .replace(/&gt;/g, ">")
+          .replace(/&amp;/g, "&")
+          .replace(/&quot;/g, "\"")
+          .replace(/&#39;/g, "'")
+      : rawContent;
+  const sanitizedContent = sanitizeHtml(decodedContent, {
+    allowedTags: [
+      "p",
+      "br",
+      "strong",
+      "em",
+      "u",
+      "s",
+      "blockquote",
+      "h2",
+      "h3",
+      "hr",
+      "ul",
+      "ol",
+      "li",
+      "img",
+    ],
+    allowedAttributes: {
+      img: ["src", "alt", "title"],
+    },
+    allowedSchemes: ["http", "https"],
+    allowedSchemesByTag: {
+      img: ["http", "https"],
+    },
+  });
+  const plainText = sanitizedContent
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!plainText) {
+    return NextResponse.json({ error: "Story content is required" }, { status: 400 });
+  }
+  const inlineImages = sanitizedContent.match(/<img /g) ?? [];
+  if (inlineImages.length > 2) {
+    return NextResponse.json({ error: "You can add up to 2 images." }, { status: 400 });
+  }
+
   story.title = body.data.title.trim();
-  story.content = body.data.content.trim();
+  story.content = sanitizedContent;
   if (nextCover) {
     story.coverImage = nextCover;
   }

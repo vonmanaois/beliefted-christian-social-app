@@ -37,6 +37,25 @@ type FaithStory = {
   coverImage?: string | null;
 };
 
+const decodeIfEncoded = (value: string) => {
+  if (!value) return "";
+  if (value.includes("<")) return value;
+  if (!value.includes("&lt;")) return value;
+  return value
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;/g, "'");
+};
+
+const stripHtml = (value: string) =>
+  decodeIfEncoded(value)
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
 export default function FaithStoryList() {
   const { data: session } = useSession();
   const isAuthenticated = Boolean(session?.user?.id);
@@ -162,16 +181,26 @@ export default function FaithStoryList() {
             .includes(queryText)
         : true;
       if (matchesQuery) {
-        queryClient.setQueryData<FaithStory[]>(
-          ["faith-stories", debounced],
+        queryClient.setQueriesData<FaithStory[]>(
+          { queryKey: ["faith-stories"] },
           (current) => {
-            if (!Array.isArray(current)) return [normalized];
+            if (!Array.isArray(current)) return current ?? [normalized];
             if (current.some((item) => item._id === normalized._id)) {
               return current;
             }
             return [normalized, ...current];
           }
         );
+      }
+      if (typeof window !== "undefined") {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < window.localStorage.length; i += 1) {
+          const key = window.localStorage.key(i);
+          if (key && key.startsWith("faith-stories-etag:")) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((key) => window.localStorage.removeItem(key));
       }
       await queryClient.invalidateQueries({ queryKey: ["faith-stories"] });
       const username = story.authorUsername ?? story.user?.username;
@@ -346,7 +375,7 @@ export default function FaithStoryList() {
                   {story.title}
                 </h2>
                 <p className="text-sm text-[color:var(--subtle)] line-clamp-4 whitespace-pre-line">
-                  {story.content}
+                  {stripHtml(story.content)}
                 </p>
               </button>
             );

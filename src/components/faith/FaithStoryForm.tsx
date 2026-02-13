@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ImageSquare, X } from "@phosphor-icons/react";
 import { useSession } from "next-auth/react";
+import FaithStoryEditor from "@/components/faith/FaithStoryEditor";
 
 type FaithStoryFormProps = {
   initialTitle?: string;
@@ -31,17 +32,26 @@ export default function FaithStoryForm({
   const { data: session } = useSession();
   const isAuthenticated = Boolean(session?.user?.id);
   const [title, setTitle] = useState(initialTitle);
-  const [content, setContent] = useState(initialContent);
+  const normalizedInitialContent = useMemo(() => {
+    const trimmed = initialContent.trim();
+    if (!trimmed) return "";
+    if (trimmed.includes("<")) return trimmed;
+    return `<p>${trimmed.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")}</p>`;
+  }, [initialContent]);
+  const [content, setContent] = useState(normalizedInitialContent);
   const [isAnonymous, setIsAnonymous] = useState(initialAnonymous);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [coverImage, setCoverImage] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
-  const textRef = useRef<HTMLTextAreaElement | null>(null);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
+  const plainContent = useMemo(() => {
+    const noTags = content.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ");
+    return noTags.replace(/\s+/g, " ").trim();
+  }, [content]);
   const isDirty =
     title.trim() !== initialTitle.trim() ||
-    content.trim() !== initialContent.trim() ||
+    content.trim() !== normalizedInitialContent.trim() ||
     isAnonymous !== initialAnonymous ||
     Boolean(coverImage);
 
@@ -64,15 +74,6 @@ export default function FaithStoryForm({
       if (coverPreview) URL.revokeObjectURL(coverPreview);
     };
   }, [coverPreview]);
-
-  useEffect(() => {
-    const el = textRef.current;
-    if (!el) return;
-    const maxHeight = Math.max(260, Math.floor(window.innerHeight * 0.6));
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
-    el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
-  }, [content]);
 
   const resizeImage = async (file: File) => {
     const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -152,7 +153,7 @@ export default function FaithStoryForm({
       openSignIn();
       return;
     }
-    if (!title.trim() || !content.trim()) {
+    if (!title.trim() || !plainContent) {
       setError("Title and story are required.");
       return;
     }
@@ -232,16 +233,13 @@ export default function FaithStoryForm({
         onFocus={handleUnauthedTextClick}
         onChange={(event) => setTitle(event.target.value)}
       />
-      <textarea
-        ref={textRef}
-        className="bg-transparent text-sm text-[color:var(--ink)] outline-none min-h-[240px] resize-none focus:outline-none focus:ring-0 overflow-hidden"
-        placeholder="Share your faith story..."
+      <FaithStoryEditor
         value={content}
-        readOnly={!isAuthenticated}
-        aria-disabled={!isAuthenticated}
-        onClick={handleUnauthedTextClick}
-        onFocus={handleUnauthedTextClick}
-        onChange={(event) => setContent(event.target.value)}
+        onChange={setContent}
+        disabled={!isAuthenticated || isSaving}
+        placeholder="Share your faith story..."
+        maxImages={2}
+        onError={(message) => setError(message)}
       />
       <div className="flex items-center gap-3 text-xs text-[color:var(--subtle)]">
         <button

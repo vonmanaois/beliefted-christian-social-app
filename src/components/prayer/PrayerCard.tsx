@@ -57,6 +57,7 @@ import {
   LockSimple,
   PlusCircle,
   NotePencil,
+  MinusCircle,
   UserCircle,
   UsersThree,
 } from "@phosphor-icons/react";
@@ -102,6 +103,26 @@ type Comment = {
   createdAt: string;
   userId?: CommentUser | null;
 };
+
+type EditPoint = {
+  id: string;
+  title: string;
+  description: string;
+};
+
+const makePointId = () => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
+const mapEditPoints = (points?: { title: string; description: string }[]) =>
+  (points ?? []).map((point) => ({
+    id: makePointId(),
+    title: point.title ?? "",
+    description: point.description ?? "",
+  }));
 
 const formatPostTime = (timestamp: string) => {
   const createdAt = new Date(timestamp);
@@ -174,8 +195,8 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
   const [commentError, setCommentError] = useState<string | null>(null);
   const [showFullContent, setShowFullContent] = useState(false);
   const [editText, setEditText] = useState(prayer.content);
-  const [editPoints, setEditPoints] = useState(
-    prayer.prayerPoints ?? []
+  const [editPoints, setEditPoints] = useState<EditPoint[]>(() =>
+    mapEditPoints(prayer.prayerPoints)
   );
   const [editPointsOriginal, setEditPointsOriginal] = useState(
     JSON.stringify(prayer.prayerPoints ?? [])
@@ -239,7 +260,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
 
   useEffect(() => {
     if (!isEditing && prayer.kind === "request") {
-      setEditPoints(prayer.prayerPoints ?? []);
+      setEditPoints(mapEditPoints(prayer.prayerPoints));
       setEditPointsOriginal(JSON.stringify(prayer.prayerPoints ?? []));
     }
   }, [prayer.kind, prayer.prayerPoints, isEditing]);
@@ -484,7 +505,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     },
     onSuccess: async (data) => {
       if (prayer.kind === "request" && "prayerPoints" in data) {
-        setEditPoints(data.prayerPoints);
+        setEditPoints(mapEditPoints(data.prayerPoints));
         setEditPointsOriginal(JSON.stringify(data.prayerPoints));
         updatePrayerCache((item) => ({
           ...item,
@@ -680,7 +701,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
   const handleEditStart = () => {
     setEditError(null);
     if (prayer.kind === "request") {
-      setEditPoints(requestPoints);
+      setEditPoints(mapEditPoints(requestPoints));
       setEditPointsOriginal(JSON.stringify(requestPoints));
     } else {
       setEditText(prayer.content);
@@ -693,7 +714,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     setIsEditing(false);
     setEditError(null);
     if (prayer.kind === "request") {
-      setEditPoints(requestPoints);
+      setEditPoints(mapEditPoints(requestPoints));
       setEditPointsOriginal(JSON.stringify(requestPoints));
     } else {
       setEditText(prayer.content);
@@ -837,7 +858,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
             {prayer.kind === "request" ? (
               <div className="flex flex-col gap-3">
                 {editPoints.map((point, index) => (
-                  <div key={`${point.title}-${index}`} className="flex flex-col gap-2">
+                  <div key={point.id} className="flex flex-col gap-2">
                     <input
                       className="soft-input text-sm"
                       placeholder="Prayer point (title)"
@@ -858,12 +879,27 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
                         setEditPoints(next);
                       }}
                     />
+                    {editPoints.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditPoints((prev) => prev.filter((item) => item.id !== point.id));
+                        }}
+                        className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--danger)] hover:text-[color:var(--danger-strong)]"
+                      >
+                        <MinusCircle size={16} weight="regular" />
+                        Remove point
+                      </button>
+                    )}
                   </div>
                 ))}
                 <button
                   type="button"
                   onClick={() =>
-                    setEditPoints((prev) => [...prev, { title: "", description: "" }])
+                    setEditPoints((prev) => [
+                      ...prev,
+                      { id: makePointId(), title: "", description: "" },
+                    ])
                   }
                   className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
                 >
@@ -1111,7 +1147,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
 
                   return (
                     <div
-                      key={comment._id}
+                      key={comment._id ?? `${index}`}
                       className={`flex gap-3 pt-3 ${
                         index === 0 ? "" : "border-t border-[color:var(--panel-border)]"
                       }`}

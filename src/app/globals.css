@@ -116,6 +116,139 @@ body {
   }
 }
 
+.editor-surface {
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: transparent;
+  min-height: 220px;
+}
+
+.editor-surface .ProseMirror {
+  outline: none;
+  min-height: 200px;
+  color: var(--ink);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.editor-surface .ProseMirror p {
+  margin: 0 0 12px;
+}
+
+.editor-surface .ProseMirror h2 {
+  font-size: 1.3rem;
+  margin: 12px 0 8px;
+}
+
+.editor-surface .ProseMirror h3 {
+  font-size: 1.1rem;
+  margin: 10px 0 6px;
+}
+
+.editor-surface .ProseMirror blockquote {
+  margin: 10px 0;
+  padding-left: 12px;
+  border-left: 3px solid var(--panel-border);
+  color: var(--subtle);
+}
+
+.editor-surface .ProseMirror hr {
+  border: none;
+  border-top: 1px solid var(--panel-border);
+  margin: 14px 0;
+}
+
+.editor-surface .ProseMirror ul,
+.editor-surface .ProseMirror ol {
+  padding-left: 20px;
+  margin: 8px 0 12px;
+}
+
+.editor-surface .ProseMirror ul {
+  list-style: disc;
+}
+
+.editor-surface .ProseMirror ol {
+  list-style: decimal;
+}
+
+.faith-story-content ul,
+.faith-story-content ol {
+  padding-left: 20px;
+  margin: 8px 0 12px;
+}
+
+.faith-story-content ul {
+  list-style: disc;
+}
+
+.faith-story-content ol {
+  list-style: decimal;
+}
+
+.faith-story-inline-image {
+  max-width: 100%;
+  border-radius: 16px;
+  margin: 12px 0;
+}
+
+.editor-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--subtle);
+  background: transparent;
+  cursor: pointer;
+}
+
+.editor-btn:hover {
+  color: var(--ink);
+}
+
+.editor-btn.is-active {
+  color: var(--accent-contrast);
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.faith-story-content p {
+  margin: 0 0 12px;
+}
+
+.faith-story-content h2 {
+  font-size: 1.3rem;
+  margin: 12px 0 8px;
+}
+
+.faith-story-content h3 {
+  font-size: 1.1rem;
+  margin: 10px 0 6px;
+}
+
+.faith-story-content blockquote {
+  margin: 10px 0;
+  padding-left: 12px;
+  border-left: 3px solid var(--panel-border);
+  color: var(--subtle);
+}
+
+.faith-story-content hr {
+  border: none;
+  border-top: 1px solid var(--panel-border);
+  margin: 14px 0;
+}
+
+.faith-story-content img {
+  max-width: 100%;
+  border-radius: 16px;
+  margin: 12px 0;
+}
+
 html[data-theme="midnight"] body {
   background: var(--surface);
 }

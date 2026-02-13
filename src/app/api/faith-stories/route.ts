@@ -8,6 +8,7 @@ import UserModel from "@/models/User";
 import { z } from "zod";
 import { rateLimit } from "@/lib/rateLimit";
 import { revalidateTag, unstable_cache } from "next/cache";
+import sanitizeHtml from "sanitize-html";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -112,7 +113,7 @@ export async function POST(req: Request) {
 
   const StorySchema = z.object({
     title: z.string().trim().min(1).max(160),
-    content: z.string().trim().min(1).max(10000),
+    content: z.string().trim().min(1).max(50000),
     isAnonymous: z.boolean().optional(),
     coverImage: z.string().url().optional(),
   });
@@ -129,9 +130,57 @@ export async function POST(req: Request) {
     .lean();
   const isAnonymous = Boolean(body.data.isAnonymous);
 
+  const rawContent = body.data.content.trim();
+  const decodedContent =
+    rawContent.includes("&lt;") && !rawContent.includes("<")
+      ? rawContent
+          .replace(/&lt;/g, "<")
+          .replace(/&gt;/g, ">")
+          .replace(/&amp;/g, "&")
+          .replace(/&quot;/g, "\"")
+          .replace(/&#39;/g, "'")
+      : rawContent;
+  const sanitizedContent = sanitizeHtml(decodedContent, {
+    allowedTags: [
+      "p",
+      "br",
+      "strong",
+      "em",
+      "u",
+      "s",
+      "blockquote",
+      "h2",
+      "h3",
+      "hr",
+      "ul",
+      "ol",
+      "li",
+      "img",
+    ],
+    allowedAttributes: {
+      img: ["src", "alt", "title"],
+    },
+    allowedSchemes: ["http", "https"],
+    allowedSchemesByTag: {
+      img: ["http", "https"],
+    },
+  });
+  const plainText = sanitizedContent
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!plainText) {
+    return NextResponse.json({ error: "Story content is required" }, { status: 400 });
+  }
+  const inlineImages = sanitizedContent.match(/<img /g) ?? [];
+  if (inlineImages.length > 2) {
+    return NextResponse.json({ error: "You can add up to 2 images." }, { status: 400 });
+  }
+
   const story = await FaithStoryModel.create({
     title: body.data.title.trim(),
-    content: body.data.content.trim(),
+    content: sanitizedContent,
     userId: session.user.id,
     authorName: author?.name ?? null,
     authorUsername: author?.username ?? null,

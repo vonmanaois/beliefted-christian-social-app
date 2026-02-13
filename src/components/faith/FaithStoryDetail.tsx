@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { cloudinaryTransform } from "@/lib/cloudinary";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +12,7 @@ import Modal from "@/components/layout/Modal";
 import PostBackHeader from "@/components/ui/PostBackHeader";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useUIStore } from "@/lib/uiStore";
+import FaithStoryEditor from "@/components/faith/FaithStoryEditor";
 
 type FaithStoryDetailProps = {
   story: {
@@ -49,6 +50,18 @@ const formatFullDate = (iso: string) =>
 
 const ADMIN_REASONS = ["Off-topic", "Inappropriate", "Spam", "Asking money"] as const;
 
+const decodeIfEncoded = (value: string) => {
+  if (!value) return "";
+  if (value.includes("<")) return value;
+  if (!value.includes("&lt;")) return value;
+  return value
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;/g, "'");
+};
+
 export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
   const { data: session } = useSession();
   const { openSignIn } = useUIStore();
@@ -83,6 +96,19 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
 
   const isOwner =
     Boolean(session?.user?.id && story.userId && String(story.userId) === String(session.user.id));
+
+  const normalizedContent = useMemo(
+    () => decodeIfEncoded(story.content ?? ""),
+    [story.content]
+  );
+  const plainContent = useMemo(() => {
+    const noTags = normalizedContent.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ");
+    return noTags.replace(/\s+/g, " ").trim();
+  }, [normalizedContent]);
+  const isLongContent = plainContent.length > 900;
+  const previewText = isLongContent
+    ? `${plainContent.slice(0, 900).trimEnd()}…`
+    : plainContent;
 
   const [localLikedBy, setLocalLikedBy] = useState<string[]>(
     Array.isArray(story.likedBy) ? story.likedBy : []
@@ -390,6 +416,14 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
         };
         coverUrl = uploaded.secure_url ?? uploaded.url ?? null;
       }
+      const plain = editContent
+        .replace(/<[^>]*>/g, " ")
+        .replace(/&nbsp;/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!editTitle.trim() || !plain) {
+        throw new Error("Title and story are required.");
+      }
       const response = await fetch(`/api/faith-stories/${story._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -435,11 +469,22 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
           if (!Array.isArray(current)) return current;
           return current.filter((item) => {
             if (!item || typeof item !== "object") return true;
-            const idValue = (item as { _id?: string })._id;
-            return idValue !== story._id;
+            const idValue = (item as { _id?: string | number })._id;
+            if (!idValue) return true;
+            return String(idValue) !== String(story._id);
           });
         }
       );
+      if (typeof window !== "undefined") {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < window.localStorage.length; i += 1) {
+          const key = window.localStorage.key(i);
+          if (key && key.startsWith("faith-stories-etag:")) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+      }
       queryClient.invalidateQueries({
         predicate: (query) => query.queryKey[0] === "faith-stories",
       });
@@ -661,12 +706,17 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
               </div>
             </div>
 
-            <div className="text-sm text-[color:var(--ink)] whitespace-pre-wrap">
-              {showFullContent || story.content.length <= 900
-                ? story.content
-                : `${story.content.slice(0, 900).trimEnd()}…`}
-            </div>
-            {story.content.length > 900 && (
+            {showFullContent || !isLongContent ? (
+              <div
+                className="faith-story-content text-sm text-[color:var(--ink)]"
+                dangerouslySetInnerHTML={{ __html: normalizedContent }}
+              />
+            ) : (
+              <p className="text-sm text-[color:var(--ink)] whitespace-pre-line">
+                {previewText}
+              </p>
+            )}
+            {isLongContent && (
               <button
                 type="button"
                 onClick={() => setShowFullContent((prev) => !prev)}
@@ -755,10 +805,11 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
                 </div>
               )}
             </div>
-            <textarea
-              className="bg-transparent text-sm text-[color:var(--ink)] outline-none min-h-[260px] resize-none focus:outline-none focus:ring-0"
+            <FaithStoryEditor
               value={editContent}
-              onChange={(event) => setEditContent(event.target.value)}
+              onChange={setEditContent}
+              placeholder="Share your faith story..."
+              maxImages={2}
             />
             <div className="flex justify-end gap-2">
               <button
