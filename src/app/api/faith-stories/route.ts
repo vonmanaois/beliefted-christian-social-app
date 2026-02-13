@@ -20,6 +20,25 @@ export async function GET(req: Request) {
       ? { $text: { $search: query } }
       : {};
 
+  const [meta] = await FaithStoryModel.aggregate<{
+    count: number;
+    latest: Date | null;
+  }>([
+    { $match: filter },
+    { $group: { _id: null, count: { $sum: 1 }, latest: { $max: "$updatedAt" } } },
+  ]);
+
+  const count = meta?.count ?? 0;
+  const latest = meta?.latest ? new Date(meta.latest).toISOString() : "0";
+  const etag = `W/"faith-stories:${query || "all"}:${count}:${latest}"`;
+  const ifNoneMatch = req.headers.get("if-none-match");
+  if (ifNoneMatch && ifNoneMatch === etag) {
+    return new NextResponse(null, {
+      status: 304,
+      headers: { ETag: etag },
+    });
+  }
+
   const loadStories = async () =>
     FaithStoryModel.find(filter)
       .sort({ createdAt: -1, _id: -1 })
@@ -74,7 +93,9 @@ export async function GET(req: Request) {
     })
   );
 
-  return NextResponse.json(items);
+  return NextResponse.json(items, {
+    headers: { ETag: etag },
+  });
 }
 
 export async function POST(req: Request) {

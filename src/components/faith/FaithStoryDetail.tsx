@@ -427,14 +427,20 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
     onSuccess: () => {
       queryClient.setQueriesData(
         {
-          queryKey: ["faith-stories"],
+          predicate: (query) => query.queryKey[0] === "faith-stories",
         },
-        (current: FaithStoryDetailProps["story"][] | undefined) => {
+        (current: unknown) => {
           if (!Array.isArray(current)) return current;
-          return current.filter((item) => item._id !== story._id);
+          return current.filter((item) => {
+            if (!item || typeof item !== "object") return true;
+            const idValue = (item as { _id?: string })._id;
+            return idValue !== story._id;
+          });
         }
       );
-      queryClient.invalidateQueries({ queryKey: ["faith-stories"] });
+      queryClient.invalidateQueries({
+        predicate: (query) => query.queryKey[0] === "faith-stories",
+      });
       router.push("/faith-stories");
     },
   });

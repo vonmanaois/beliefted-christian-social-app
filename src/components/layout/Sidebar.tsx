@@ -58,6 +58,7 @@ export default function Sidebar() {
   const sseConnectedRef = useRef(false);
   const currentUserIdRef = useRef<string | null>(null);
   const lastCountRefreshRef = useRef(0);
+  const lastSseMessageAtRef = useRef(0);
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
@@ -106,7 +107,7 @@ export default function Sidebar() {
     enabled: isAuthenticated,
     staleTime: Infinity,
     refetchOnMount: false,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
   });
 
   const hasUnreadNotifications =
@@ -191,10 +192,12 @@ export default function Sidebar() {
       unifiedStream.onopen = () => {
         unifiedStreamRetryDelay = 1000;
         sseConnectedRef.current = true;
+        lastSseMessageAtRef.current = Date.now();
       };
 
       unifiedStream.onmessage = (event) => {
         try {
+          lastSseMessageAtRef.current = Date.now();
           const viewerId = currentUserIdRef.current;
           if (!viewerId) return;
           const payload = JSON.parse(event.data) as {
@@ -205,7 +208,9 @@ export default function Sidebar() {
             wordAuthorIds?: string[];
             prayerAuthorIds?: string[];
             notificationsCount?: number;
+            viewerId?: string | null;
           };
+          if (payload.viewerId && payload.viewerId !== viewerId) return;
           const wordHasOtherAuthor =
             !payload.wordAuthorId || payload.wordAuthorId !== viewerId;
           const prayerHasOtherAuthor =
@@ -236,6 +241,9 @@ export default function Sidebar() {
           // ignore parse errors
         }
       };
+      unifiedStream.addEventListener("ping", () => {
+        lastSseMessageAtRef.current = Date.now();
+      });
 
       unifiedStream.onerror = () => {
         unifiedStream?.close();
@@ -261,9 +269,21 @@ export default function Sidebar() {
 
     connect();
     document.addEventListener("visibilitychange", handleVisibility);
+    const staleCheck = window.setInterval(() => {
+      if (!sseConnectedRef.current) return;
+      const last = lastSseMessageAtRef.current;
+      if (!last) return;
+      if (Date.now() - last > 45000) {
+        unifiedStream?.close();
+        unifiedStream = null;
+        sseConnectedRef.current = false;
+        connect();
+      }
+    }, 15000);
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
+      window.clearInterval(staleCheck);
       unifiedStreamUsers = Math.max(0, unifiedStreamUsers - 1);
       if (unifiedStreamUsers === 0) {
         unifiedStreamCloseTimer = setTimeout(() => {

@@ -61,11 +61,50 @@ export default function FaithStoryList() {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (debounced.trim()) params.set("q", debounced.trim());
-      const response = await fetch(`/api/faith-stories?${params.toString()}`, {
+      const queryKey = params.toString();
+      const etagKey = `faith-stories-etag:${queryKey || "all"}`;
+      const headers = new Headers();
+      if (typeof window !== "undefined") {
+        const stored = window.localStorage.getItem(etagKey);
+        if (stored) {
+          headers.set("If-None-Match", stored);
+        }
+      }
+      const response = await fetch(`/api/faith-stories?${queryKey}`, {
         cache: "no-store",
+        headers,
       });
+      if (response.status === 304) {
+        const cached = queryClient.getQueryData<FaithStory[]>([
+          "faith-stories",
+          debounced,
+        ]);
+        if (cached && cached.length > 0) {
+          return cached;
+        }
+        const retry = await fetch(`/api/faith-stories?${queryKey}`, {
+          cache: "no-store",
+        });
+        if (!retry.ok) {
+          throw new Error("Failed to load stories");
+        }
+        const retryData = (await retry.json()) as FaithStory[];
+        const retryEtag = retry.headers.get("ETag");
+        if (retryEtag && typeof window !== "undefined") {
+          window.localStorage.setItem(etagKey, retryEtag);
+        }
+        return retryData.map((item) => ({
+          ...item,
+          _id: typeof item._id === "string" ? item._id : String(item._id),
+          coverImage: item.coverImage ?? null,
+        }));
+      }
       if (!response.ok) {
         throw new Error("Failed to load stories");
+      }
+      const etag = response.headers.get("ETag");
+      if (etag && typeof window !== "undefined") {
+        window.localStorage.setItem(etagKey, etag);
       }
       const data = (await response.json()) as FaithStory[];
       return data.map((item) => ({
@@ -75,8 +114,8 @@ export default function FaithStoryList() {
       }));
     },
     staleTime: 120000,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
   });
 
   const createMutation = useMutation({
@@ -104,6 +143,36 @@ export default function FaithStoryList() {
     onSuccess: async (story) => {
       setShowCreate(false);
       setIsDirty(false);
+      const normalized = {
+        ...story,
+        _id: typeof story._id === "string" ? story._id : String(story._id),
+        coverImage: story.coverImage ?? null,
+      } as FaithStory;
+      const queryText = debounced.trim().toLowerCase();
+      const matchesQuery = queryText
+        ? [
+            normalized.title ?? "",
+            normalized.content ?? "",
+            normalized.user?.name ?? "",
+            normalized.user?.username ?? "",
+            normalized.authorUsername ?? "",
+          ]
+            .join(" ")
+            .toLowerCase()
+            .includes(queryText)
+        : true;
+      if (matchesQuery) {
+        queryClient.setQueryData<FaithStory[]>(
+          ["faith-stories", debounced],
+          (current) => {
+            if (!Array.isArray(current)) return [normalized];
+            if (current.some((item) => item._id === normalized._id)) {
+              return current;
+            }
+            return [normalized, ...current];
+          }
+        );
+      }
       await queryClient.invalidateQueries({ queryKey: ["faith-stories"] });
       const username = story.authorUsername ?? story.user?.username;
       if (username) {

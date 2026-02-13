@@ -15,6 +15,7 @@ type StreamPayload = {
   wordAuthorIds?: string[];
   prayerAuthorIds?: string[];
   notificationsCount?: number;
+  viewerId?: string | null;
 };
 
 const EVENT_BUFFER_SIZE = 50;
@@ -242,6 +243,7 @@ export async function GET(request: Request) {
             if (notificationsChanged && typeof notificationsCount === "number") {
               payload.notificationsCount = notificationsCount;
             }
+            payload.viewerId = userId ?? null;
             if (Object.keys(payload).length === 0) {
               return;
             }
@@ -257,13 +259,19 @@ export async function GET(request: Request) {
         }
       };
 
+      const heartbeat = () => {
+        controller.enqueue(encoder.encode(`event: ping\ndata: ${Date.now()}\n\n`));
+      };
+
       replay();
       send();
 
       const interval = setInterval(send, 5000);
+      const heartbeatInterval = setInterval(heartbeat, 25000);
 
       const close = () => {
         clearInterval(interval);
+        clearInterval(heartbeatInterval);
         controller.close();
       };
 
@@ -276,6 +284,7 @@ export async function GET(request: Request) {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
     },
   });
 }
