@@ -1030,6 +1030,9 @@ export default function Sidebar() {
         <p className="text-sm text-[color:var(--subtle)]">
           Sign in with Google to create a profile and post prayers.
         </p>
+        <p className="mt-2 text-xs text-[color:var(--subtle)]">
+          We never store your password. Google sign-in is handled by Google.
+        </p>
         <button
           type="button"
           onClick={() => signIn("google")}
