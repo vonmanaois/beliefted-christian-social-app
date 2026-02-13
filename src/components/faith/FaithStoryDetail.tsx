@@ -11,6 +11,7 @@ import Avatar from "@/components/ui/Avatar";
 import Modal from "@/components/layout/Modal";
 import PostBackHeader from "@/components/ui/PostBackHeader";
 import { useAdmin } from "@/hooks/useAdmin";
+import { useUIStore } from "@/lib/uiStore";
 
 type FaithStoryDetailProps = {
   story: {
@@ -50,6 +51,7 @@ const ADMIN_REASONS = ["Off-topic", "Inappropriate", "Spam", "Asking money"] as 
 
 export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
   const { data: session } = useSession();
+  const { openSignIn } = useUIStore();
   const { data: adminData } = useAdmin();
   const isAdmin = Boolean(adminData?.isAdmin);
   const router = useRouter();
@@ -812,9 +814,13 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
             </div>
           </form>
         ) : (
-          <p className="mt-3 text-sm text-[color:var(--subtle)]">
+          <button
+            type="button"
+            onClick={openSignIn}
+            className="mt-3 text-sm text-[color:var(--subtle)] hover:text-[color:var(--accent)]"
+          >
             Sign in to comment.
-          </p>
+          </button>
         )}
 
         <div className="mt-6 flex flex-col gap-3 text-[13px] sm:text-sm">
