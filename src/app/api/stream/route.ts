@@ -47,6 +47,11 @@ const pushEvent = (payload: StreamPayload) => {
   return lastEventId;
 };
 
+const pushReplayableEvent = (payload: StreamPayload) => {
+  const { notificationsCount: _omit, viewerId: _omitViewer, ...replayable } = payload;
+  return pushEvent(replayable);
+};
+
 const getCachedEventsAfter = (id: number) =>
   cachedEvents.filter((event) => event.id > id);
 
@@ -247,7 +252,7 @@ export async function GET(request: Request) {
             if (Object.keys(payload).length === 0) {
               return;
             }
-            const id = pushEvent(payload);
+            const id = pushReplayableEvent(payload);
             controller.enqueue(
               encoder.encode(
                 `id: ${id}\n` + `data: ${JSON.stringify(payload)}\n\n`

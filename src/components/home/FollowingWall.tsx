@@ -132,9 +132,21 @@ export default function FollowingWall() {
   }
 
   const items = data?.pages.flatMap((page) => page.items) ?? [];
+
+  const refreshButton = (
+    <button
+      type="button"
+      onClick={() => refetch()}
+      className="hidden sm:inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border)] px-3 py-1.5 text-xs font-semibold text-[color:var(--ink)] hover:text-[color:var(--accent)] hover:border-[color:var(--accent)]"
+    >
+      Refresh
+    </button>
+  );
+
   if (items.length === 0) {
     return (
       <section className="feed-surface">
+        <div className="flex items-center justify-end px-3 pb-2">{refreshButton}</div>
         <button
           type="button"
           onClick={() => {
@@ -202,6 +214,7 @@ export default function FollowingWall() {
         pullStartRef.current = null;
       }}
     >
+      <div className="flex items-center justify-end px-3 pb-2">{refreshButton}</div>
       {pullDistance > 0 && (
         <div
           className="flex items-center justify-center text-[11px] text-[color:var(--subtle)]"

@@ -194,6 +194,9 @@ export default function Sidebar() {
         unifiedStreamRetryDelay = 1000;
         sseConnectedRef.current = true;
         lastSseMessageAtRef.current = Date.now();
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", "count", session?.user?.id ?? "guest"],
+        });
       };
 
       unifiedStream.onmessage = (event) => {

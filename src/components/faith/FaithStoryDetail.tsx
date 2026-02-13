@@ -281,7 +281,7 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
     });
 
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const image = new Image();
+      const image = new window.Image();
       image.onload = () => resolve(image);
       image.onerror = () => reject(new Error("Failed to load image"));
       image.src = dataUrl;
