@@ -45,6 +45,8 @@ const extractYouTube = (value: string) => {
         candidate = parsed.searchParams.get("v");
       } else if (parsed.pathname.startsWith("/shorts/")) {
         candidate = parsed.pathname.split("/").filter(Boolean)[1] ?? null;
+      } else if (parsed.pathname.startsWith("/live/")) {
+        candidate = parsed.pathname.split("/").filter(Boolean)[1] ?? null;
       } else if (parsed.pathname.startsWith("/embed/")) {
         candidate = parsed.pathname.split("/").filter(Boolean)[1] ?? null;
       }
