@@ -1000,7 +1000,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
               </div>
             )}
             {Array.isArray(word.images) && word.images.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-3 grid grid-cols-3 gap-2 sm:gap-3">
                 {word.images.map((src, index) => {
                   const isCloudinary =
                     typeof src === "string" && src.includes("res.cloudinary.com");
@@ -1013,7 +1013,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                   return (
                     <div
                       key={`${src}-${index}`}
-                      className="h-32 w-32 sm:h-36 sm:w-36 overflow-hidden rounded-xl border border-[color:var(--panel-border)]"
+                      className="aspect-square w-full overflow-hidden rounded-xl border border-[color:var(--panel-border)]"
                       onClick={(event) => {
                         event.stopPropagation();
                         setLightboxSrc(lightboxSrc);

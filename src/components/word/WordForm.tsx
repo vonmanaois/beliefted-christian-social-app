@@ -479,11 +479,11 @@ export default function WordForm({
         onChange={handleSelectImages}
       />
       {imageItems.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2 overflow-x-auto">
           {imageItems.map((item, index) => (
             <div
               key={`${item.previewUrl}-${index}`}
-              className="relative h-20 w-20 overflow-hidden rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--surface-strong)]"
+              className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--surface-strong)]"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
