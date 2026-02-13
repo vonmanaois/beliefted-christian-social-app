@@ -137,7 +137,7 @@ export default function FollowingWall() {
     <button
       type="button"
       onClick={() => refetch()}
-      className="hidden sm:inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border)] px-3 py-1.5 text-xs font-semibold text-[color:var(--ink)] hover:text-[color:var(--accent)] hover:border-[color:var(--accent)]"
+      className="inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border)] px-3 py-1.5 text-xs font-semibold text-[color:var(--ink)] hover:text-[color:var(--accent)] hover:border-[color:var(--accent)]"
     >
       Refresh
     </button>
@@ -195,7 +195,9 @@ export default function FollowingWall() {
     <section
       className="feed-surface"
       onTouchStart={(event) => {
-        if (window.scrollY > 0) return;
+        const scrollTop =
+          document.scrollingElement?.scrollTop ?? window.scrollY ?? 0;
+        if (scrollTop > 0) return;
         pullStartRef.current = event.touches[0]?.clientY ?? null;
         setIsPulling(true);
       }}
