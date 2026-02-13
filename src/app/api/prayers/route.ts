@@ -24,10 +24,7 @@ export async function GET(req: Request) {
   await dbConnect();
 
   let followingIds: Types.ObjectId[] = [];
-  if (followingOnly) {
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (session?.user?.id) {
     const currentUser = await UserModel.findById(session.user.id)
       .select("following")
       .lean();
@@ -35,7 +32,10 @@ export async function GET(req: Request) {
     followingIds = rawFollowing
       .map((id) => (typeof id === "string" ? new Types.ObjectId(id) : id))
       .filter(Boolean);
+  } else if (followingOnly) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const followingIdSet = new Set(followingIds.map((id) => String(id)));
 
   const loadPrayers = async (viewerId: string | null) => {
     const isOwnerView = Boolean(viewerId && userId && viewerId === userId);
@@ -55,6 +55,18 @@ export async function GET(req: Request) {
         conditions.push({ prayedBy: reprayedTargetId });
       }
     }
+
+    const privacyOr = viewerId
+      ? [
+          { userId: viewerId },
+          { privacy: "public" },
+          { privacy: { $exists: false } },
+          ...(followingIds.length
+            ? [{ privacy: "followers", userId: { $in: followingIds } }]
+            : []),
+        ]
+      : [{ privacy: "public" }, { privacy: { $exists: false } }];
+    conditions.push({ $or: privacyOr });
 
     if (cursor) {
       const decoded = Buffer.from(cursor, "base64").toString("utf8");
@@ -77,8 +89,33 @@ export async function GET(req: Request) {
       .limit(limit + 1)
       .lean();
 
-    const hasMore = prayers.length > limit;
-    const items = hasMore ? prayers.slice(0, limit) : prayers;
+    const visible = prayers.filter((prayer) => {
+      const rawUserId = (prayer as { userId?: unknown }).userId;
+      let userIdString: string | null = null;
+      if (typeof rawUserId === "string") {
+        userIdString = rawUserId;
+      } else if (
+        rawUserId &&
+        typeof (rawUserId as { _id?: { toString: () => string } })._id?.toString === "function"
+      ) {
+        userIdString = (rawUserId as { _id: { toString: () => string } })._id.toString();
+      } else if (rawUserId && typeof (rawUserId as { toString?: () => string }).toString === "function") {
+        const asString = (rawUserId as { toString: () => string }).toString();
+        userIdString = asString !== "[object Object]" ? asString : null;
+      }
+
+      const privacy = (prayer as { privacy?: string | null }).privacy ?? "public";
+      if (privacy === "public") return true;
+      if (!viewerId || !userIdString) return false;
+      if (userIdString === viewerId) return true;
+      if (privacy === "followers") {
+        return followingIdSet.has(userIdString);
+      }
+      return false;
+    });
+
+    const hasMore = visible.length > limit;
+    const items = hasMore ? visible.slice(0, limit) : visible;
 
     const userIds = items
       .filter((prayer) => !prayer.isAnonymous && prayer.userId)
@@ -86,11 +123,21 @@ export async function GET(req: Request) {
     const uniqueUserIds = Array.from(new Set(userIds));
     const users = uniqueUserIds.length
       ? await UserModel.find({ _id: { $in: uniqueUserIds } })
-          .select("name image username")
+          .select("name image username followers")
           .lean()
       : [];
     const userMap = new Map(
-      users.map((user) => [String(user._id), { name: user.name, image: user.image, username: user.username }])
+      users.map((user) => [
+        String(user._id),
+        {
+          name: user.name,
+          image: user.image,
+          username: user.username,
+          followers: Array.isArray(user.followers)
+            ? user.followers.map((id) => String(id))
+            : [],
+        },
+      ])
     );
 
     const sanitized = await Promise.all(
@@ -125,27 +172,41 @@ export async function GET(req: Request) {
           prayerId: prayer._id,
         });
 
-        if (prayer.isAnonymous) {
-          return { ...base, user: null, commentCount };
-        }
-
+        const privacy = (prayer as { privacy?: string | null }).privacy ?? "public";
+        const isOwner = Boolean(viewerId && userIdString && viewerId === userIdString);
         const user =
           userMap.get(userIdString ?? "") ?? {
             name: prayer.authorName,
             image: prayer.authorImage,
             username: prayer.authorUsername,
+            followers: [],
           };
+        const isFollower = Boolean(viewerId && followingIdSet.has(String(userIdString)));
+        const isVisible =
+          privacy === "public" ||
+          !privacy ||
+          isOwner ||
+          (privacy === "followers" && isFollower);
 
-        return { ...base, user, commentCount };
+        if (!isVisible) {
+          return null;
+        }
+
+        if (prayer.isAnonymous) {
+          return { ...base, user: null, commentCount, isOwner };
+        }
+
+        return { ...base, user, commentCount, isOwner };
       })
     );
+    const filtered = sanitized.filter((item) => item !== null);
 
     const last = items[items.length - 1];
     const nextCursor = hasMore && last
       ? Buffer.from(`${new Date(last.createdAt).toISOString()}|${last._id.toString()}`).toString("base64")
       : null;
 
-    return { items: sanitized, nextCursor };
+    return { items: filtered, nextCursor };
   };
 
   if (!session?.user?.id && !userId && !followingOnly && !reprayedOnly) {
@@ -191,6 +252,7 @@ export async function POST(req: Request) {
       .optional(),
     scriptureRef: z.string().trim().max(80).optional().or(z.literal("")),
     isAnonymous: z.boolean().optional(),
+    privacy: z.enum(["public", "followers", "private"]).optional(),
     expiresInDays: z.union([z.literal(7), z.literal(30), z.literal("never")]).optional(),
   });
 
@@ -211,6 +273,7 @@ export async function POST(req: Request) {
   );
   const isAnonymous = Boolean(body.data.isAnonymous);
   const expiresInDays = body.data.expiresInDays ?? 7;
+  const privacy = body.data.privacy ?? "public";
 
   if (kind === "prayer" && !content) {
     return NextResponse.json({ error: "Content is required" }, { status: 400 });
@@ -245,6 +308,7 @@ export async function POST(req: Request) {
     prayerPoints,
     scriptureRef: scriptureRef || undefined,
     isAnonymous,
+    privacy,
     prayedBy: [],
     expiresAt,
   });

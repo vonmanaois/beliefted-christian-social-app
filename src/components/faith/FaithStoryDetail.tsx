@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { cloudinaryTransform } from "@/lib/cloudinary";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChatCircle, DotsThreeOutline, Heart, UserCircle } from "@phosphor-icons/react";
+import { ChatCircle, DotsThreeOutline, Heart, ImageSquare, UserCircle, ShareNetwork, X } from "@phosphor-icons/react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Avatar from "@/components/ui/Avatar";
@@ -21,6 +21,7 @@ type FaithStoryDetailProps = {
     likedBy: string[];
     isAnonymous?: boolean;
     coverImage?: string | null;
+    sharedCount?: number;
     user: { name?: string | null; username?: string | null; image?: string | null } | null;
     userId?: string | null;
   };
@@ -61,21 +62,36 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
   const [editTitle, setEditTitle] = useState(story.title);
   const [editContent, setEditContent] = useState(story.content);
   const [showFullContent, setShowFullContent] = useState(false);
+  const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
+  const [editCoverPreview, setEditCoverPreview] = useState<string | null>(null);
   const [commentText, setCommentText] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentText, setEditingCommentText] = useState("");
   const [editingCommentOriginal, setEditingCommentOriginal] = useState("");
   const [showCommentDeleteConfirm, setShowCommentDeleteConfirm] = useState(false);
   const [pendingDeleteCommentId, setPendingDeleteCommentId] = useState<string | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareText, setShareText] = useState("");
+  const [shareCopied, setShareCopied] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [isSharing, setIsSharing] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const commentEditRef = useRef<HTMLDivElement | null>(null);
+  const coverInputRef = useRef<HTMLInputElement | null>(null);
 
   const isOwner =
     Boolean(session?.user?.id && story.userId && String(story.userId) === String(session.user.id));
 
-  const likedBy = Array.isArray(story.likedBy) ? story.likedBy : [];
+  const [localLikedBy, setLocalLikedBy] = useState<string[]>(
+    Array.isArray(story.likedBy) ? story.likedBy : []
+  );
+
+  useEffect(() => {
+    setLocalLikedBy(Array.isArray(story.likedBy) ? story.likedBy : []);
+  }, [story._id, story.likedBy]);
+
   const hasLiked = session?.user?.id
-    ? likedBy.includes(String(session.user.id))
+    ? localLikedBy.includes(String(session.user.id))
     : false;
 
   const { data: comments = [], isLoading: isLoadingComments } = useQuery({
@@ -127,20 +143,31 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
       }
       return (await response.json()) as { count: number; liked: boolean };
     },
+    onMutate: async () => {
+      if (!session?.user?.id) return null;
+      const viewerId = String(session.user.id);
+      const previous = localLikedBy;
+      const alreadyLiked = previous.includes(viewerId);
+      const nextLikedBy = alreadyLiked
+        ? previous.filter((id) => id !== viewerId)
+        : [...previous, viewerId];
+      setLocalLikedBy(nextLikedBy);
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) {
+        setLocalLikedBy(context.previous);
+      }
+    },
     onSuccess: (data) => {
       const viewerId = session?.user?.id ? String(session.user.id) : null;
       if (!viewerId) return;
-      queryClient.setQueryData<FaithStoryDetailProps["story"]>(
-        ["faith-story", story._id],
-        (current) => {
-          if (!current) return current;
-          const currentLikedBy = Array.isArray(current.likedBy) ? current.likedBy : [];
-          const nextLikedBy = data.liked
-            ? [...new Set([...currentLikedBy, viewerId])]
-            : currentLikedBy.filter((id) => id !== viewerId);
-          return { ...current, likedBy: nextLikedBy };
-        }
-      );
+      setLocalLikedBy((current) => {
+        const nextLikedBy = data.liked
+          ? [...new Set([...current, viewerId])]
+          : current.filter((id) => id !== viewerId);
+        return nextLikedBy;
+      });
     },
   });
 
@@ -237,12 +264,138 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
     },
   });
 
+  useEffect(() => {
+    return () => {
+      if (editCoverPreview) {
+        URL.revokeObjectURL(editCoverPreview);
+      }
+    };
+  }, [editCoverPreview]);
+
+  const resizeImage = async (file: File) => {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error("Failed to read image"));
+      reader.readAsDataURL(file);
+    });
+
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("Failed to load image"));
+      image.src = dataUrl;
+    });
+
+    const maxSize = 1200;
+    let targetWidth = img.width;
+    let targetHeight = img.height;
+    if (targetWidth > targetHeight && targetWidth > maxSize) {
+      targetHeight = Math.round((targetHeight * maxSize) / targetWidth);
+      targetWidth = maxSize;
+    } else if (targetHeight > maxSize) {
+      targetWidth = Math.round((targetWidth * maxSize) / targetHeight);
+      targetHeight = maxSize;
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("Canvas not supported");
+    }
+    ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (result) => {
+          if (!result) {
+            reject(new Error("Failed to compress image"));
+          } else {
+            resolve(result);
+          }
+        },
+        "image/jpeg",
+        0.84
+      );
+    });
+
+    return new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), {
+      type: "image/jpeg",
+    });
+  };
+
+  const handleCoverChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const processed = await resizeImage(file);
+      if (editCoverPreview) URL.revokeObjectURL(editCoverPreview);
+      setEditCoverFile(processed);
+      setEditCoverPreview(URL.createObjectURL(processed));
+    } catch {
+      // ignore
+    } finally {
+      event.target.value = "";
+    }
+  };
+
   const updateMutation = useMutation({
     mutationFn: async () => {
+      let coverUrl: string | null = null;
+      if (editCoverFile) {
+        const signResponse = await fetch("/api/cloudinary/sign-faith-story", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ count: 1 }),
+        });
+        if (!signResponse.ok) {
+          throw new Error("Failed to prepare upload");
+        }
+        const signData = (await signResponse.json()) as {
+          cloudName: string;
+          apiKey: string;
+          upload: {
+            publicId: string;
+            signature: string;
+            timestamp: number;
+            folder: string;
+            invalidate: string;
+          };
+        };
+        const formData = new FormData();
+        formData.append("file", editCoverFile);
+        formData.append("api_key", signData.apiKey);
+        formData.append("timestamp", String(signData.upload.timestamp));
+        formData.append("signature", signData.upload.signature);
+        formData.append("folder", signData.upload.folder);
+        formData.append("public_id", signData.upload.publicId);
+        formData.append("invalidate", signData.upload.invalidate);
+
+        const uploadResponse = await fetch(
+          `https://api.cloudinary.com/v1_1/${signData.cloudName}/image/upload`,
+          { method: "POST", body: formData }
+        );
+        if (!uploadResponse.ok) {
+          throw new Error("Failed to upload cover image");
+        }
+        const uploaded = (await uploadResponse.json()) as {
+          secure_url?: string;
+          url?: string;
+        };
+        coverUrl = uploaded.secure_url ?? uploaded.url ?? null;
+      }
       const response = await fetch(`/api/faith-stories/${story._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: editTitle.trim(), content: editContent.trim() }),
+        body: JSON.stringify({
+          title: editTitle.trim(),
+          content: editContent.trim(),
+          coverImage: coverUrl ?? undefined,
+        }),
       });
       if (!response.ok) {
         throw new Error("Failed to update story");
@@ -251,6 +404,11 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
     },
     onSuccess: () => {
       setIsEditing(false);
+      if (editCoverPreview) {
+        URL.revokeObjectURL(editCoverPreview);
+      }
+      setEditCoverPreview(null);
+      setEditCoverFile(null);
       router.refresh();
     },
   });
@@ -291,9 +449,106 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
     }
   };
 
+  const storyHref =
+    story.user?.username ? `/faith-story/${story.user.username}/${story._id}` : null;
+
+  const handleCopyLink = async () => {
+    if (!storyHref) return;
+    setShareError(null);
+    try {
+      await navigator.clipboard.writeText(
+        `${window.location.origin}${storyHref}`
+      );
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch {
+      setShareError("Failed to copy link.");
+    }
+  };
+
+  const handleShareToFeed = async () => {
+    if (!session?.user?.id) {
+      setShareError("Sign in to share this story.");
+      return;
+    }
+    setShareError(null);
+    setIsSharing(true);
+    try {
+      const response = await fetch("/api/words", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: shareText.trim(),
+          sharedFaithStoryId: story._id,
+        }),
+      });
+      if (!response.ok) {
+        const data = (await response.json()) as { error?: string };
+        throw new Error(data?.error ?? "Failed to share story.");
+      }
+      const data = (await response.json()) as {
+        _id: string;
+        content?: string | null;
+        createdAt?: string | Date;
+        images?: string[];
+        scriptureRef?: string | null;
+      };
+      queryClient.setQueriesData(
+        { queryKey: ["words"] },
+        (current: {
+          pages?: Array<{ items: Array<Record<string, unknown>>; nextCursor?: string | null }>;
+          pageParams?: Array<string | null>;
+        } | undefined) => {
+          if (!current?.pages?.length) return current;
+          const firstPage = current.pages[0];
+          const newWord = {
+            ...data,
+            _id: typeof data._id === "string" ? data._id : String(data._id),
+            content: data.content ?? "",
+            createdAt: data.createdAt ?? new Date().toISOString(),
+            userId: session.user.id,
+            user: {
+              name: session.user.name ?? "User",
+              image: session.user.image ?? null,
+              username: (session.user as { username?: string | null }).username ?? null,
+            },
+            likedBy: [],
+            savedBy: [],
+            commentCount: 0,
+            scriptureRef: data.scriptureRef ?? null,
+            images: Array.isArray(data.images) ? data.images : [],
+            sharedFaithStory: {
+              id: story._id,
+              title: story.title,
+              coverImage: story.coverImage ?? null,
+              authorUsername: story.user?.username ?? null,
+            },
+          };
+          return {
+            ...current,
+            pages: [
+              {
+                ...firstPage,
+                items: [newWord, ...firstPage.items],
+              },
+              ...current.pages.slice(1),
+            ],
+          };
+        }
+      );
+      setShowShareModal(false);
+      setShareText("");
+      setShareCopied(false);
+    } catch (error) {
+      setShareError(error instanceof Error ? error.message : "Failed to share story.");
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
   return (
     <div>
-      <PostBackHeader label="Faith Story" />
+      <PostBackHeader label="Faith Story" refreshOnBack />
       <div className="panel p-6 sm:p-8 rounded-none">
         <div className="flex items-center justify-between text-xs text-[color:var(--subtle)]">
           <span>{formatFullDate(story.createdAt)}</span>
@@ -420,9 +675,21 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
                 className="inline-flex items-center gap-2 text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
               >
                 <Heart size={20} weight={hasLiked ? "fill" : "regular"} />
-                {likedBy.length > 0 && (
+                {localLikedBy.length > 0 && (
                   <span className="text-xs font-semibold text-[color:var(--ink)]">
-                    {likedBy.length}
+                    {localLikedBy.length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowShareModal(true)}
+                className="inline-flex items-center gap-2 text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
+              >
+                <ShareNetwork size={20} weight="regular" />
+                {typeof story.sharedCount === "number" && story.sharedCount > 0 && (
+                  <span className="text-xs font-semibold text-[color:var(--ink)]">
+                    {story.sharedCount}
                   </span>
                 )}
               </button>
@@ -439,6 +706,47 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
               value={editTitle}
               onChange={(event) => setEditTitle(event.target.value)}
             />
+            <div className="flex items-center gap-3 text-xs text-[color:var(--subtle)]">
+              <button
+                type="button"
+                onClick={() => coverInputRef.current?.click()}
+                className="inline-flex items-center gap-2 font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
+              >
+                <ImageSquare size={18} weight="regular" />
+                Change cover
+              </button>
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleCoverChange}
+              />
+              {(editCoverPreview || story.coverImage) && (
+                <div className="relative h-16 w-24 overflow-hidden rounded-lg border border-[color:var(--panel-border)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={editCoverPreview ?? story.coverImage ?? ""}
+                    alt="Cover preview"
+                    className="h-full w-full object-cover"
+                  />
+                  {editCoverPreview && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (editCoverPreview) URL.revokeObjectURL(editCoverPreview);
+                        setEditCoverPreview(null);
+                        setEditCoverFile(null);
+                      }}
+                      className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
+                      aria-label="Remove cover image"
+                    >
+                      <X size={12} weight="bold" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
             <textarea
               className="bg-transparent text-sm text-[color:var(--ink)] outline-none min-h-[260px] resize-none focus:outline-none focus:ring-0"
               value={editContent}
@@ -488,7 +796,11 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
               }}
             />
             <div className="flex justify-end">
-              <button type="submit" className="post-button">
+              <button
+                type="submit"
+                className="post-button"
+                disabled={!commentText.trim()}
+              >
                 Post comment
               </button>
             </div>
@@ -648,7 +960,7 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
             type="button"
             onClick={async () => {
               if (isDeleting) return;
-              await deleteMutation.mutateAsync();
+              await deleteMutation.mutateAsync(undefined);
             }}
             disabled={isDeleting}
             className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer disabled:opacity-60"
@@ -702,6 +1014,44 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
             className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer disabled:opacity-60"
           >
             {isDeleting ? "Deleting..." : "Delete"}
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        title="Share Faith Story"
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        autoFocus={false}
+      >
+        <p className="text-sm text-[color:var(--subtle)]">
+          Share this story to your Faith Share feed or copy the link.
+        </p>
+        <textarea
+          className="mt-4 bg-transparent text-sm text-[color:var(--ink)] outline-none min-h-[80px] resize-none w-full border border-[color:var(--panel-border)] rounded-lg p-3 focus:outline-none focus:ring-0"
+          placeholder="Add a message (optional)"
+          value={shareText}
+          onChange={(event) => setShareText(event.target.value)}
+        />
+        {shareError && (
+          <p className="mt-2 text-xs text-[color:var(--danger)]">{shareError}</p>
+        )}
+        <div className="mt-4 flex flex-wrap gap-2 justify-end">
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] border border-[color:var(--panel-border)]"
+            disabled={!storyHref}
+          >
+            {shareCopied ? "Copied" : "Copy link"}
+          </button>
+          <button
+            type="button"
+            onClick={handleShareToFeed}
+            disabled={isSharing}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--accent-contrast)] bg-[color:var(--accent)] disabled:opacity-60"
+          >
+            {isSharing ? "Sharing..." : "Share to feed"}
           </button>
         </div>
       </Modal>

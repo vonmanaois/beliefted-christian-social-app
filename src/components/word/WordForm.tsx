@@ -1,8 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ImageSquare, Plus, SpotifyLogo, X, YoutubeLogo } from "@phosphor-icons/react";
+import {
+  Globe,
+  ImageSquare,
+  LockSimple,
+  Plus,
+  SpotifyLogo,
+  UsersThree,
+  X,
+  YoutubeLogo,
+} from "@phosphor-icons/react";
 import { useSession } from "next-auth/react";
+import { useUIStore } from "@/lib/uiStore";
 
 type WordFormProps = {
   onPosted?: () => void;
@@ -24,6 +34,7 @@ export default function WordForm({
   placeholder = "What did God put on your heart today?",
 }: WordFormProps) {
   const { data: session } = useSession();
+  const { setNewWordPosts } = useUIStore();
   const [content, setContent] = useState("");
   const [scriptureRef, setScriptureRef] = useState("");
   const [showScriptureRef, setShowScriptureRef] = useState(false);
@@ -33,6 +44,8 @@ export default function WordForm({
   const [showSpotifyInput, setShowSpotifyInput] = useState(false);
   const [spotifyUrl, setSpotifyUrl] = useState("");
   const [spotifyError, setSpotifyError] = useState<string | null>(null);
+  const [privacy, setPrivacy] = useState<"public" | "followers" | "private">("public");
+  const [showPrivacyMenu, setShowPrivacyMenu] = useState(false);
   const [imageItems, setImageItems] = useState<
     { file: File; previewUrl: string }[]
   >([]);
@@ -45,7 +58,8 @@ export default function WordForm({
     imageItems.length > 0 ||
     scriptureRef.trim().length > 0 ||
     youtubeUrl.trim().length > 0 ||
-    spotifyUrl.trim().length > 0;
+    spotifyUrl.trim().length > 0 ||
+    privacy !== "public";
 
   useEffect(() => {
     if (variant !== "modal") return;
@@ -275,6 +289,7 @@ export default function WordForm({
           content: mergedContent,
           images: imageUrls,
           scriptureRef: scriptureRef.trim(),
+          privacy,
         }),
       });
 
@@ -293,8 +308,11 @@ export default function WordForm({
       setSpotifyUrl("");
       setShowYoutubeInput(false);
       setShowSpotifyInput(false);
+      setPrivacy("public");
+      setShowPrivacyMenu(false);
       imageItems.forEach((item) => URL.revokeObjectURL(item.previewUrl));
       setImageItems([]);
+      setNewWordPosts(false);
       onPosted?.();
       onDirtyChange?.(false);
       if (typeof window !== "undefined") {
@@ -333,7 +351,7 @@ export default function WordForm({
         }}
       />
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 relative">
           <button
             type="button"
             onClick={() => setShowScriptureRef((prev) => !prev)}
@@ -381,6 +399,54 @@ export default function WordForm({
           >
             <SpotifyLogo size={16} weight="regular" />
           </button>
+          <button
+            type="button"
+            onClick={() => setShowPrivacyMenu((prev) => !prev)}
+            className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
+            aria-label="Post privacy"
+          >
+            {privacy === "public" ? (
+              <Globe size={16} weight="regular" />
+            ) : privacy === "followers" ? (
+              <UsersThree size={16} weight="regular" />
+            ) : (
+              <LockSimple size={16} weight="regular" />
+            )}
+          </button>
+          {showPrivacyMenu && (
+            <div className="absolute left-0 top-7 z-10 min-w-[180px] rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-2 shadow-lg">
+              <button
+                type="button"
+                onClick={() => {
+                  setPrivacy("public");
+                  setShowPrivacyMenu(false);
+                }}
+                className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)]"
+              >
+                Share to All
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPrivacy("followers");
+                  setShowPrivacyMenu(false);
+                }}
+                className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)]"
+              >
+                Followers only
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPrivacy("private");
+                  setShowPrivacyMenu(false);
+                }}
+                className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)]"
+              >
+                Only me
+              </button>
+            </div>
+          )}
         </div>
         <span className="text-[11px] text-[color:var(--subtle)]">
           {imageItems.length}/3

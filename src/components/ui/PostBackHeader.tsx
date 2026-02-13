@@ -20,6 +20,8 @@ export default function PostBackHeader({ label, refreshOnBack }: PostBackHeaderP
           if (refreshOnBack) {
             queryClient.invalidateQueries({ queryKey: ["words"] });
             queryClient.invalidateQueries({ queryKey: ["prayers"] });
+            queryClient.invalidateQueries({ queryKey: ["following-feed"] });
+            queryClient.invalidateQueries({ queryKey: ["faith-stories"] });
           }
           router.back();
         }}

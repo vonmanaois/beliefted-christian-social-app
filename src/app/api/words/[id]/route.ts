@@ -55,6 +55,8 @@ const destroyCloudinaryImage = async (publicId: string) => {
 };
 
 const ADMIN_REASONS = ["Off-topic", "Inappropriate", "Spam", "Asking money"] as const;
+const isAdminReason = (value: string): value is (typeof ADMIN_REASONS)[number] =>
+  ADMIN_REASONS.includes(value as (typeof ADMIN_REASONS)[number]);
 
 export async function DELETE(
   req: Request,
@@ -72,8 +74,8 @@ export async function DELETE(
   if (isAdmin) {
     try {
       const body = (await req.json()) as { reason?: string };
-      if (body?.reason && ADMIN_REASONS.includes(body.reason as typeof reason)) {
-        reason = body.reason as typeof reason;
+      if (body?.reason && isAdminReason(body.reason)) {
+        reason = body.reason;
       }
     } catch {
       // ignore missing body

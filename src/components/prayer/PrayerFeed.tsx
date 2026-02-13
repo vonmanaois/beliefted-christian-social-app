@@ -59,6 +59,10 @@ export default function PrayerFeed({ refreshKey, userId, followingOnly, reprayed
         prayedBy: Array.isArray(prayer.prayedBy)
           ? prayer.prayedBy.map((id) => String(id))
           : [],
+        privacy:
+          prayer.privacy === "followers" || prayer.privacy === "private"
+            ? prayer.privacy
+            : "public",
         userId: prayer.userId ? String(prayer.userId) : undefined,
       }));
       return { items, nextCursor: data.nextCursor ?? null };

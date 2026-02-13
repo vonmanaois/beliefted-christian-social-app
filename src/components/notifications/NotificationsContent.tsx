@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
 import EmptyState from "@/components/ui/EmptyState";
@@ -66,12 +66,12 @@ type NotificationsContentProps = {
 };
 
 export default function NotificationsContent({ active = false }: NotificationsContentProps) {
-  const { status } = useSession();
+  const { status, data: session } = useSession();
   const isAuthenticated = status === "authenticated";
   const queryClient = useQueryClient();
 
-  const { data: notifications = [], isLoading, refetch } = useQuery({
-    queryKey: ["notifications"],
+  const { data: notifications = [], isLoading } = useQuery({
+    queryKey: ["notifications", session?.user?.id ?? "guest"],
     queryFn: async () => {
       const response = await fetch("/api/notifications", { cache: "no-store" });
       if (!response.ok) {
@@ -79,17 +79,13 @@ export default function NotificationsContent({ active = false }: NotificationsCo
       }
       return (await response.json()) as NotificationItem[];
     },
-    enabled: isAuthenticated,
-    staleTime: 60000,
+    enabled: isAuthenticated && active,
+    staleTime: Infinity,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: true,
   });
 
-  useEffect(() => {
-    if (!active) return;
-    if (!isAuthenticated) return;
-    refetch();
-  }, [active, isAuthenticated, refetch]);
+  // Fetch only when drawer is opened and something is stale or missing.
 
   const clearMutation = useMutation({
     mutationFn: async () => {
@@ -99,8 +95,12 @@ export default function NotificationsContent({ active = false }: NotificationsCo
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["notifications", "count"] });
+      queryClient.invalidateQueries({
+        queryKey: ["notifications", session?.user?.id ?? "guest"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["notifications", "count", session?.user?.id ?? "guest"],
+      });
     },
   });
 
@@ -112,8 +112,12 @@ export default function NotificationsContent({ active = false }: NotificationsCo
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["notifications", "count"] });
+      queryClient.invalidateQueries({
+        queryKey: ["notifications", session?.user?.id ?? "guest"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["notifications", "count", session?.user?.id ?? "guest"],
+      });
     },
   });
 
@@ -129,17 +133,18 @@ export default function NotificationsContent({ active = false }: NotificationsCo
       }
     },
     onSuccess: (_data, userId) => {
-      queryClient.setQueryData<NotificationItem[]>(["notifications"], (current = []) =>
+      queryClient.setQueryData<NotificationItem[]>(
+        ["notifications", session?.user?.id ?? "guest"],
+        (current = []) =>
         current.map((note) =>
           note.type === "follow" && note.actorId?._id === userId
             ? { ...note, isFollowing: true }
             : note
         )
       );
-      queryClient.invalidateQueries({ queryKey: ["notifications", "count"] });
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("notifications:refresh"));
-      }
+      queryClient.invalidateQueries({
+        queryKey: ["notifications", "count", session?.user?.id ?? "guest"],
+      });
     },
   });
 

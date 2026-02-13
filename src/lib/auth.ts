@@ -30,6 +30,15 @@ export const authOptions: NextAuthOptions = {
         session.user.name = user.name;
         session.user.email = user.email;
         session.user.image = user.image;
+        try {
+          await dbConnect();
+          const dbUser = await UserModel.findById(user.id).select("username").lean();
+          if (dbUser?.username) {
+            session.user.username = dbUser.username;
+          }
+        } catch {
+          // ignore username lookup errors
+        }
       }
       return session;
     },

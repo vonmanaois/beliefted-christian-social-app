@@ -66,6 +66,7 @@ export async function GET(req: Request) {
   const [words, prayers] = await Promise.all([
     WordModel.find({
       userId: { $in: followingIds },
+      privacy: { $ne: "private" },
       ...cursorFilter,
     })
       .sort({ createdAt: -1, _id: -1 })
@@ -73,6 +74,7 @@ export async function GET(req: Request) {
       .lean(),
     PrayerModel.find({
       userId: { $in: followingIds },
+      privacy: { $ne: "private" },
       ...cursorFilter,
       isAnonymous: false,
     })

@@ -12,6 +12,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import Avatar from "@/components/ui/Avatar";
 import Modal from "@/components/layout/Modal";
 import Spinner from "@/components/ui/Spinner";
+import { useUIStore } from "@/lib/uiStore";
 
 const FaithStoryForm = dynamic(() => import("@/components/faith/FaithStoryForm"), {
   ssr: false,
@@ -41,6 +42,7 @@ export default function FaithStoryList() {
   const isAuthenticated = Boolean(session?.user?.id);
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { openSignIn } = useUIStore();
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const [showCreate, setShowCreate] = useState(false);
@@ -147,16 +149,20 @@ export default function FaithStoryList() {
               Public stories shared by the community.
             </p>
           </div>
-          {isAuthenticated && (
-            <button
-              type="button"
-              onClick={() => setShowCreate(true)}
-              className="text-[color:var(--ink)] hover:text-[color:var(--accent)] inline-flex items-center justify-center"
-              aria-label="New story"
-            >
-              <Plus size={22} weight="regular" />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => {
+              if (!isAuthenticated) {
+                openSignIn();
+                return;
+              }
+              setShowCreate(true);
+            }}
+            className="text-[color:var(--ink)] hover:text-[color:var(--accent)] inline-flex items-center justify-center"
+            aria-label="New story"
+          >
+            <Plus size={22} weight="regular" />
+          </button>
         </div>
         <div className="w-full max-w-2xl">
           <div className="soft-input text-sm w-full flex items-center gap-2 px-3">
@@ -259,7 +265,7 @@ export default function FaithStoryList() {
                 {story.coverImage && (
                   <div className="relative h-36 w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)]">
                     <Image
-                      src={cloudinaryTransform(story.coverImage, { width: 900, height: 360 })}
+                      src={cloudinaryTransform(story.coverImage, { width: 900, height: 390 })}
                       alt=""
                       fill
                       sizes="(min-width: 768px) 640px, 100vw"

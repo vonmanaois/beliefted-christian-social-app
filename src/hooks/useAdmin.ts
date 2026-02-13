@@ -10,6 +10,6 @@ export const useAdmin = () =>
       if (!response.ok) return { isAdmin: false };
       return (await response.json()) as { isAdmin: boolean };
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: Infinity,
     refetchOnWindowFocus: false,
   });

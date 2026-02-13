@@ -52,10 +52,13 @@ import {
   BookOpenText,
   ChatCircle,
   DotsThreeOutline,
+  Globe,
   HandsClapping,
+  LockSimple,
   PlusCircle,
   NotePencil,
   UserCircle,
+  UsersThree,
 } from "@phosphor-icons/react";
 
 export type PrayerUser = {
@@ -78,6 +81,7 @@ export type Prayer = {
   user?: PrayerUser | null;
   userId?: string;
   isOwner?: boolean;
+  privacy?: "public" | "followers" | "private";
 };
 
 type PrayerCardProps = {
@@ -357,9 +361,6 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
         ["prayer-comments", prayerId],
         (current = []) => [hydratedComment as Comment, ...current]
       );
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("notifications:refresh"));
-      }
     },
     onError: () => {
       setCommentError("Couldn't post comment.");
@@ -576,7 +577,6 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
       setPrayError(null);
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("stats:refresh"));
-        window.dispatchEvent(new Event("notifications:refresh"));
       }
     },
   });
@@ -662,7 +662,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
   const handleDelete = async () => {
     if (!isOwner) return;
     try {
-      await deleteMutation.mutateAsync();
+      await deleteMutation.mutateAsync(undefined);
     } catch (error) {
       console.error(error);
     }
@@ -773,11 +773,11 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2 pr-1">
-              <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
-                {formatPostTime(createdAtValue.toISOString())}
-              </p>
-              {(isOwner || isAdmin) && (
+          <div className="flex items-center gap-2 pr-1">
+            <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
+              {formatPostTime(createdAtValue.toISOString())}
+            </p>
+            {(isOwner || isAdmin) && (
                 <div className="relative" ref={menuRef}>
                   <button
                     type="button"
@@ -1011,14 +1011,25 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
               )}
             </span>
           </button>
-          {prayedBy.length > 0 && (
-            <div className="ml-auto text-[10px] sm:text-xs text-[color:var(--subtle)]">
-              <span className="font-semibold text-[color:var(--ink)]">
-                {prayedBy.length}
-              </span>{" "}
-              people prayed
-            </div>
-          )}
+          <div className="ml-auto flex items-center gap-2 text-[10px] sm:text-xs text-[color:var(--subtle)]">
+            {prayedBy.length > 0 && (
+              <span>
+                <span className="font-semibold text-[color:var(--ink)]">
+                  {prayedBy.length}
+                </span>{" "}
+                people prayed
+              </span>
+            )}
+            <span className="text-[color:var(--subtle)]">
+              {prayer.privacy === "private" ? (
+                <LockSimple size={16} weight="regular" />
+              ) : prayer.privacy === "followers" ? (
+                <UsersThree size={16} weight="regular" />
+              ) : (
+                <Globe size={16} weight="regular" />
+              )}
+            </span>
+          </div>
         </div>
         {prayError && !isOwner && (
           <div className="mt-2 text-[11px] text-[color:var(--subtle)] flex items-center gap-2">
@@ -1049,7 +1060,11 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
                   }}
                 />
                 <div className="flex justify-end">
-                  <button type="submit" className="post-button">
+                  <button
+                    type="submit"
+                    className="post-button"
+                    disabled={!commentText.trim()}
+                  >
                     Post encouragement
                   </button>
                 </div>

@@ -60,9 +60,6 @@ export default function FollowButton({
           })
         );
       }
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("notifications:refresh"));
-      }
     } catch (error) {
       console.error(error);
       setIsFollowing(previousFollowing);

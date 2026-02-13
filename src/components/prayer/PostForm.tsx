@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MinusCircle, PlusCircle } from "@phosphor-icons/react";
+import { Globe, LockSimple, MinusCircle, PlusCircle, UsersThree } from "@phosphor-icons/react";
 import { useSession } from "next-auth/react";
+import { useUIStore } from "@/lib/uiStore";
 
 type PostFormProps = {
   onPosted?: () => void;
@@ -20,12 +21,15 @@ export default function PostForm({
   variant = "modal",
 }: PostFormProps) {
   const { data: session } = useSession();
+  const { setNewPrayerPosts } = useUIStore();
   const [kind, setKind] = useState<"prayer" | "request">("prayer");
   const [content, setContent] = useState("");
   const [points, setPoints] = useState<
     { title: string; description: string }[]
   >([{ title: "", description: "" }]);
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [privacy, setPrivacy] = useState<"public" | "followers" | "private">("public");
+  const [showPrivacyMenu, setShowPrivacyMenu] = useState(false);
   const [expiresInDays, setExpiresInDays] = useState<7 | 30 | "never">(7);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -53,7 +57,7 @@ export default function PostForm({
       ? content.trim().length > 0
       : points.some(
           (point) => point.title.trim().length > 0 || point.description.trim().length > 0
-        );
+        ) || privacy !== "public";
 
   const showRequestValidation =
     kind === "request" &&
@@ -103,6 +107,7 @@ export default function PostForm({
                   .slice(0, 8)
               : [],
           isAnonymous,
+          privacy,
           expiresInDays,
         }),
       });
@@ -119,8 +124,11 @@ export default function PostForm({
       setContent("");
       setPoints([{ title: "", description: "" }]);
       setIsAnonymous(false);
+      setPrivacy("public");
+      setShowPrivacyMenu(false);
       setExpiresInDays(7);
       setValidationError(null);
+      setNewPrayerPosts(false);
       onPosted?.();
       onDirtyChange?.(false);
       if (typeof window !== "undefined") {
@@ -242,7 +250,7 @@ export default function PostForm({
       )}
 
       {(showExtras || kind === "request") && (
-        <div className="mt-2 flex flex-wrap items-center gap-3 w-full text-xs text-[color:var(--subtle)]">
+        <div className="mt-2 flex flex-wrap items-center gap-3 w-full text-xs text-[color:var(--subtle)] relative">
           {kind === "prayer" && (
             <button
               type="button"
@@ -292,6 +300,54 @@ export default function PostForm({
               Never
             </label>
           </div>
+          <button
+            type="button"
+            onClick={() => setShowPrivacyMenu((prev) => !prev)}
+            className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
+            aria-label="Prayer privacy"
+          >
+            {privacy === "public" ? (
+              <Globe size={16} weight="regular" />
+            ) : privacy === "followers" ? (
+              <UsersThree size={16} weight="regular" />
+            ) : (
+              <LockSimple size={16} weight="regular" />
+            )}
+          </button>
+          {showPrivacyMenu && (
+            <div className="absolute left-0 top-9 z-10 min-w-[180px] rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-2 shadow-lg">
+              <button
+                type="button"
+                onClick={() => {
+                  setPrivacy("public");
+                  setShowPrivacyMenu(false);
+                }}
+                className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)]"
+              >
+                Share to All
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPrivacy("followers");
+                  setShowPrivacyMenu(false);
+                }}
+                className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)]"
+              >
+                Followers only
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPrivacy("private");
+                  setShowPrivacyMenu(false);
+                }}
+                className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)]"
+              >
+                Only me
+              </button>
+            </div>
+          )}
         </div>
       )}
 

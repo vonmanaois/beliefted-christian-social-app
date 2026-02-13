@@ -3,13 +3,23 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpenText, BookmarkSimple, ChatCircle, DotsThreeOutline, Heart } from "@phosphor-icons/react";
+import {
+  BookOpenText,
+  BookmarkSimple,
+  ChatCircle,
+  DotsThreeOutline,
+  Globe,
+  Heart,
+  LockSimple,
+  UsersThree,
+} from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import Avatar from "@/components/ui/Avatar";
 import Modal from "@/components/layout/Modal";
 import { useUIStore } from "@/lib/uiStore";
 import YouTubeEmbed from "@/components/ui/YouTubeEmbed";
 import { useAdmin } from "@/hooks/useAdmin";
+import { cloudinaryTransform } from "@/lib/cloudinary";
 
 const extractYouTube = (value: string) => {
   let videoId: string | null = null;
@@ -99,6 +109,14 @@ export type Word = {
   isOwner?: boolean;
   scriptureRef?: string | null;
   images?: string[];
+  privacy?: "public" | "followers" | "private";
+  sharedFaithStoryId?: string | null;
+  sharedFaithStory?: {
+    id: string;
+    title: string;
+    coverImage?: string | null;
+    authorUsername?: string | null;
+  } | null;
 };
 
 type WordCommentData = {
@@ -398,9 +416,6 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
     },
     onSuccess: () => {
       setLikeError(null);
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("notifications:refresh"));
-      }
     },
   });
 
@@ -427,6 +442,12 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
           const nextSavedBy = currentSaved.filter((id) => id !== viewerId);
           return { ...item, savedBy: nextSavedBy };
         });
+        queryClient.invalidateQueries({
+          predicate: (query) =>
+            Array.isArray(query.queryKey) &&
+            query.queryKey[0] === "words" &&
+            query.queryKey.includes("saved"),
+        });
         return;
       }
       updateWordCache((item) => {
@@ -435,6 +456,12 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
           ? [...new Set([...currentSaved, viewerId])]
           : currentSaved.filter((id) => id !== viewerId);
         return { ...item, savedBy: nextSavedBy };
+      });
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          Array.isArray(query.queryKey) &&
+          query.queryKey[0] === "words" &&
+          query.queryKey.includes("saved"),
       });
     },
   });
@@ -486,9 +513,6 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
         ["word-comments", wordId],
         (current = []) => [hydratedComment as WordCommentData, ...current]
       );
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("notifications:refresh"));
-      }
     },
     onError: () => {
       setCommentError("Couldn't post comment.");
@@ -626,7 +650,8 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
   });
   const isDeleting = deleteMutation.isPending;
 
-  const toggleComments = () => {
+  const toggleComments = (event?: React.MouseEvent) => {
+    event?.stopPropagation();
     setShowComments((prev) => {
       if (prev) {
         if (commentText.trim().length > 0) {
@@ -641,7 +666,8 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
     });
   };
 
-  const handleLike = async () => {
+  const handleLike = async (event?: React.MouseEvent) => {
+    event?.stopPropagation();
     if (!session?.user?.id) {
       openSignIn();
       return;
@@ -658,7 +684,8 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (event?: React.MouseEvent) => {
+    event?.stopPropagation();
     if (!session?.user?.id) {
       openSignIn();
       return;
@@ -737,7 +764,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
   const handleDelete = async () => {
     if (!isOwner) return;
     try {
-      await deleteMutation.mutateAsync();
+      await deleteMutation.mutateAsync(undefined);
     } catch (error) {
       console.error(error);
     }
@@ -758,6 +785,12 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
     showFullContent || cleaned.length <= 320
       ? cleaned
       : `${cleaned.slice(0, 320).trimEnd()}…`;
+  const sharedStory = word.sharedFaithStory ?? null;
+  const sharedStoryMissing = !sharedStory && Boolean(word.sharedFaithStoryId);
+  const sharedStoryHref =
+    sharedStory?.authorUsername && sharedStory?.id
+      ? `/faith-story/${sharedStory.authorUsername}/${sharedStory.id}`
+      : null;
 
   return (
     <article
@@ -899,6 +932,35 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                   {showFullContent ? "Done" : "Continue"}
                 </button>
               )}
+            {(sharedStory || sharedStoryMissing) && (
+              <div
+                className="mt-3 overflow-hidden rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] cursor-pointer"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (sharedStoryHref) {
+                    router.push(sharedStoryHref);
+                  }
+                }}
+              >
+                {sharedStory?.coverImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={cloudinaryTransform(sharedStory.coverImage, { width: 720 })}
+                    alt=""
+                    className="h-40 w-full object-cover"
+                    loading="lazy"
+                  />
+                ) : null}
+                <div className="p-3">
+                  <p className="text-sm font-semibold text-[color:var(--ink)]">
+                    {sharedStory ? sharedStory.title : "Story unavailable"}
+                  </p>
+                  <p className="mt-1 text-xs text-[color:var(--accent)]">
+                    {sharedStory ? "Read full story" : "This story is no longer available."}
+                  </p>
+                </div>
+              </div>
+            )}
             {youtubeId && (
               <div
                 className="mt-3 aspect-video w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)]"
@@ -925,19 +987,29 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
             )}
             {Array.isArray(word.images) && word.images.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
-                {word.images.map((src, index) => (
-                  <div
-                    key={`${src}-${index}`}
-                    className="h-32 w-32 sm:h-36 sm:w-36 overflow-hidden rounded-xl border border-[color:var(--panel-border)]"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setLightboxSrc(src);
-                    }}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={src} alt="" className="h-full w-full object-cover" />
-                  </div>
-                ))}
+                {word.images.map((src, index) => {
+                  const isCloudinary =
+                    typeof src === "string" && src.includes("res.cloudinary.com");
+                  const thumbSrc = isCloudinary
+                    ? cloudinaryTransform(src, { width: 720 })
+                    : src;
+                  const lightboxSrc = isCloudinary
+                    ? cloudinaryTransform(src, { width: 1200 })
+                    : src;
+                  return (
+                    <div
+                      key={`${src}-${index}`}
+                      className="h-32 w-32 sm:h-36 sm:w-36 overflow-hidden rounded-xl border border-[color:var(--panel-border)]"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setLightboxSrc(lightboxSrc);
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={thumbSrc} alt="" className="h-full w-full object-cover" />
+                    </div>
+                  );
+                })}
               </div>
             )}
           </>
@@ -1006,6 +1078,15 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
               )}
             </span>
           </button>
+          <span className="ml-auto text-[color:var(--subtle)]">
+            {word.privacy === "private" ? (
+              <LockSimple size={16} weight="regular" />
+            ) : word.privacy === "followers" ? (
+              <UsersThree size={16} weight="regular" />
+            ) : (
+              <Globe size={16} weight="regular" />
+            )}
+          </span>
         </div>
         {likeError && (
           <div className="mt-2 text-[11px] text-[color:var(--subtle)] flex items-center gap-2">
@@ -1036,7 +1117,11 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                   }}
                 />
                 <div className="flex justify-end">
-                  <button type="submit" className="post-button">
+                  <button
+                    type="submit"
+                    className="post-button"
+                    disabled={!commentText.trim()}
+                  >
                     Post reflection
                   </button>
                 </div>

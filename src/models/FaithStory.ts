@@ -11,6 +11,7 @@ const FaithStorySchema = new Schema(
     coverImage: { type: String, trim: true },
     isAnonymous: { type: Boolean, default: false },
     likedBy: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    sharedCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

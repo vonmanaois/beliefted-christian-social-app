@@ -57,6 +57,8 @@ const destroyCloudinaryImage = async (publicId: string) => {
 
 const normalizeId = (raw: string) => raw.replace(/^ObjectId\(\"(.+)\"\)$/, "$1");
 const ADMIN_REASONS = ["Off-topic", "Inappropriate", "Spam", "Asking money"] as const;
+const isAdminReason = (value: string): value is (typeof ADMIN_REASONS)[number] =>
+  ADMIN_REASONS.includes(value as (typeof ADMIN_REASONS)[number]);
 
 export async function PUT(
   req: Request,
@@ -76,6 +78,7 @@ export async function PUT(
   const StorySchema = z.object({
     title: z.string().trim().min(1).max(160),
     content: z.string().trim().min(1).max(10000),
+    coverImage: z.string().url().optional().or(z.literal("")),
   });
 
   const body = StorySchema.safeParse(await req.json());
@@ -94,9 +97,25 @@ export async function PUT(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const nextCover =
+    typeof body.data.coverImage === "string" && body.data.coverImage.trim()
+      ? body.data.coverImage.trim()
+      : null;
+
+  const previousCover = story.coverImage ?? null;
   story.title = body.data.title.trim();
   story.content = body.data.content.trim();
+  if (nextCover) {
+    story.coverImage = nextCover;
+  }
   await story.save();
+
+  if (nextCover && previousCover && previousCover !== nextCover) {
+    const publicId = extractCloudinaryPublicId(previousCover);
+    if (publicId) {
+      await destroyCloudinaryImage(publicId);
+    }
+  }
 
   revalidateTag("faith-stories", "max");
   return NextResponse.json({ ok: true, title: story.title, content: story.content });
@@ -116,8 +135,8 @@ export async function DELETE(
   if (isAdmin) {
     try {
       const body = (await req.json()) as { reason?: string };
-      if (body?.reason && ADMIN_REASONS.includes(body.reason as typeof reason)) {
-        reason = body.reason as typeof reason;
+      if (body?.reason && isAdminReason(body.reason)) {
+        reason = body.reason;
       }
     } catch {
       // ignore missing body

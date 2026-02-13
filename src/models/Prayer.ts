@@ -17,6 +17,7 @@ const PrayerSchema = new Schema(
     ],
     scriptureRef: { type: String, trim: true, maxlength: 80 },
     isAnonymous: { type: Boolean, default: false },
+    privacy: { type: String, enum: ["public", "followers", "private"], default: "public" },
     prayedBy: [{ type: Schema.Types.ObjectId, ref: "User" }],
     expiresAt: { type: Date },
   },

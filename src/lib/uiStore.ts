@@ -5,6 +5,7 @@ type UIState = {
   preferencesOpen: boolean;
   newWordPosts: boolean;
   newPrayerPosts: boolean;
+  activeHomeTab: "words" | "prayers" | "following";
   lastSeenNotificationsCount: number;
   openSignIn: () => void;
   closeSignIn: () => void;
@@ -14,6 +15,7 @@ type UIState = {
   togglePreferences: () => void;
   setNewWordPosts: (value: boolean) => void;
   setNewPrayerPosts: (value: boolean) => void;
+  setActiveHomeTab: (value: "words" | "prayers" | "following") => void;
   setLastSeenNotificationsCount: (value: number) => void;
 };
 
@@ -22,6 +24,7 @@ export const useUIStore = create<UIState>((set) => ({
   preferencesOpen: false,
   newWordPosts: false,
   newPrayerPosts: false,
+  activeHomeTab: "words",
   lastSeenNotificationsCount: 0,
   openSignIn: () => set({ signInOpen: true }),
   closeSignIn: () => set({ signInOpen: false }),
@@ -32,5 +35,6 @@ export const useUIStore = create<UIState>((set) => ({
     set((state) => ({ preferencesOpen: !state.preferencesOpen })),
   setNewWordPosts: (value) => set({ newWordPosts: value }),
   setNewPrayerPosts: (value) => set({ newPrayerPosts: value }),
+  setActiveHomeTab: (value) => set({ activeHomeTab: value }),
   setLastSeenNotificationsCount: (value) => set({ lastSeenNotificationsCount: value }),
 }));

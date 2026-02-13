@@ -59,6 +59,12 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
         savedBy: Array.isArray(word.savedBy)
           ? word.savedBy.map((id) => String(id))
           : [],
+        sharedFaithStoryId:
+          typeof word.sharedFaithStoryId === "string" ? word.sharedFaithStoryId : null,
+        privacy:
+          word.privacy === "followers" || word.privacy === "private"
+            ? word.privacy
+            : "public",
         userId: word.userId ? String(word.userId) : undefined,
       }));
       return { items, nextCursor: data.nextCursor ?? null };

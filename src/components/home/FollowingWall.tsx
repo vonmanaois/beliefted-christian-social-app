@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { UserCircle, UserPlus } from "@phosphor-icons/react";
 import Image from "next/image";
 import { useUIStore } from "@/lib/uiStore";
@@ -48,13 +48,18 @@ export default function FollowingWall() {
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     initialPageParam: null,
-    staleTime: 180000,
+    staleTime: 60000,
     gcTime: 900000,
     placeholderData: keepPreviousData,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: true,
     enabled: isAuthenticated,
   });
+
+  const pullStartRef = useRef<number | null>(null);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isPulling, setIsPulling] = useState(false);
+  const threshold = 60;
 
   useEffect(() => {
     if (!hasNextPage) return;
@@ -175,7 +180,36 @@ export default function FollowingWall() {
   }
 
   return (
-    <section className="feed-surface">
+    <section
+      className="feed-surface"
+      onTouchStart={(event) => {
+        if (window.scrollY > 0) return;
+        pullStartRef.current = event.touches[0]?.clientY ?? null;
+        setIsPulling(true);
+      }}
+      onTouchMove={(event) => {
+        if (!isPulling || pullStartRef.current === null) return;
+        const currentY = event.touches[0]?.clientY ?? 0;
+        const delta = Math.max(0, currentY - pullStartRef.current);
+        setPullDistance(Math.min(delta, 90));
+      }}
+      onTouchEnd={() => {
+        if (pullDistance >= threshold) {
+          refetch();
+        }
+        setPullDistance(0);
+        setIsPulling(false);
+        pullStartRef.current = null;
+      }}
+    >
+      {pullDistance > 0 && (
+        <div
+          className="flex items-center justify-center text-[11px] text-[color:var(--subtle)]"
+          style={{ height: pullDistance }}
+        >
+          {pullDistance >= threshold ? "Release to refresh" : "Pull to refresh"}
+        </div>
+      )}
       <button
         type="button"
         onClick={() => {

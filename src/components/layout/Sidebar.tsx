@@ -44,6 +44,7 @@ export default function Sidebar() {
     closeSignIn,
     newWordPosts,
     newPrayerPosts,
+    activeHomeTab,
     lastSeenNotificationsCount,
     setLastSeenNotificationsCount,
     setNewWordPosts,
@@ -51,6 +52,10 @@ export default function Sidebar() {
   } = useUIStore();
   const mobileMenuRef = useRef<HTMLDivElement | null>(null);
   const notificationsRef = useRef<HTMLDivElement | null>(null);
+  const lastUserIdRef = useRef<string | null>(null);
+  const notificationsOpenRef = useRef(false);
+  const sseConnectedRef = useRef(false);
+  const lastCountRefreshRef = useRef(0);
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
@@ -87,14 +92,14 @@ export default function Sidebar() {
   }, [infoPanel]);
 
   const { data: notificationsCount = 0 } = useQuery({
-    queryKey: ["notifications", "count"],
+    queryKey: ["notifications", "count", session?.user?.id ?? "guest"],
     queryFn: async () => {
-      const response = await fetch("/api/notifications", { cache: "no-store" });
+      const response = await fetch("/api/notifications/count", { cache: "no-store" });
       if (!response.ok) {
         throw new Error("Failed to load notifications");
       }
-      const data = (await response.json()) as Array<unknown>;
-      return Array.isArray(data) ? data.length : 0;
+      const data = (await response.json()) as { count?: number };
+      return typeof data.count === "number" ? data.count : 0;
     },
     enabled: isAuthenticated,
     staleTime: Infinity,
@@ -112,12 +117,44 @@ export default function Sidebar() {
   }, [notificationsCount, lastSeenNotificationsCount, setLastSeenNotificationsCount]);
 
   useEffect(() => {
-    const refresh = () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications", "count"] });
+    const nextUserId = session?.user?.id ?? null;
+    if (lastUserIdRef.current === nextUserId) return;
+    lastUserIdRef.current = nextUserId;
+    setLastSeenNotificationsCount(0);
+    setNewWordPosts(false);
+    setNewPrayerPosts(false);
+    queryClient.setQueryData(
+      ["notifications", "count", nextUserId ?? "guest"],
+      0
+    );
+  }, [session?.user?.id, queryClient, setLastSeenNotificationsCount, setNewWordPosts, setNewPrayerPosts]);
+
+  useEffect(() => {
+    // keep ref for potential future manual refresh hooks
+    lastCountRefreshRef.current = Date.now();
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const poll = () => {
+      if (sseConnectedRef.current) return;
+      queryClient.invalidateQueries({
+        queryKey: ["notifications", "count", session?.user?.id ?? "guest"],
+      });
     };
-    window.addEventListener("notifications:refresh", refresh);
-    return () => window.removeEventListener("notifications:refresh", refresh);
-  }, [queryClient]);
+    poll();
+    const interval = window.setInterval(poll, 60000);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        poll();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [isAuthenticated, queryClient, session?.user?.id]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -149,23 +186,56 @@ export default function Sidebar() {
 
       unifiedStream.onopen = () => {
         unifiedStreamRetryDelay = 1000;
+        sseConnectedRef.current = true;
       };
 
       unifiedStream.onmessage = (event) => {
         try {
+          const now = Date.now();
           const payload = JSON.parse(event.data) as {
             wordsChanged?: boolean;
             prayersChanged?: boolean;
+            wordAuthorId?: string | null;
+            prayerAuthorId?: string | null;
+            wordAuthorIds?: string[];
+            prayerAuthorIds?: string[];
             notificationsCount?: number;
           };
-          if (payload.wordsChanged) {
+          const viewerId = session?.user?.id ?? null;
+          if (!viewerId) {
+            if (typeof payload.notificationsCount === "number") {
+              queryClient.setQueryData(
+                ["notifications", "count", session?.user?.id ?? "guest"],
+                payload.notificationsCount
+              );
+            }
+            return;
+          }
+          const wordHasOtherAuthor =
+            !payload.wordAuthorId || payload.wordAuthorId !== viewerId;
+          const prayerHasOtherAuthor =
+            !payload.prayerAuthorId || payload.prayerAuthorId !== viewerId;
+          if (payload.wordsChanged && wordHasOtherAuthor) {
             setNewWordPosts(true);
           }
-          if (payload.prayersChanged) {
+          if (payload.prayersChanged && prayerHasOtherAuthor) {
             setNewPrayerPosts(true);
           }
           if (typeof payload.notificationsCount === "number") {
-            queryClient.setQueryData(["notifications", "count"], payload.notificationsCount);
+            queryClient.setQueryData(
+              ["notifications", "count", session?.user?.id ?? "guest"],
+              payload.notificationsCount
+            );
+            if (payload.notificationsCount > lastSeenNotificationsCount) {
+              queryClient.invalidateQueries({
+                queryKey: ["notifications", session?.user?.id ?? "guest"],
+              });
+            }
+            if (notificationsOpenRef.current) {
+              queryClient.invalidateQueries({
+                queryKey: ["notifications", session?.user?.id ?? "guest"],
+              });
+            }
           }
         } catch {
           // ignore parse errors
@@ -175,6 +245,7 @@ export default function Sidebar() {
       unifiedStream.onerror = () => {
         unifiedStream?.close();
         unifiedStream = null;
+        sseConnectedRef.current = false;
         if (unifiedStreamRetryTimer) {
           clearTimeout(unifiedStreamRetryTimer);
         }
@@ -187,6 +258,7 @@ export default function Sidebar() {
       if (document.visibilityState === "hidden") {
         unifiedStream?.close();
         unifiedStream = null;
+        sseConnectedRef.current = false;
         return;
       }
       connect();
@@ -206,15 +278,28 @@ export default function Sidebar() {
           }
           unifiedStream?.close();
           unifiedStream = null;
+          sseConnectedRef.current = false;
         }, 5000);
       }
     };
-  }, [isAuthenticated, queryClient, setNewPrayerPosts, setNewWordPosts]);
+  }, [
+    isAuthenticated,
+    queryClient,
+    session?.user?.id,
+    setNewPrayerPosts,
+    setNewWordPosts,
+    lastSeenNotificationsCount,
+  ]);
 
   const openNotifications = () => {
     if (!isAuthenticated) {
       openSignIn();
       return;
+    }
+    if (hasUnreadNotifications) {
+      queryClient.invalidateQueries({
+        queryKey: ["notifications", session?.user?.id ?? "guest"],
+      });
     }
     setLastSeenNotificationsCount(notificationsCount);
     if (notificationsOpen) {
@@ -306,6 +391,10 @@ export default function Sidebar() {
     document.addEventListener("pointerdown", handlePointerDown);
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [notificationsOpen, closeNotifications]);
+
+  useEffect(() => {
+    notificationsOpenRef.current = notificationsOpen;
+  }, [notificationsOpen]);
 
   useEffect(() => {
     const handleTouchStart = (event: TouchEvent) => {
@@ -585,7 +674,7 @@ export default function Sidebar() {
                       type="button"
                       onClick={() => {
                         closeMenu();
-                        signIn("google");
+                        openSignIn();
                       }}
                       className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[color:var(--accent)] hover:bg-[color:var(--surface-strong)]"
                     >
@@ -731,8 +820,19 @@ export default function Sidebar() {
             if (pathname !== "/") {
               router.push("/");
             }
-            queryClient.invalidateQueries({ queryKey: ["words"] });
-            setNewWordPosts(false);
+            if (activeHomeTab === "prayers") {
+              if (newPrayerPosts) {
+                queryClient.invalidateQueries({ queryKey: ["prayers"] });
+              }
+              setNewPrayerPosts(false);
+            } else if (activeHomeTab === "following") {
+              // Following uses staleTime + pull-to-refresh.
+            } else {
+              if (newWordPosts) {
+                queryClient.invalidateQueries({ queryKey: ["words"] });
+              }
+              setNewWordPosts(false);
+            }
           }}
         >
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
@@ -846,6 +946,49 @@ export default function Sidebar() {
             <ThemeToggle />
           </div>
         )}
+        {isAuthenticated && (
+          <div className="hidden lg:flex flex-col gap-3 rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-3">
+            <button
+              type="button"
+              onClick={() => {
+                const target = resolvedUsername ? `/profile/${resolvedUsername}` : "/profile";
+                router.push(target);
+              }}
+              className="flex items-center gap-3 text-left"
+              aria-label="Go to profile"
+            >
+              <span className="h-10 w-10 rounded-full bg-[color:var(--surface-strong)] overflow-hidden flex items-center justify-center text-[10px] font-semibold text-[color:var(--subtle)]">
+                {session?.user?.image ? (
+                  <Image
+                    src={session.user.image}
+                    alt=""
+                    width={40}
+                    height={40}
+                    sizes="40px"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <User size={20} weight="regular" />
+                )}
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-[color:var(--ink)]">
+                  {session?.user?.name ?? "Signed in"}
+                </p>
+                <p className="text-xs text-[color:var(--subtle)]">
+                  {resolvedUsername ? `@${resolvedUsername}` : session?.user?.email}
+                </p>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => signOut()}
+              className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[color:var(--danger)] border border-[color:var(--danger)]"
+            >
+              Sign out
+            </button>
+          </div>
+        )}
       </div>
 
       </aside>
@@ -880,7 +1023,9 @@ export default function Sidebar() {
               if (pathname !== "/") {
                 router.push("/");
               }
-              queryClient.invalidateQueries({ queryKey: ["words"] });
+              if (newWordPosts) {
+                queryClient.invalidateQueries({ queryKey: ["words"] });
+              }
               setNewWordPosts(false);
             }}
             aria-label="Home"

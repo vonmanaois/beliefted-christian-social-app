@@ -16,7 +16,13 @@ export default function HomeTabs() {
   const { status } = useSession();
   const isAuthenticated = status === "authenticated";
   const queryClient = useQueryClient();
-  const { newWordPosts, newPrayerPosts, setNewWordPosts, setNewPrayerPosts } = useUIStore();
+  const {
+    newWordPosts,
+    newPrayerPosts,
+    setNewWordPosts,
+    setNewPrayerPosts,
+    setActiveHomeTab,
+  } = useUIStore();
 
   const [activeIndex, setActiveIndex] = useState(0);
   const activeTab = useMemo<Tab>(() => tabs[activeIndex], [activeIndex]);
@@ -32,6 +38,18 @@ export default function HomeTabs() {
     window.addEventListener("open-word-composer", handleOpenWord);
     return () => window.removeEventListener("open-word-composer", handleOpenWord);
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "Prayer Wall") {
+      setActiveHomeTab("prayers");
+      return;
+    }
+    if (activeTab === "Following") {
+      setActiveHomeTab("following");
+      return;
+    }
+    setActiveHomeTab("words");
+  }, [activeTab, setActiveHomeTab]);
 
   return (
     <div className="flex flex-col gap-6 w-full">
@@ -54,6 +72,10 @@ export default function HomeTabs() {
             const showDot =
               (tab === "Faith Share" && newWordPosts) ||
               (tab === "Prayer Wall" && newPrayerPosts);
+            const dotClass =
+              activeTab === tab
+                ? "bg-[color:var(--accent-contrast)]"
+                : "bg-[color:var(--accent)]";
             return (
               <button
                 key={tab}
@@ -83,7 +105,7 @@ export default function HomeTabs() {
                 <span className="relative z-10 inline-flex items-center gap-1">
                   {tab}
                   {showDot && (
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--accent)]" />
+                    <span className={`inline-block h-1.5 w-1.5 rounded-full ${dotClass}`} />
                   )}
                 </span>
               </button>
@@ -98,6 +120,10 @@ export default function HomeTabs() {
             const showDot =
               (tab === "Faith Share" && newWordPosts) ||
               (tab === "Prayer Wall" && newPrayerPosts);
+            const dotClass =
+              activeTab === tab
+                ? "bg-[color:var(--accent-contrast)]"
+                : "bg-[color:var(--accent)]";
             return (
               <button
                 key={tab}
@@ -127,7 +153,7 @@ export default function HomeTabs() {
                 <span className="relative z-10 inline-flex items-center gap-1">
                   {tab}
                   {showDot && (
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--accent)]" />
+                    <span className={`inline-block h-1.5 w-1.5 rounded-full ${dotClass}`} />
                   )}
                 </span>
               </button>
