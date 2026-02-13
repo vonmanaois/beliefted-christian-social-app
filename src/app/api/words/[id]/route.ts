@@ -6,6 +6,7 @@ import WordModel from "@/models/Word";
 import WordCommentModel from "@/models/WordComment";
 import NotificationModel from "@/models/Notification";
 import ModerationLogModel from "@/models/ModerationLog";
+import FaithStoryModel from "@/models/FaithStory";
 import { isAdminEmail } from "@/lib/admin";
 import { revalidateTag } from "next/cache";
 import crypto from "crypto";
@@ -99,6 +100,20 @@ export async function DELETE(
 
   await WordCommentModel.deleteMany({ wordId: word._id });
   await WordModel.deleteOne({ _id: word._id });
+  if (word.sharedFaithStoryId) {
+    await FaithStoryModel.updateOne(
+      { _id: word.sharedFaithStoryId },
+      [
+        {
+          $set: {
+            sharedCount: {
+              $max: [0, { $subtract: ["$sharedCount", 1] }],
+            },
+          },
+        },
+      ]
+    );
+  }
 
   const images = Array.isArray(word.images) ? word.images : [];
   await Promise.all(

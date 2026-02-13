@@ -10,6 +10,7 @@ import WordModel from "@/models/Word";
 import CommentModel from "@/models/Comment";
 import WordCommentModel from "@/models/WordComment";
 import UserModel from "@/models/User";
+import FaithStoryModel from "@/models/FaithStory";
 import PrayerCard from "@/components/prayer/PrayerCard";
 import WordCard from "@/components/word/WordCard";
 
@@ -189,6 +190,38 @@ export default async function PostDetailPage({ params }: PageProps) {
     const isOwner = Boolean(
       session?.user?.id && String(word.userId) === String(session.user.id)
     );
+    const sharedStoryId = word.sharedFaithStoryId
+      ? String(word.sharedFaithStoryId)
+      : null;
+    let sharedStoryFallback: {
+      title?: string | null;
+      coverImage?: string | null;
+      authorUsername?: string | null;
+    } | null = null;
+    if (
+      sharedStoryId &&
+      (!word.sharedFaithStoryTitle ||
+        !word.sharedFaithStoryCover ||
+        !word.sharedFaithStoryAuthorUsername)
+    ) {
+      sharedStoryFallback = await FaithStoryModel.findById(sharedStoryId)
+        .select("title coverImage authorUsername")
+        .lean();
+    }
+    const sharedFaithStory =
+      sharedStoryId &&
+      (word.sharedFaithStoryTitle || sharedStoryFallback)
+        ? {
+            id: sharedStoryId,
+            title: word.sharedFaithStoryTitle ?? sharedStoryFallback?.title ?? "",
+            coverImage:
+              word.sharedFaithStoryCover ?? sharedStoryFallback?.coverImage ?? null,
+            authorUsername:
+              word.sharedFaithStoryAuthorUsername ??
+              sharedStoryFallback?.authorUsername ??
+              null,
+          }
+        : null;
 
     return (
       <main className="container">
@@ -210,6 +243,10 @@ export default async function PostDetailPage({ params }: PageProps) {
                   content: word.content ?? "",
                   _id: word._id.toString(),
                   userId: word.userId?.toString() ?? null,
+                  sharedFaithStoryId: word.sharedFaithStoryId
+                    ? String(word.sharedFaithStoryId)
+                    : null,
+                  sharedFaithStory: sharedFaithStory ?? undefined,
                   scriptureRef: word.scriptureRef ?? null,
                   createdAt:
                     word.createdAt instanceof Date
