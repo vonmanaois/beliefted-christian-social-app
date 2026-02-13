@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 
 type JournalFormProps = {
   initialTitle?: string;
@@ -19,6 +20,8 @@ export default function JournalForm({
   submitLabel = "Save",
   onDirtyChange,
 }: JournalFormProps) {
+  const { data: session } = useSession();
+  const isAuthenticated = Boolean(session?.user?.id);
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
   const [isSaving, setIsSaving] = useState(false);
@@ -26,6 +29,16 @@ export default function JournalForm({
   const textRef = useRef<HTMLTextAreaElement | null>(null);
   const isDirty =
     title.trim() !== initialTitle.trim() || content.trim() !== initialContent.trim();
+
+  const openSignIn = () => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("open-signin"));
+    }
+  };
+
+  const handleUnauthedTextClick = () => {
+    if (!isAuthenticated) openSignIn();
+  };
 
   useEffect(() => {
     onDirtyChange?.(isDirty);
@@ -43,6 +56,10 @@ export default function JournalForm({
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
+    if (!isAuthenticated) {
+      openSignIn();
+      return;
+    }
     if (!title.trim() || !content.trim()) {
       setError("Title and text are required.");
       return;
@@ -63,6 +80,10 @@ export default function JournalForm({
         className="bg-transparent text-lg font-semibold text-[color:var(--ink)] outline-none border-b border-[color:var(--panel-border)] pb-2 focus:outline-none focus:ring-0 focus:border-[color:var(--panel-border)]"
         placeholder="Title"
         value={title}
+        readOnly={!isAuthenticated}
+        aria-disabled={!isAuthenticated}
+        onClick={handleUnauthedTextClick}
+        onFocus={handleUnauthedTextClick}
         onChange={(event) => setTitle(event.target.value)}
       />
       <textarea
@@ -70,6 +91,10 @@ export default function JournalForm({
         className="bg-transparent text-sm text-[color:var(--ink)] outline-none min-h-[220px] resize-none focus:outline-none focus:ring-0 overflow-hidden"
         placeholder="What does God telling you today..."
         value={content}
+        readOnly={!isAuthenticated}
+        aria-disabled={!isAuthenticated}
+        onClick={handleUnauthedTextClick}
+        onFocus={handleUnauthedTextClick}
         onChange={(event) => setContent(event.target.value)}
       />
       {error && <p className="text-xs text-[color:var(--danger)]">{error}</p>}
@@ -85,7 +110,7 @@ export default function JournalForm({
         )}
         <button
           type="submit"
-          disabled={isSaving}
+          disabled={!isAuthenticated || isSaving}
           className="post-button disabled:opacity-60"
         >
           {isSaving ? "Saving..." : submitLabel}

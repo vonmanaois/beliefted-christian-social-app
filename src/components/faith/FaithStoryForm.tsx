@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ImageSquare, X } from "@phosphor-icons/react";
+import { useSession } from "next-auth/react";
 
 type FaithStoryFormProps = {
   initialTitle?: string;
@@ -27,6 +28,8 @@ export default function FaithStoryForm({
   submitLabel = "Publish",
   onDirtyChange,
 }: FaithStoryFormProps) {
+  const { data: session } = useSession();
+  const isAuthenticated = Boolean(session?.user?.id);
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
   const [isAnonymous, setIsAnonymous] = useState(initialAnonymous);
@@ -41,6 +44,16 @@ export default function FaithStoryForm({
     content.trim() !== initialContent.trim() ||
     isAnonymous !== initialAnonymous ||
     Boolean(coverImage);
+
+  const openSignIn = () => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("open-signin"));
+    }
+  };
+
+  const handleUnauthedTextClick = () => {
+    if (!isAuthenticated) openSignIn();
+  };
 
   useEffect(() => {
     onDirtyChange?.(isDirty);
@@ -135,6 +148,10 @@ export default function FaithStoryForm({
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
+    if (!isAuthenticated) {
+      openSignIn();
+      return;
+    }
     if (!title.trim() || !content.trim()) {
       setError("Title and story are required.");
       return;
@@ -209,6 +226,10 @@ export default function FaithStoryForm({
         className="bg-transparent text-2xl font-semibold text-[color:var(--ink)] outline-none border-b border-[color:var(--panel-border)] pb-3 focus:outline-none focus:ring-0 focus:border-[color:var(--panel-border)] text-center"
         placeholder="Title"
         value={title}
+        readOnly={!isAuthenticated}
+        aria-disabled={!isAuthenticated}
+        onClick={handleUnauthedTextClick}
+        onFocus={handleUnauthedTextClick}
         onChange={(event) => setTitle(event.target.value)}
       />
       <textarea
@@ -216,12 +237,17 @@ export default function FaithStoryForm({
         className="bg-transparent text-sm text-[color:var(--ink)] outline-none min-h-[240px] resize-none focus:outline-none focus:ring-0 overflow-hidden"
         placeholder="Share your faith story..."
         value={content}
+        readOnly={!isAuthenticated}
+        aria-disabled={!isAuthenticated}
+        onClick={handleUnauthedTextClick}
+        onFocus={handleUnauthedTextClick}
         onChange={(event) => setContent(event.target.value)}
       />
       <div className="flex items-center gap-3 text-xs text-[color:var(--subtle)]">
         <button
           type="button"
           onClick={() => coverInputRef.current?.click()}
+          disabled={!isAuthenticated || isSaving}
           className="inline-flex items-center gap-2 font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
         >
           <ImageSquare size={18} weight="regular" />
@@ -232,6 +258,7 @@ export default function FaithStoryForm({
           type="file"
           accept="image/*"
           className="hidden"
+          disabled={!isAuthenticated || isSaving}
           onChange={handleCoverChange}
         />
         {coverPreview && (
@@ -245,6 +272,7 @@ export default function FaithStoryForm({
                 setCoverPreview(null);
                 setCoverImage(null);
               }}
+              disabled={!isAuthenticated || isSaving}
               className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
               aria-label="Remove cover image"
             >
@@ -258,6 +286,7 @@ export default function FaithStoryForm({
         <input
           type="checkbox"
           checked={isAnonymous}
+          disabled={!isAuthenticated || isSaving}
           onChange={(event) => setIsAnonymous(event.target.checked)}
           className="h-4 w-4"
         />
@@ -275,7 +304,7 @@ export default function FaithStoryForm({
         )}
         <button
           type="submit"
-          disabled={isSaving}
+          disabled={!isAuthenticated || isSaving}
           className="post-button disabled:opacity-60"
         >
           {isSaving ? "Saving..." : submitLabel}

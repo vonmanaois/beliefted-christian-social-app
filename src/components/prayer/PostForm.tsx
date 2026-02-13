@@ -21,6 +21,7 @@ export default function PostForm({
   variant = "modal",
 }: PostFormProps) {
   const { data: session } = useSession();
+  const isAuthenticated = Boolean(session?.user?.id);
   const { setNewPrayerPosts } = useUIStore();
   const [kind, setKind] = useState<"prayer" | "request">("prayer");
   const [content, setContent] = useState("");
@@ -50,7 +51,8 @@ export default function PostForm({
       .length > 0;
 
   const canSubmit =
-    kind === "prayer" ? content.trim().length > 0 : hasValidRequestPoints;
+    isAuthenticated &&
+    (kind === "prayer" ? content.trim().length > 0 : hasValidRequestPoints);
 
   const isDirty =
     kind === "prayer"
@@ -63,6 +65,16 @@ export default function PostForm({
     kind === "request" &&
     Boolean(validationError?.toLowerCase().includes("prayer point"));
 
+  const openSignIn = () => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("open-signin"));
+    }
+  };
+
+  const handleUnauthedTextClick = () => {
+    if (!isAuthenticated) openSignIn();
+  };
+
   useEffect(() => {
     onDirtyChange?.(isDirty);
   }, [isDirty, onDirtyChange]);
@@ -72,9 +84,7 @@ export default function PostForm({
     setValidationError(null);
 
     if (!session?.user) {
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("open-signin"));
-      }
+      openSignIn();
       return;
     }
 
@@ -170,6 +180,10 @@ export default function PostForm({
           placeholder="What can we pray for today?"
           value={content}
           ref={textAreaRef}
+          readOnly={!isAuthenticated}
+          aria-disabled={!isAuthenticated}
+          onClick={handleUnauthedTextClick}
+          onFocus={handleUnauthedTextClick}
           onChange={(event) => {
             setContent(event.target.value);
             if (textAreaRef.current) {
@@ -202,6 +216,10 @@ export default function PostForm({
                 }`}
                 placeholder="Prayer point"
                 value={point.title}
+                readOnly={!isAuthenticated}
+                aria-disabled={!isAuthenticated}
+                onClick={handleUnauthedTextClick}
+                onFocus={handleUnauthedTextClick}
                 onChange={(event) => {
                   const next = [...points];
                   next[index] = { ...next[index], title: event.target.value };
@@ -216,6 +234,10 @@ export default function PostForm({
                 }`}
                 placeholder="Description"
                 value={point.description}
+                readOnly={!isAuthenticated}
+                aria-disabled={!isAuthenticated}
+                onClick={handleUnauthedTextClick}
+                onFocus={handleUnauthedTextClick}
                 onChange={(event) => {
                   const next = [...points];
                   next[index] = { ...next[index], description: event.target.value };
@@ -228,6 +250,7 @@ export default function PostForm({
                   onClick={() =>
                     setPoints((prev) => prev.filter((_, i) => i !== index))
                   }
+                  disabled={!isAuthenticated}
                   className="self-start text-[color:var(--danger)] hover:text-[color:var(--danger-strong)]"
                   aria-label="Remove prayer point"
                 >
@@ -241,6 +264,7 @@ export default function PostForm({
             onClick={() =>
               setPoints((prev) => [...prev, { title: "", description: "" }])
             }
+            disabled={!isAuthenticated}
             className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
           >
             <PlusCircle size={16} weight="regular" />
@@ -255,6 +279,7 @@ export default function PostForm({
             <button
               type="button"
               onClick={() => setKind("request")}
+              disabled={!isAuthenticated}
               className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
             >
               <PlusCircle size={16} weight="regular" />
@@ -265,6 +290,7 @@ export default function PostForm({
             <input
               type="checkbox"
               checked={isAnonymous}
+              disabled={!isAuthenticated}
               onChange={(event) => setIsAnonymous(event.target.checked)}
             />
             Anonymous
@@ -277,6 +303,7 @@ export default function PostForm({
                 type="radio"
                 name="expires"
                 checked={expiresInDays === 7}
+                disabled={!isAuthenticated}
                 onChange={() => setExpiresInDays(7)}
               />
               7d
@@ -286,6 +313,7 @@ export default function PostForm({
                 type="radio"
                 name="expires"
                 checked={expiresInDays === 30}
+                disabled={!isAuthenticated}
                 onChange={() => setExpiresInDays(30)}
               />
               30d
@@ -295,6 +323,7 @@ export default function PostForm({
                 type="radio"
                 name="expires"
                 checked={expiresInDays === "never"}
+                disabled={!isAuthenticated}
                 onChange={() => setExpiresInDays("never")}
               />
               Never
@@ -303,6 +332,7 @@ export default function PostForm({
           <button
             type="button"
             onClick={() => setShowPrivacyMenu((prev) => !prev)}
+            disabled={!isAuthenticated}
             className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
             aria-label="Prayer privacy"
           >
@@ -350,11 +380,10 @@ export default function PostForm({
           )}
         </div>
       )}
-
       <div className="flex justify-end">
         <button
           type="submit"
-          disabled={isSubmitting || !canSubmit}
+          disabled={!isAuthenticated || isSubmitting || !canSubmit}
           className="post-button disabled:opacity-60"
         >
           {isSubmitting ? "Posting..." : "Pray"}

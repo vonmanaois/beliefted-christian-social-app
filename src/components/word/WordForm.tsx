@@ -34,6 +34,7 @@ export default function WordForm({
   placeholder = "What did God put on your heart today?",
 }: WordFormProps) {
   const { data: session } = useSession();
+  const isAuthenticated = Boolean(session?.user?.id);
   const { setNewWordPosts } = useUIStore();
   const [content, setContent] = useState("");
   const [scriptureRef, setScriptureRef] = useState("");
@@ -53,6 +54,17 @@ export default function WordForm({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const isFormDisabled = !isAuthenticated || isSubmitting;
+
+  const openSignIn = () => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("open-signin"));
+    }
+  };
+
+  const handleUnauthedTextClick = () => {
+    if (!isAuthenticated) openSignIn();
+  };
   const isDirty =
     content.trim().length > 0 ||
     imageItems.length > 0 ||
@@ -177,9 +189,7 @@ export default function WordForm({
     setSpotifyError(null);
 
     if (!session?.user) {
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("open-signin"));
-      }
+      openSignIn();
       return;
     }
 
@@ -342,6 +352,10 @@ export default function WordForm({
         placeholder={placeholder}
         value={content}
         ref={textAreaRef}
+        readOnly={!isAuthenticated}
+        aria-disabled={!isAuthenticated}
+        onClick={handleUnauthedTextClick}
+        onFocus={handleUnauthedTextClick}
         onChange={(event) => {
           setContent(event.target.value);
           if (textAreaRef.current) {
@@ -355,6 +369,7 @@ export default function WordForm({
           <button
             type="button"
             onClick={() => setShowScriptureRef((prev) => !prev)}
+            disabled={isFormDisabled}
             className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
             aria-label="Add verse reference"
           >
@@ -364,6 +379,7 @@ export default function WordForm({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
+            disabled={isFormDisabled}
             className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
             aria-label="Add images"
           >
@@ -378,7 +394,7 @@ export default function WordForm({
               }
               setShowYoutubeInput((prev) => !prev);
             }}
-            disabled={Boolean(spotifyUrl.trim())}
+            disabled={isFormDisabled || Boolean(spotifyUrl.trim())}
             className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)] disabled:opacity-40 disabled:cursor-not-allowed"
             aria-label="Add YouTube link"
           >
@@ -393,7 +409,7 @@ export default function WordForm({
               }
               setShowSpotifyInput((prev) => !prev);
             }}
-            disabled={Boolean(youtubeUrl.trim())}
+            disabled={isFormDisabled || Boolean(youtubeUrl.trim())}
             className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)] disabled:opacity-40 disabled:cursor-not-allowed"
             aria-label="Add Spotify link"
           >
@@ -402,6 +418,7 @@ export default function WordForm({
           <button
             type="button"
             onClick={() => setShowPrivacyMenu((prev) => !prev)}
+            disabled={isFormDisabled}
             className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
             aria-label="Post privacy"
           >
@@ -458,6 +475,7 @@ export default function WordForm({
         accept="image/*"
         multiple
         className="hidden"
+        disabled={isFormDisabled}
         onChange={handleSelectImages}
       />
       {imageItems.length > 0 && (
@@ -476,6 +494,7 @@ export default function WordForm({
               <button
                 type="button"
                 onClick={() => removeImage(index)}
+                disabled={isFormDisabled}
                 className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
                 aria-label="Remove image"
               >
@@ -491,6 +510,10 @@ export default function WordForm({
           className="bg-transparent text-sm text-[color:var(--ink)] outline-none border-b border-[color:var(--panel-border)] pb-1 focus:outline-none focus:ring-0"
           placeholder="Scripture reference"
           value={scriptureRef}
+          readOnly={!isAuthenticated}
+          aria-disabled={!isAuthenticated}
+          onClick={handleUnauthedTextClick}
+          onFocus={handleUnauthedTextClick}
           onChange={(event) => setScriptureRef(event.target.value)}
         />
       )}
@@ -500,6 +523,10 @@ export default function WordForm({
           className="bg-transparent text-sm text-[color:var(--ink)] outline-none border-b border-[color:var(--panel-border)] pb-1 focus:outline-none focus:ring-0"
           placeholder="Paste YouTube link"
           value={youtubeUrl}
+          readOnly={!isAuthenticated}
+          aria-disabled={!isAuthenticated}
+          onClick={handleUnauthedTextClick}
+          onFocus={handleUnauthedTextClick}
           onChange={(event) => {
             setYoutubeUrl(event.target.value);
             if (youtubeError) setYoutubeError(null);
@@ -515,6 +542,10 @@ export default function WordForm({
           className="bg-transparent text-sm text-[color:var(--ink)] outline-none border-b border-[color:var(--panel-border)] pb-1 focus:outline-none focus:ring-0"
           placeholder="Paste Spotify link"
           value={spotifyUrl}
+          readOnly={!isAuthenticated}
+          aria-disabled={!isAuthenticated}
+          onClick={handleUnauthedTextClick}
+          onFocus={handleUnauthedTextClick}
           onChange={(event) => {
             setSpotifyUrl(event.target.value);
             if (spotifyError) setSpotifyError(null);
@@ -528,7 +559,7 @@ export default function WordForm({
         <button
           type="submit"
           disabled={
-            isSubmitting ||
+            isFormDisabled ||
             (!content.trim() &&
               imageItems.length === 0 &&
               !youtubeUrl.trim() &&
