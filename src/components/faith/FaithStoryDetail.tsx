@@ -673,7 +673,11 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
             {story.coverImage && (
               <div className="relative h-52 w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)]">
                 <Image
-                  src={cloudinaryTransform(story.coverImage, { width: 1200, height: 520 })}
+                  src={cloudinaryTransform(story.coverImage, {
+                    width: 1200,
+                    height: 520,
+                    autoOrient: false,
+                  })}
                   alt=""
                   fill
                   sizes="(min-width: 768px) 720px, 100vw"

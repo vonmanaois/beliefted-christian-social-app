@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import FaithStoryEditor from "@/components/faith/FaithStoryEditor";
+import { stripHtmlToText } from "@/lib/mentions";
 
 type JournalFormProps = {
   initialTitle?: string;
@@ -26,9 +28,9 @@ export default function JournalForm({
   const [content, setContent] = useState(initialContent);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const textRef = useRef<HTMLTextAreaElement | null>(null);
   const isDirty =
-    title.trim() !== initialTitle.trim() || content.trim() !== initialContent.trim();
+    title.trim() !== initialTitle.trim() ||
+    content.trim() !== initialContent.trim();
 
   const openSignIn = () => {
     if (typeof window !== "undefined") {
@@ -44,15 +46,6 @@ export default function JournalForm({
     onDirtyChange?.(isDirty);
   }, [isDirty, onDirtyChange]);
 
-  useEffect(() => {
-    const el = textRef.current;
-    if (!el) return;
-    const maxHeight = Math.max(240, Math.floor(window.innerHeight * 0.6));
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
-    el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
-  }, [content]);
-
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
@@ -60,7 +53,8 @@ export default function JournalForm({
       openSignIn();
       return;
     }
-    if (!title.trim() || !content.trim()) {
+    const textContent = stripHtmlToText(content);
+    if (!title.trim() || !textContent) {
       setError("Title and text are required.");
       return;
     }
@@ -86,17 +80,22 @@ export default function JournalForm({
         onFocus={handleUnauthedTextClick}
         onChange={(event) => setTitle(event.target.value)}
       />
-      <textarea
-        ref={textRef}
-        className="bg-transparent text-sm text-[color:var(--ink)] outline-none min-h-[220px] resize-none focus:outline-none focus:ring-0 overflow-hidden"
-        placeholder="What does God telling you today..."
-        value={content}
-        readOnly={!isAuthenticated}
-        aria-disabled={!isAuthenticated}
-        onClick={handleUnauthedTextClick}
-        onFocus={handleUnauthedTextClick}
-        onChange={(event) => setContent(event.target.value)}
-      />
+      <div
+        onMouseDown={() => {
+          if (!isAuthenticated) openSignIn();
+        }}
+        onTouchStart={() => {
+          if (!isAuthenticated) openSignIn();
+        }}
+      >
+        <FaithStoryEditor
+          value={content}
+          onChange={setContent}
+          placeholder="What does God tell you today..."
+          disabled={!isAuthenticated}
+          allowImages={false}
+        />
+      </div>
       {error && <p className="text-xs text-[color:var(--danger)]">{error}</p>}
       <div className="flex items-center justify-end gap-2">
         {onCancel && (

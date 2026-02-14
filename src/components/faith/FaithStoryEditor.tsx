@@ -59,6 +59,7 @@ type FaithStoryEditorProps = {
   placeholder?: string;
   disabled?: boolean;
   maxImages?: number;
+  allowImages?: boolean;
   onError?: (message: string | null) => void;
 };
 
@@ -81,10 +82,12 @@ export default function FaithStoryEditor({
   placeholder = "Share your faith story...",
   disabled = false,
   maxImages = 2,
+  allowImages = true,
   onError,
 }: FaithStoryEditorProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const imagesEnabled = allowImages;
   const [activeState, setActiveState] = useState({
     bold: false,
     italic: false,
@@ -205,12 +208,16 @@ export default function FaithStoryEditor({
           },
         },
       }),
-      Image.configure({
-        allowBase64: false,
-        HTMLAttributes: {
-          class: "faith-story-inline-image",
-        },
-      }),
+      ...(imagesEnabled
+        ? [
+            Image.configure({
+              allowBase64: false,
+              HTMLAttributes: {
+                class: "faith-story-inline-image",
+              },
+            }),
+          ]
+        : []),
       Placeholder.configure({
         placeholder,
       }),
@@ -253,8 +260,8 @@ export default function FaithStoryEditor({
   }, [editor, normalizedValue]);
 
   const inlineImageCount = useMemo(
-    () => (value.match(/<img /g) ?? []).length,
-    [value]
+    () => (imagesEnabled ? value.match(/<img /g)?.length ?? 0 : 0),
+    [imagesEnabled, value]
   );
 
   const resizeImage = async (file: File) => {
@@ -307,7 +314,7 @@ export default function FaithStoryEditor({
   };
 
   const handleInsertImage = async (file: File) => {
-    if (!editor) return;
+    if (!editor || !imagesEnabled) return;
     if (inlineImageCount >= maxImages) {
       onError?.(`You can add up to ${maxImages} images.`);
       return;
@@ -370,7 +377,7 @@ export default function FaithStoryEditor({
   };
 
   const openFilePicker = () => {
-    if (disabled || isUploading) return;
+    if (!imagesEnabled || disabled || isUploading) return;
     if (inlineImageCount >= maxImages) {
       onError?.(`You can add up to ${maxImages} images.`);
       return;
@@ -442,24 +449,28 @@ export default function FaithStoryEditor({
         >
           <Minus size={18} />
         </button>
-        <button
-          type="button"
-          onClick={openFilePicker}
-          disabled={disabled || isUploading}
-          className="editor-btn"
-        >
-          <ImageSquare size={18} />
-          <span className="text-[11px] font-semibold">
-            {inlineImageCount}/{maxImages}
-          </span>
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleFileChange}
-        />
+        {imagesEnabled && (
+          <>
+            <button
+              type="button"
+              onClick={openFilePicker}
+              disabled={disabled || isUploading}
+              className="editor-btn"
+            >
+              <ImageSquare size={18} />
+              <span className="text-[11px] font-semibold">
+                {inlineImageCount}/{maxImages}
+              </span>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+          </>
+        )}
       </div>
 
       <div className="editor-surface">

@@ -24,6 +24,7 @@ type MentionTextareaProps = {
   textareaRef?: RefObject<HTMLTextAreaElement | null>;
   onFocus?: () => void;
   onClick?: () => void;
+  onPaste?: (event: React.ClipboardEvent<HTMLTextAreaElement>) => void;
 };
 
 const mentionRegex = /@([a-zA-Z0-9_.]{0,30})/g;
@@ -62,6 +63,7 @@ export default function MentionTextarea({
   textareaRef,
   onFocus,
   onClick,
+  onPaste,
 }: MentionTextareaProps) {
   const innerRef = useRef<HTMLTextAreaElement | null>(null);
   const ref = textareaRef ?? innerRef;
@@ -211,6 +213,7 @@ export default function MentionTextarea({
         onFocus={onFocus}
         onChange={(event) => handleChange(event.target.value)}
         onKeyDown={handleKeyDown}
+        onPaste={onPaste}
         onBlur={() => {
           window.setTimeout(() => {
             setOpen(false);

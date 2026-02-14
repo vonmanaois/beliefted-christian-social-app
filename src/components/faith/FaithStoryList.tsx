@@ -363,7 +363,11 @@ export default function FaithStoryList() {
                 {story.coverImage && (
                   <div className="relative h-36 w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)]">
                     <Image
-                      src={cloudinaryTransform(story.coverImage, { width: 900, height: 390 })}
+                      src={cloudinaryTransform(story.coverImage, {
+                        width: 900,
+                        height: 390,
+                        autoOrient: false,
+                      })}
                       alt=""
                       fill
                       sizes="(min-width: 768px) 640px, 100vw"

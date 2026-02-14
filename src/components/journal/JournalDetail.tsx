@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { DotsThreeOutline } from "@phosphor-icons/react";
@@ -8,6 +8,7 @@ import dynamic from "next/dynamic";
 import Modal from "@/components/layout/Modal";
 import PostBackHeader from "@/components/ui/PostBackHeader";
 import Spinner from "@/components/ui/Spinner";
+import { linkifyMentionsHtml } from "@/lib/mentions";
 
 type JournalDetailProps = {
   journal: {
@@ -35,6 +36,19 @@ const formatFullDate = (iso: string) =>
     year: "numeric",
   });
 
+const escapeHtml = (value: string) =>
+  value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+
+const normalizeContent = (value: string) => {
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed) return "";
+  if (trimmed.includes("<")) return trimmed;
+  return `<p>${escapeHtml(trimmed)}</p>`;
+};
+
 export default function JournalDetail({ journal }: JournalDetailProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -45,6 +59,15 @@ export default function JournalDetail({ journal }: JournalDetailProps) {
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [pendingAction, setPendingAction] = useState<null | (() => void)>(null);
   const editRef = useRef<HTMLDivElement | null>(null);
+  const normalizedContent = useMemo(
+    () => normalizeContent(journal.content),
+    [journal.content]
+  );
+  const [linkedContent, setLinkedContent] = useState(normalizedContent);
+
+  useEffect(() => {
+    setLinkedContent(linkifyMentionsHtml(normalizedContent));
+  }, [normalizedContent]);
 
   const updateMutation = useMutation({
     mutationFn: async ({ title, content }: { title: string; content: string }) => {
@@ -160,9 +183,10 @@ export default function JournalDetail({ journal }: JournalDetailProps) {
             <h1 className="text-xl font-semibold text-[color:var(--ink)]">
               {journal.title}
             </h1>
-            <div className="text-sm text-[color:var(--ink)] whitespace-pre-wrap">
-              {journal.content}
-            </div>
+            <div
+              className="faith-story-content text-sm text-[color:var(--ink)]"
+              dangerouslySetInnerHTML={{ __html: linkedContent }}
+            />
           </div>
         ) : (
           <div ref={editRef}>

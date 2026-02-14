@@ -173,6 +173,39 @@ export default function WordForm({
     }
   };
 
+  const handlePasteImages = async (
+    event: React.ClipboardEvent<HTMLTextAreaElement>
+  ) => {
+    if (!isAuthenticated) {
+      openSignIn();
+      return;
+    }
+    const items = Array.from(event.clipboardData?.items ?? []);
+    const imageItemsFromClipboard = items.filter((item) =>
+      item.type.startsWith("image/")
+    );
+    if (imageItemsFromClipboard.length === 0) return;
+    event.preventDefault();
+    const remaining = Math.max(0, 4 - imageItems.length);
+    if (remaining === 0) return;
+    const files = imageItemsFromClipboard
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => Boolean(file))
+      .slice(0, remaining);
+    if (files.length === 0) return;
+    try {
+      const processed = await Promise.all(files.map((file) => resizeImage(file)));
+      const nextItems = processed.map((file) => ({
+        file,
+        previewUrl: URL.createObjectURL(file),
+      }));
+      setImageItems((prev) => [...prev, ...nextItems]);
+    } catch (error) {
+      console.error(error);
+      setSubmitError("Failed to paste image. Try again.");
+    }
+  };
+
   const removeImage = (index: number) => {
     setImageItems((prev) => {
       const target = prev[index];
@@ -387,6 +420,7 @@ export default function WordForm({
         ariaDisabled={!isAuthenticated}
         onClick={handleUnauthedTextClick}
         onFocus={handleUnauthedTextClick}
+        onPaste={handlePasteImages}
       />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 relative">

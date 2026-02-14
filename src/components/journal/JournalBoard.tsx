@@ -8,6 +8,7 @@ import dynamic from "next/dynamic";
 import Modal from "@/components/layout/Modal";
 import EmptyState from "@/components/ui/EmptyState";
 import Spinner from "@/components/ui/Spinner";
+import { stripHtmlToText } from "@/lib/mentions";
 
 const JournalForm = dynamic(() => import("@/components/journal/JournalForm"), {
   ssr: false,
@@ -237,7 +238,7 @@ export default function JournalBoard() {
               {journal.title}
             </p>
             <p className="mt-3 text-xs text-[color:var(--subtle)] leading-relaxed line-clamp-6 whitespace-pre-line">
-              {journal.content}
+              {stripHtmlToText(journal.content)}
             </p>
           </div>
         </div>
