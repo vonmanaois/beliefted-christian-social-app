@@ -4,6 +4,7 @@ export type CloudinaryTransformOptions = {
   crop?: "fill" | "fit" | "limit";
   quality?: string;
   format?: string;
+  autoOrient?: boolean;
 };
 
 export function cloudinaryTransform(
@@ -14,6 +15,7 @@ export function cloudinaryTransform(
     crop = "fill",
     quality = "q_auto",
     format = "f_auto",
+    autoOrient = true,
   }: CloudinaryTransformOptions = {}
 ) {
   if (!url || !url.includes("/res.cloudinary.com/")) return url;
@@ -25,6 +27,8 @@ export function cloudinaryTransform(
   if (height) sizeParts.push(`h_${height}`);
   if (width || height) sizeParts.push(`c_${crop}`);
 
-  const transform = [format, quality, ...sizeParts].filter(Boolean).join(",");
+  const transform = [format, quality, autoOrient ? "a_auto" : "", ...sizeParts]
+    .filter(Boolean)
+    .join(",");
   return url.replace(marker, `${marker}${transform}/`);
 }

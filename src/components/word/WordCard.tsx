@@ -232,6 +232,10 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
   const [imageOrientations, setImageOrientations] = useState<
     Record<string, "portrait" | "landscape">
   >({});
+  const isDraggingImagesRef = useRef(false);
+  const dragMovedRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragStartScrollRef = useRef(0);
   const [likeError, setLikeError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const editRef = useRef<HTMLDivElement | null>(null);
@@ -1100,8 +1104,45 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                 )}
                 <div
                   ref={imageStripRef}
-                  className="flex min-w-0 w-full max-w-full gap-3 overflow-x-auto pb-1 snap-x snap-mandatory overscroll-x-contain"
+                  className="flex min-w-0 w-full max-w-full gap-3 overflow-x-auto pb-1 snap-x snap-mandatory overscroll-x-contain sm:cursor-grab sm:active:cursor-grabbing"
                   style={{ touchAction: "pan-x" }}
+                  onPointerDown={(event) => {
+                    if (event.pointerType !== "mouse") return;
+                    const node = imageStripRef.current;
+                    if (!node) return;
+                    isDraggingImagesRef.current = true;
+                    dragMovedRef.current = false;
+                    dragStartXRef.current = event.clientX;
+                    dragStartScrollRef.current = node.scrollLeft;
+                    node.setPointerCapture(event.pointerId);
+                  }}
+                  onPointerMove={(event) => {
+                    if (!isDraggingImagesRef.current) return;
+                    const node = imageStripRef.current;
+                    if (!node) return;
+                    const delta = event.clientX - dragStartXRef.current;
+                    if (Math.abs(delta) > 4) {
+                      dragMovedRef.current = true;
+                    }
+                    node.scrollLeft = dragStartScrollRef.current - delta;
+                  }}
+                  onPointerUp={(event) => {
+                    if (!isDraggingImagesRef.current) return;
+                    isDraggingImagesRef.current = false;
+                    const node = imageStripRef.current;
+                    if (node) node.releasePointerCapture(event.pointerId);
+                    window.setTimeout(() => {
+                      dragMovedRef.current = false;
+                    }, 0);
+                  }}
+                  onPointerCancel={() => {
+                    isDraggingImagesRef.current = false;
+                    dragMovedRef.current = false;
+                  }}
+                  onPointerLeave={() => {
+                    isDraggingImagesRef.current = false;
+                    dragMovedRef.current = false;
+                  }}
                 >
                   {word.images.map((src, index) => {
                   const isCloudinary =
@@ -1119,6 +1160,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                       className={`relative shrink-0 snap-start w-[60%] sm:w-[44%] max-w-[220px] ${aspectClass} overflow-hidden rounded-md border border-transparent`}
                       onClick={(event) => {
                         event.stopPropagation();
+                        if (dragMovedRef.current) return;
                         const fullSrc = isCloudinary
                           ? cloudinaryTransform(src, { width: 1200 })
                           : src;
