@@ -92,7 +92,48 @@ export default function WordForm({
     };
   }, [imageItems]);
 
+  const getExifOrientation = async (file: File) => {
+    const buffer = await file.arrayBuffer();
+    const view = new DataView(buffer);
+    if (view.byteLength < 12) return 1;
+    if (view.getUint16(0, false) !== 0xffd8) return 1;
+    let offset = 2;
+    while (offset + 4 < view.byteLength) {
+      const marker = view.getUint16(offset, false);
+      if (marker === 0xffe1) {
+        const length = view.getUint16(offset + 2, false);
+        const exifHeader = String.fromCharCode(
+          view.getUint8(offset + 4),
+          view.getUint8(offset + 5),
+          view.getUint8(offset + 6),
+          view.getUint8(offset + 7)
+        );
+        if (exifHeader !== "Exif") return 1;
+        const tiffOffset = offset + 10;
+        const endian = view.getUint16(tiffOffset, false);
+        const little = endian === 0x4949;
+        const firstIfdOffset = view.getUint32(tiffOffset + 4, little);
+        if (firstIfdOffset < 8) return 1;
+        const ifdStart = tiffOffset + firstIfdOffset;
+        const entries = view.getUint16(ifdStart, little);
+        for (let i = 0; i < entries; i += 1) {
+          const entryOffset = ifdStart + 2 + i * 12;
+          const tag = view.getUint16(entryOffset, little);
+          if (tag === 0x0112) {
+            return view.getUint16(entryOffset + 8, little);
+          }
+        }
+        return 1;
+      }
+      if ((marker & 0xff00) !== 0xff00) break;
+      const size = view.getUint16(offset + 2, false);
+      offset += 2 + size;
+    }
+    return 1;
+  };
+
   const resizeImage = async (file: File) => {
+    const orientation = await getExifOrientation(file);
     const dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result));
@@ -107,9 +148,18 @@ export default function WordForm({
       image.src = dataUrl;
     });
 
+    const rawWidth = img.naturalWidth || img.width;
+    const rawHeight = img.naturalHeight || img.height;
+    const autoOriented =
+      orientation >= 5 && orientation <= 8 && rawHeight > rawWidth;
+    const effectiveOrientation = autoOriented ? 1 : orientation;
+    const rotates = effectiveOrientation >= 5 && effectiveOrientation <= 8;
+    const orientedWidth = rotates ? rawHeight : rawWidth;
+    const orientedHeight = rotates ? rawWidth : rawHeight;
+
     const maxSize = 1080;
-    let targetWidth = img.width;
-    let targetHeight = img.height;
+    let targetWidth = orientedWidth;
+    let targetHeight = orientedHeight;
     if (targetWidth > targetHeight && targetWidth > maxSize) {
       targetHeight = Math.round((targetHeight * maxSize) / targetWidth);
       targetWidth = maxSize;
@@ -119,11 +169,37 @@ export default function WordForm({
     }
 
     const canvas = document.createElement("canvas");
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
+    canvas.width = rotates ? targetHeight : targetWidth;
+    canvas.height = rotates ? targetWidth : targetHeight;
     const ctx = canvas.getContext("2d");
     if (!ctx) {
       throw new Error("Canvas not supported");
+    }
+    switch (effectiveOrientation) {
+      case 2:
+        ctx.setTransform(-1, 0, 0, 1, canvas.width, 0);
+        break;
+      case 3:
+        ctx.setTransform(-1, 0, 0, -1, canvas.width, canvas.height);
+        break;
+      case 4:
+        ctx.setTransform(1, 0, 0, -1, 0, canvas.height);
+        break;
+      case 5:
+        ctx.setTransform(0, 1, 1, 0, 0, 0);
+        break;
+      case 6:
+        ctx.setTransform(0, 1, -1, 0, canvas.width, 0);
+        break;
+      case 7:
+        ctx.setTransform(0, -1, -1, 0, canvas.width, canvas.height);
+        break;
+      case 8:
+        ctx.setTransform(0, -1, 1, 0, 0, canvas.height);
+        break;
+      default:
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        break;
     }
     ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
@@ -292,6 +368,7 @@ export default function WordForm({
         .filter(Boolean)
         .join("\n");
       let imageUrls: string[] = [];
+      let imageOrientations: ("portrait" | "landscape")[] = [];
       if (imageItems.length > 0) {
         const response = await fetch("/api/cloudinary/sign-word", {
           method: "POST",
@@ -342,7 +419,11 @@ export default function WordForm({
             if (!uploadResponse.ok) {
               return null;
             }
-            return (await uploadResponse.json()) as { secure_url?: string };
+            return (await uploadResponse.json()) as {
+              secure_url?: string;
+              width?: number;
+              height?: number;
+            };
           })
         );
         const secureUrls = uploadResponses
@@ -352,7 +433,16 @@ export default function WordForm({
           setSubmitError("Failed to upload images. Try again.");
           return;
         }
+        const orientations = uploadResponses.map((res) => {
+          if (!res?.width || !res?.height) return null;
+          return res.height > res.width ? "portrait" : "landscape";
+        });
+        if (orientations.some((value) => !value)) {
+          setSubmitError("Failed to read image orientation.");
+          return;
+        }
         imageUrls = secureUrls;
+        imageOrientations = orientations as ("portrait" | "landscape")[];
       }
 
       const response = await fetch("/api/words", {
@@ -361,6 +451,7 @@ export default function WordForm({
         body: JSON.stringify({
           content: mergedContent,
           images: imageUrls,
+          imageOrientations,
           scriptureRef: scriptureRef.trim(),
           privacy,
         }),

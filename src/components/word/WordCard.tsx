@@ -113,6 +113,7 @@ export type Word = {
   isOwner?: boolean;
   scriptureRef?: string | null;
   images?: string[];
+  imageOrientations?: ("portrait" | "landscape")[];
   privacy?: "public" | "followers" | "private";
   sharedFaithStoryId?: string | null;
   sharedFaithStory?: {
@@ -260,6 +261,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
   >({});
   const isDraggingImagesRef = useRef(false);
   const dragMovedRef = useRef(false);
+  const lastDragDeltaRef = useRef(0);
   const dragStartXRef = useRef(0);
   const dragStartScrollRef = useRef(0);
   const [likeError, setLikeError] = useState<string | null>(null);
@@ -1138,15 +1140,16 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                     if (!node) return;
                     isDraggingImagesRef.current = true;
                     dragMovedRef.current = false;
+                    lastDragDeltaRef.current = 0;
                     dragStartXRef.current = event.clientX;
                     dragStartScrollRef.current = node.scrollLeft;
-                    node.setPointerCapture(event.pointerId);
                   }}
                   onPointerMove={(event) => {
                     if (!isDraggingImagesRef.current) return;
                     const node = imageStripRef.current;
                     if (!node) return;
                     const delta = event.clientX - dragStartXRef.current;
+                    lastDragDeltaRef.current = delta;
                     if (Math.abs(delta) > 4) {
                       dragMovedRef.current = true;
                     }
@@ -1155,19 +1158,22 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                   onPointerUp={(event) => {
                     if (!isDraggingImagesRef.current) return;
                     isDraggingImagesRef.current = false;
-                    const node = imageStripRef.current;
-                    if (node) node.releasePointerCapture(event.pointerId);
+                    const shouldBlock = Math.abs(lastDragDeltaRef.current) > 6;
+                    dragMovedRef.current = shouldBlock;
                     window.setTimeout(() => {
                       dragMovedRef.current = false;
+                      lastDragDeltaRef.current = 0;
                     }, 0);
                   }}
                   onPointerCancel={() => {
                     isDraggingImagesRef.current = false;
                     dragMovedRef.current = false;
+                    lastDragDeltaRef.current = 0;
                   }}
                   onPointerLeave={() => {
                     isDraggingImagesRef.current = false;
                     dragMovedRef.current = false;
+                    lastDragDeltaRef.current = 0;
                   }}
                 >
                   {word.images.map((src, index) => {
@@ -1177,7 +1183,8 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                     ? cloudinaryTransform(src, { width: 600 })
                     : src;
                   const key = `${src}-${index}`;
-                  const orientation = imageOrientations[key] ?? "landscape";
+                  const storedOrientation = word.imageOrientations?.[index];
+                  const orientation = storedOrientation ?? imageOrientations[key] ?? "landscape";
                   const aspectClass =
                     orientation === "portrait" ? "aspect-[3/4]" : "aspect-[4/3]";
                   return (
@@ -1186,7 +1193,9 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                       className={`relative shrink-0 snap-start w-[60%] sm:w-[44%] max-w-[220px] ${aspectClass} overflow-hidden rounded-md border border-transparent`}
                       onClick={(event) => {
                         event.stopPropagation();
-                        if (dragMovedRef.current) return;
+                        if (dragMovedRef.current || Math.abs(lastDragDeltaRef.current) > 6) {
+                          return;
+                        }
                         const fullSrc = isCloudinary
                           ? cloudinaryTransform(src, { width: 1200 })
                           : src;

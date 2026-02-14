@@ -59,6 +59,9 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
         savedBy: Array.isArray(word.savedBy)
           ? word.savedBy.map((id) => String(id))
           : [],
+        imageOrientations: Array.isArray(word.imageOrientations)
+          ? word.imageOrientations
+          : undefined,
         sharedFaithStoryId:
           typeof word.sharedFaithStoryId === "string" ? word.sharedFaithStoryId : null,
         privacy: (word.privacy === "followers" || word.privacy === "private"

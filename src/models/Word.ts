@@ -9,6 +9,7 @@ const WordSchema = new Schema(
     authorImage: { type: String, trim: true },
     scriptureRef: { type: String, trim: true, maxlength: 80 },
     images: [{ type: String, trim: true }],
+    imageOrientations: [{ type: String, enum: ["portrait", "landscape"] }],
     sharedFaithStoryId: { type: Schema.Types.ObjectId, ref: "FaithStory" },
     sharedFaithStoryTitle: { type: String, trim: true, maxlength: 160 },
     sharedFaithStoryCover: { type: String, trim: true },

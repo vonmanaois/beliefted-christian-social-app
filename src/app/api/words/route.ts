@@ -197,6 +197,9 @@ export async function GET(req: Request) {
           sharedFaithStoryId: sharedStoryId,
           scriptureRef: word.scriptureRef ?? null,
           images: Array.isArray(word.images) ? word.images : [],
+          imageOrientations: Array.isArray(word.imageOrientations)
+            ? word.imageOrientations
+            : undefined,
           sharedFaithStory:
             sharedStoryId &&
             (word.sharedFaithStoryTitle || fallbackShared)
@@ -259,6 +262,7 @@ export async function POST(req: Request) {
     content: z.string().trim().max(2000).optional().or(z.literal("")),
     scriptureRef: z.string().trim().max(80).optional().or(z.literal("")),
     images: z.array(z.string().url()).max(4).optional(),
+    imageOrientations: z.array(z.enum(["portrait", "landscape"])).max(4).optional(),
     sharedFaithStoryId: z.string().optional().or(z.literal("")),
     privacy: z.enum(["public", "followers", "private"]).optional(),
   });
@@ -271,6 +275,9 @@ export async function POST(req: Request) {
   const content = (body.data.content ?? "").trim();
   const scriptureRef = (body.data.scriptureRef ?? "").trim();
   const images = Array.isArray(body.data.images) ? body.data.images : [];
+  const imageOrientations = Array.isArray(body.data.imageOrientations)
+    ? body.data.imageOrientations
+    : [];
   const sharedFaithStoryId = (body.data.sharedFaithStoryId ?? "").trim();
   const privacy = body.data.privacy ?? "public";
 
@@ -319,6 +326,8 @@ export async function POST(req: Request) {
     authorImage: author?.image ?? null,
     scriptureRef: scriptureRef || undefined,
     images,
+    imageOrientations:
+      imageOrientations.length === images.length ? imageOrientations : undefined,
     sharedFaithStoryId: sharedStoryData?.id ?? undefined,
     sharedFaithStoryTitle: sharedStoryData?.title ?? undefined,
     sharedFaithStoryCover: sharedStoryData?.coverImage ?? undefined,
