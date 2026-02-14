@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f3f4f6",
+  themeColor: "#9ad1ff",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -46,6 +46,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="apple-touch-startup-image" href="/icon-512.png" />
+      </head>
       <body
         suppressHydrationWarning
         className={`${inter.variable}`}

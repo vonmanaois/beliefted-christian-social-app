@@ -298,6 +298,24 @@ html[data-theme="dark"] body {
   background: var(--surface);
 }
 
+:root {
+  --pwa-splash: #9ad1ff;
+}
+
+html {
+  background: var(--pwa-splash);
+}
+
+body {
+  min-height: 100vh;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+html.app-ready body {
+  opacity: 1;
+}
+
 html[data-theme="purple-rose"] body {
   background: var(--surface);
 }

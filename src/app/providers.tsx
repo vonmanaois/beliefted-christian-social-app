@@ -5,6 +5,7 @@ import { ThemeProvider } from "next-themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import ThemeSync from "@/components/layout/ThemeSync";
+import AppReady from "@/components/layout/AppReady";
 
 type ProvidersProps = {
   children: React.ReactNode;
@@ -32,6 +33,7 @@ export default function Providers({ children }: ProvidersProps) {
           storageKey="beliefted_theme"
           themes={["light", "dark", "midnight", "purple-rose", "banana"]}
         >
+          <AppReady />
           <ThemeSync />
           {children}
         </ThemeProvider>
