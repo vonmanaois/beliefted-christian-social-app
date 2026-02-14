@@ -176,8 +176,8 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
         </div>
       )}
       {isFetching && (
-        <div className="mb-3 h-1 w-full overflow-hidden rounded-full bg-[color:var(--surface-strong)]">
-          <div className="h-full w-1/3 animate-pulse rounded-full bg-[color:var(--accent)]/70" />
+        <div className="mb-3 loading-bar">
+          <div className="loading-bar__fill" />
         </div>
       )}
       {words.map((word) => (
