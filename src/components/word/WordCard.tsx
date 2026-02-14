@@ -279,6 +279,26 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
       }
     );
   };
+  const updateFollowingCache = (updater: (item: Word) => Word) => {
+    queryClient.setQueriesData<{ pages: { items: Array<{ type: string; word?: Word }> }[]; pageParams: unknown[] }>(
+      { queryKey: ["following-feed"] },
+      (data) => {
+        if (!data) return data;
+        return {
+          ...data,
+          pages: data.pages.map((page) => ({
+            ...page,
+            items: page.items.map((item) => {
+              if (item?.type !== "word" || !item.word) return item;
+              return normalizeId(item.word._id) === wordId
+                ? { ...item, word: updater(item.word) }
+                : item;
+            }),
+          })),
+        };
+      }
+    );
+  };
   const removeFromSavedCache = () => {
     queryClient.setQueriesData<{ pages: { items: Word[] }[]; pageParams: unknown[] }>(
       {
@@ -447,6 +467,38 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
       }
       return (await response.json()) as { saved: boolean };
     },
+    onMutate: async () => {
+      const viewerId = session?.user?.id ? String(session.user.id) : null;
+      if (!viewerId) return { previousWords: null, previousFollowing: null, viewerId: null };
+      const previousWords = queryClient.getQueriesData({
+        queryKey: ["words"],
+      });
+      const previousFollowing = queryClient.getQueriesData({
+        queryKey: ["following-feed"],
+      });
+      const applyOptimistic = (item: Word) => {
+        const currentSaved = Array.isArray(item.savedBy) ? item.savedBy : [];
+        const nextSavedBy = currentSaved.includes(viewerId)
+          ? currentSaved.filter((id) => id !== viewerId)
+          : [...currentSaved, viewerId];
+        return { ...item, savedBy: nextSavedBy };
+      };
+      updateWordCache(applyOptimistic);
+      updateFollowingCache(applyOptimistic);
+      return { previousWords, previousFollowing, viewerId };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousWords) {
+        context.previousWords.forEach(([key, data]) => {
+          queryClient.setQueryData(key, data);
+        });
+      }
+      if (context?.previousFollowing) {
+        context.previousFollowing.forEach(([key, data]) => {
+          queryClient.setQueryData(key, data);
+        });
+      }
+    },
     onSuccess: (data) => {
       const viewerId = session?.user?.id ? String(session.user.id) : null;
       if (!viewerId) return;
@@ -469,6 +521,13 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
         return;
       }
       updateWordCache((item) => {
+        const currentSaved = Array.isArray(item.savedBy) ? item.savedBy : [];
+        const nextSavedBy = data.saved
+          ? [...new Set([...currentSaved, viewerId])]
+          : currentSaved.filter((id) => id !== viewerId);
+        return { ...item, savedBy: nextSavedBy };
+      });
+      updateFollowingCache((item) => {
         const currentSaved = Array.isArray(item.savedBy) ? item.savedBy : [];
         const nextSavedBy = data.saved
           ? [...new Set([...currentSaved, viewerId])]

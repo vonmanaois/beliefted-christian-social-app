@@ -118,18 +118,26 @@ export default function FaithStoryEditor({
           render: () => {
             let container: HTMLDivElement | null = null;
             let selectedIndex = 0;
+            let currentItems: MentionUser[] = [];
+            let currentCommand: ((props: { id: string; label: string }) => void) | null = null;
 
-            const update = (props: {
-              items: MentionUser[];
-              command: (props: { id: string; label: string }) => void;
-              clientRect?: () => DOMRect | null;
-            }) => {
+            const update = (
+              props: {
+                items: MentionUser[];
+                command: (props: { id: string; label: string }) => void;
+                clientRect?: (() => DOMRect | null) | null;
+              } | null
+            ) => {
+              if (!props) return;
               if (!container) return;
               if (!props.items.length) {
+                currentItems = [];
                 container.style.display = "none";
                 container.innerHTML = "";
                 return;
               }
+              currentItems = props.items;
+              currentCommand = props.command;
               container.style.display = "block";
               const rect = props.clientRect?.();
               if (rect) {
@@ -153,23 +161,32 @@ export default function FaithStoryEditor({
                 update(props);
               },
               onKeyDown: (props) => {
-                if (!props.items.length) {
+                if (!currentItems.length) {
                   return false;
                 }
                 if (props.event.key === "ArrowDown") {
-                  selectedIndex = (selectedIndex + 1) % props.items.length;
-                  update(props);
+                  selectedIndex = (selectedIndex + 1) % currentItems.length;
+                  update({
+                    items: currentItems,
+                    command: currentCommand ?? (() => {}),
+                    clientRect: undefined,
+                  });
                   return true;
                 }
                 if (props.event.key === "ArrowUp") {
-                  selectedIndex = (selectedIndex - 1 + props.items.length) % props.items.length;
-                  update(props);
+                  selectedIndex =
+                    (selectedIndex - 1 + currentItems.length) % currentItems.length;
+                  update({
+                    items: currentItems,
+                    command: currentCommand ?? (() => {}),
+                    clientRect: undefined,
+                  });
                   return true;
                 }
                 if (props.event.key === "Enter") {
-                  const item = props.items[selectedIndex];
+                  const item = currentItems[selectedIndex];
                   if (item?.username) {
-                    props.command({ id: item.username, label: `@${item.username}` });
+                    currentCommand?.({ id: item.username, label: `@${item.username}` });
                   }
                   return true;
                 }

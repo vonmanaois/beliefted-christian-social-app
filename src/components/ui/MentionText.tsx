@@ -17,8 +17,8 @@ export default function MentionText({ text, className }: MentionTextProps) {
     const nodes: React.ReactNode[] = [];
     let lastIndex = 0;
     let match: RegExpExecArray | null;
-    mentionRegex.lastIndex = 0;
-    while ((match = mentionRegex.exec(text)) !== null) {
+    const regex = new RegExp(mentionRegex);
+    while ((match = regex.exec(text)) !== null) {
       const start = match.index;
       const before = start > 0 ? text[start - 1] : "";
       if (before && isWordChar(before)) {

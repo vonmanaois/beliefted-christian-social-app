@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import Image from "next/image";
 import { cloudinaryTransform } from "@/lib/cloudinary";
 
@@ -133,7 +133,8 @@ export default function MentionTextarea({
     setRange(null);
     requestAnimationFrame(() => {
       if (!ref.current) return;
-      const cursor = before.length + user.username.length + 2;
+      const usernameLength = user.username?.length ?? 0;
+      const cursor = before.length + usernameLength + 2;
       ref.current.focus();
       ref.current.setSelectionRange(cursor, cursor);
       if (autoResize) {
@@ -159,46 +160,42 @@ export default function MentionTextarea({
     }
   };
 
-  const list = useMemo(
-    () =>
-      suggestions.map((user, index) => (
-        <button
-          key={`${user.username ?? "user"}-${index}`}
-          type="button"
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => selectUser(user)}
-          className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs ${
-            index === activeIndex
-              ? "bg-[color:var(--surface-strong)]"
-              : "bg-transparent"
-          }`}
-        >
-          <span className="h-6 w-6 rounded-full overflow-hidden bg-[color:var(--surface-strong)] flex items-center justify-center text-[10px] font-semibold text-[color:var(--subtle)]">
-            {user.image ? (
-              <Image
-                src={cloudinaryTransform(user.image, { width: 48, height: 48 })}
-                alt=""
-                width={24}
-                height={24}
-                sizes="24px"
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              (user.name?.[0] ?? "U").toUpperCase()
-            )}
-          </span>
-          <div className="flex flex-col">
-            <span className="font-semibold text-[color:var(--ink)]">
-              {user.name ?? user.username ?? "User"}
-            </span>
-            {user.username && (
-              <span className="text-[10px] text-[color:var(--subtle)]">@{user.username}</span>
-            )}
-          </div>
-        </button>
-      )),
-    [suggestions, activeIndex]
-  );
+  const list = suggestions.map((user, index) => (
+    <button
+      key={`${user.username ?? "user"}-${index}`}
+      type="button"
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={() => selectUser(user)}
+      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs ${
+        index === activeIndex
+          ? "bg-[color:var(--surface-strong)]"
+          : "bg-transparent"
+      }`}
+    >
+      <span className="h-6 w-6 rounded-full overflow-hidden bg-[color:var(--surface-strong)] flex items-center justify-center text-[10px] font-semibold text-[color:var(--subtle)]">
+        {user.image ? (
+          <Image
+            src={cloudinaryTransform(user.image, { width: 48, height: 48 })}
+            alt=""
+            width={24}
+            height={24}
+            sizes="24px"
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          (user.name?.[0] ?? "U").toUpperCase()
+        )}
+      </span>
+      <div className="flex flex-col">
+        <span className="font-semibold text-[color:var(--ink)]">
+          {user.name ?? user.username ?? "User"}
+        </span>
+        {user.username && (
+          <span className="text-[10px] text-[color:var(--subtle)]">@{user.username}</span>
+        )}
+      </div>
+    </button>
+  ));
 
   return (
     <div className="relative">

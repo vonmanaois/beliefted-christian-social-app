@@ -13,7 +13,6 @@ import {
   House,
   Info,
   List,
-  Question,
   Notebook,
   MagnifyingGlass,
   SlidersHorizontal,
@@ -24,7 +23,6 @@ import Modal from "@/components/layout/Modal";
 import ThemeToggle from "@/components/layout/ThemeToggle";
 import NotificationsContent from "@/components/notifications/NotificationsContent";
 import WhyBelieftedContent from "@/components/info/WhyBelieftedContent";
-import HowToDownloadContent from "@/components/info/HowToDownloadContent";
 import CommunityGuidelinesContent from "@/components/info/CommunityGuidelinesContent";
 import UserSearch from "@/components/layout/UserSearch";
 import { useUIStore } from "@/lib/uiStore";
@@ -68,8 +66,11 @@ export default function Sidebar() {
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notificationsClosing, setNotificationsClosing] = useState(false);
-  const [infoPanel, setInfoPanel] = useState<"why" | "how" | "guidelines" | null>(null);
+  const [infoPanel, setInfoPanel] = useState<"why" | "guidelines" | null>(null);
   const [infoClosing, setInfoClosing] = useState(false);
+  const [showInstallModal, setShowInstallModal] = useState(false);
+  const [installPromptSupported, setInstallPromptSupported] = useState(false);
+  const deferredInstallPrompt = useRef<BeforeInstallPromptEvent | null>(null);
   const [menuMounted] = useState(true);
   const touchStartX = useRef<number | null>(null);
   const triggerPanelClose = (target: "search") => {
@@ -81,7 +82,7 @@ export default function Sidebar() {
     }, 220);
   };
 
-  const openInfoPanel = useCallback((panel: "why" | "how" | "guidelines") => {
+  const openInfoPanel = useCallback((panel: "why" | "guidelines") => {
     setInfoClosing(false);
     setInfoPanel(panel);
   }, []);
@@ -94,6 +95,24 @@ export default function Sidebar() {
       setInfoClosing(false);
     }, 220);
   }, [infoPanel]);
+
+  const isIOS = () => {
+    if (typeof navigator === "undefined") return false;
+    return /iphone|ipad|ipod/i.test(navigator.userAgent);
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      deferredInstallPrompt.current = event as BeforeInstallPromptEvent;
+      setInstallPromptSupported(true);
+    };
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    };
+  }, []);
 
   const { data: notificationsCount = 0 } = useQuery({
     queryKey: ["notifications", "count", session?.user?.id ?? "guest"],
@@ -617,13 +636,25 @@ export default function Sidebar() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       closeMenu();
-                      openInfoPanel("how");
+                      const prompt = deferredInstallPrompt.current;
+                      if (prompt) {
+                        prompt.prompt();
+                        try {
+                          await prompt.userChoice;
+                        } catch {
+                          // ignore prompt errors
+                        }
+                        deferredInstallPrompt.current = null;
+                        setInstallPromptSupported(false);
+                        return;
+                      }
+                      setShowInstallModal(true);
                     }}
                     className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface-strong)]"
                   >
-                    How To Download
+                    Add to Home Screen
                   </button>
                   <button
                     type="button"
@@ -771,9 +802,7 @@ export default function Sidebar() {
                     <p className="text-xs uppercase tracking-[0.2em] text-[color:var(--subtle)]">
                       {infoPanel === "why"
                         ? "Why Beliefted"
-                        : infoPanel === "how"
-                          ? "How To Download"
-                          : "Community Guidelines"}
+                        : "Community Guidelines"}
                     </p>
                     <button
                       type="button"
@@ -787,8 +816,6 @@ export default function Sidebar() {
                   <div className="mt-4">
                     {infoPanel === "why" ? (
                       <WhyBelieftedContent />
-                    ) : infoPanel === "how" ? (
-                      <HowToDownloadContent />
                     ) : (
                       <CommunityGuidelinesContent />
                     )}
@@ -943,16 +970,6 @@ export default function Sidebar() {
         <button
           type="button"
           className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-          onClick={() => openInfoPanel("how")}
-        >
-          <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
-            <Question size={22} weight="regular" />
-          </span>
-          <span className="hidden lg:inline">How To Download</span>
-        </button>
-        <button
-          type="button"
-          className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
           onClick={() => openInfoPanel("guidelines")}
         >
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
@@ -1041,6 +1058,65 @@ export default function Sidebar() {
           <GoogleLogo size={16} weight="regular" />
           Continue with Google
         </button>
+      </Modal>
+
+      <Modal
+        title="Add to Home Screen"
+        isOpen={showInstallModal}
+        onClose={() => setShowInstallModal(false)}
+      >
+        {isIOS() ? (
+          <div className="text-sm text-[color:var(--subtle)]">
+            <p>Apple doesn’t allow one‑tap installs on iOS.</p>
+            <p className="mt-3">To add Beliefted:</p>
+            <ul className="mt-2 space-y-2">
+              <li className="flex flex-wrap items-center gap-2">
+                <span>Tap the Share button</span>
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-[color:var(--panel-border)] text-[color:var(--ink)]">
+                  <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      d="M12 4v10m0-10l-4 4m4-4l4 4M7 12v6a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-6"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+                <span>in Safari.</span>
+              </li>
+              <li className="flex flex-wrap items-center gap-2">
+                <span>Scroll and tap</span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--panel-border)] px-2 py-0.5 text-[11px] text-[color:var(--ink)]">
+                  <span className="text-[12px]">＋</span>
+                  Add to Home Screen
+                </span>
+              </li>
+              <li>Tap “Add”.</li>
+            </ul>
+          </div>
+        ) : (
+          <div className="text-sm text-[color:var(--subtle)]">
+            {installPromptSupported ? (
+              <p>Tap “Add to Home Screen” again to install.</p>
+            ) : (
+              <p>
+                Install is not available right now. Try opening this in Chrome or
+                ensure the app is served over HTTPS.
+              </p>
+            )}
+          </div>
+        )}
+        <div className="mt-5 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setShowInstallModal(false)}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer hover:text-[color:var(--accent)]"
+          >
+            Got it
+          </button>
+        </div>
       </Modal>
 
       <nav
