@@ -200,6 +200,32 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
   useEffect(() => {
     setLocalLikedBy(likedBy);
   }, [likedBy]);
+
+  useEffect(() => {
+    const node = imageStripRef.current;
+    if (!node) return;
+    const imgs = Array.from(
+      node.querySelectorAll<HTMLImageElement>("img[data-orientation-key]")
+    );
+    if (imgs.length === 0) return;
+    setImageOrientations((prev) => {
+      let next = prev;
+      let didUpdate = false;
+      imgs.forEach((img) => {
+        const key = img.dataset.orientationKey;
+        if (!key || prev[key]) return;
+        if (!img.complete || !img.naturalWidth || !img.naturalHeight) return;
+        const nextOrientation =
+          img.naturalHeight > img.naturalWidth ? "portrait" : "landscape";
+        if (!didUpdate) {
+          next = { ...prev };
+          didUpdate = true;
+        }
+        next[key] = nextOrientation;
+      });
+      return didUpdate ? next : prev;
+    });
+  }, [word.images]);
   const hasSaved = session?.user?.id
     ? savedBy.includes(String(session.user.id))
     : false;
@@ -1171,6 +1197,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                       <img
                         src={thumbSrc}
                         alt=""
+                        data-orientation-key={key}
                         className="h-full w-full object-cover"
                         loading="lazy"
                         onLoad={(event) => {
