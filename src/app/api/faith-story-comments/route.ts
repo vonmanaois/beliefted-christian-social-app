@@ -8,6 +8,7 @@ import NotificationModel from "@/models/Notification";
 import { z } from "zod";
 import { rateLimit } from "@/lib/rateLimit";
 import { Types } from "mongoose";
+import { notifyMentions } from "@/lib/mentionNotifications";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -58,6 +59,12 @@ export async function POST(req: Request) {
       type: "faith_comment",
     });
   }
+
+  await notifyMentions({
+    text: content,
+    actorId: session.user.id,
+    faithStoryId: storyObjectId.toString(),
+  });
 
   return NextResponse.json(comment, { status: 201 });
 }

@@ -16,6 +16,7 @@ const NotificationSchema = new Schema(
         "follow",
         "faith_like",
         "faith_comment",
+        "mention",
         "moderation",
       ],
       required: true,

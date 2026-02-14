@@ -9,6 +9,7 @@ import { Types } from "mongoose";
 import { revalidateTag, unstable_cache } from "next/cache";
 import { z } from "zod";
 import { rateLimit } from "@/lib/rateLimit";
+import { notifyMentions } from "@/lib/mentionNotifications";
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -311,6 +312,17 @@ export async function POST(req: Request) {
     privacy,
     prayedBy: [],
     expiresAt,
+  });
+
+  const mentionText =
+    kind === "request"
+      ? prayerPoints.map((point) => `${point.title} ${point.description}`).join(" ")
+      : content;
+
+  await notifyMentions({
+    text: mentionText,
+    actorId: session.user.id,
+    prayerId: prayer._id.toString(),
   });
 
   revalidateTag("prayers-feed", "max");

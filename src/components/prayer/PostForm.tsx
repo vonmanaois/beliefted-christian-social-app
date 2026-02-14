@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Globe, LockSimple, MinusCircle, PlusCircle, UsersThree } from "@phosphor-icons/react";
 import { useSession } from "next-auth/react";
 import { useUIStore } from "@/lib/uiStore";
+import MentionTextarea from "@/components/ui/MentionTextarea";
 
 type PostFormProps = {
   onPosted?: () => void;
@@ -173,24 +174,18 @@ export default function PostForm({
       } pb-0`}
     >
       {kind === "prayer" ? (
-        <textarea
-          className={`bg-transparent text-base text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none ${
+        <MentionTextarea
+          value={content}
+          onChangeValue={setContent}
+          placeholder="What can we pray for today?"
+          className={`bg-transparent text-base text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full ${
             compact ? "min-h-[28px]" : "min-h-[36px]"
           }`}
-          placeholder="What can we pray for today?"
-          value={content}
-          ref={textAreaRef}
+          textareaRef={textAreaRef}
           readOnly={!isAuthenticated}
-          aria-disabled={!isAuthenticated}
+          ariaDisabled={!isAuthenticated}
           onClick={handleUnauthedTextClick}
           onFocus={handleUnauthedTextClick}
-          onChange={(event) => {
-            setContent(event.target.value);
-            if (textAreaRef.current) {
-              textAreaRef.current.style.height = "auto";
-              textAreaRef.current.style.height = `${textAreaRef.current.scrollHeight}px`;
-            }
-          }}
         />
       ) : (
         <div className="flex flex-col gap-3">
@@ -226,23 +221,23 @@ export default function PostForm({
                   setPoints(next);
                 }}
               />
-              <textarea
-                className={`bg-transparent text-sm text-[color:var(--ink)] outline-none border-b border-[color:var(--panel-border)] pb-1 focus:outline-none focus:ring-0 resize-none min-h-[60px] ${
+              <MentionTextarea
+                value={point.description}
+                onChangeValue={(nextValue) => {
+                  const next = [...points];
+                  next[index] = { ...next[index], description: nextValue };
+                  setPoints(next);
+                }}
+                placeholder="Description"
+                className={`bg-transparent text-sm text-[color:var(--ink)] outline-none border-b border-[color:var(--panel-border)] pb-1 focus:outline-none focus:ring-0 resize-none min-h-[60px] w-full ${
                   showRequestValidation && !point.description.trim()
                     ? "border-[color:var(--danger)]"
                     : ""
                 }`}
-                placeholder="Description"
-                value={point.description}
                 readOnly={!isAuthenticated}
-                aria-disabled={!isAuthenticated}
+                ariaDisabled={!isAuthenticated}
                 onClick={handleUnauthedTextClick}
                 onFocus={handleUnauthedTextClick}
-                onChange={(event) => {
-                  const next = [...points];
-                  next[index] = { ...next[index], description: event.target.value };
-                  setPoints(next);
-                }}
               />
               {points.length > 1 && index === points.length - 1 && (
                 <button

@@ -8,6 +8,7 @@ import NotificationModel from "@/models/Notification";
 import PrayerModel from "@/models/Prayer";
 import { z } from "zod";
 import { rateLimit } from "@/lib/rateLimit";
+import { notifyMentions } from "@/lib/mentionNotifications";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -65,6 +66,12 @@ export async function POST(req: Request) {
       type: "comment",
     });
   }
+
+  await notifyMentions({
+    text: content,
+    actorId: session.user.id,
+    prayerId: prayerObjectId.toString(),
+  });
 
   return NextResponse.json(comment, { status: 201 });
 }

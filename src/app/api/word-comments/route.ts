@@ -7,6 +7,7 @@ import NotificationModel from "@/models/Notification";
 import WordModel from "@/models/Word";
 import { z } from "zod";
 import { rateLimit } from "@/lib/rateLimit";
+import { notifyMentions } from "@/lib/mentionNotifications";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -60,6 +61,12 @@ export async function POST(req: Request) {
       type: "word_comment",
     });
   }
+
+  await notifyMentions({
+    text: content,
+    actorId: session.user.id,
+    wordId: String(wordId),
+  });
 
   return NextResponse.json(comment, { status: 201 });
 }

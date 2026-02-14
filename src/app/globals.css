@@ -249,6 +249,45 @@ body {
   margin: 12px 0;
 }
 
+.mention-link {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.mention-link:hover {
+  color: var(--accent-strong);
+  text-decoration: underline;
+}
+
+.mention-suggestions {
+  max-height: 220px;
+  overflow: auto;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.mention-suggestions-wrapper {
+  min-width: 220px;
+}
+
+.mention-suggestions__item {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink);
+  background: transparent;
+  border: none;
+}
+
+.mention-suggestions__item.is-active,
+.mention-suggestions__item:hover {
+  background: var(--surface-strong);
+}
+
 .loading-bar {
   position: relative;
   height: 6px;

@@ -13,6 +13,7 @@ import {
 } from "@phosphor-icons/react";
 import { useSession } from "next-auth/react";
 import { useUIStore } from "@/lib/uiStore";
+import MentionTextarea from "@/components/ui/MentionTextarea";
 
 type WordFormProps = {
   onPosted?: () => void;
@@ -374,24 +375,18 @@ export default function WordForm({
         compact ? "p-3" : "p-4"
       } pb-0`}
     >
-      <textarea
-        className={`bg-transparent text-base text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none ${
+      <MentionTextarea
+        value={content}
+        onChangeValue={setContent}
+        placeholder={placeholder}
+        className={`bg-transparent text-base text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full ${
           compact ? "min-h-[28px]" : "min-h-[36px]"
         }`}
-        placeholder={placeholder}
-        value={content}
-        ref={textAreaRef}
+        textareaRef={textAreaRef}
         readOnly={!isAuthenticated}
-        aria-disabled={!isAuthenticated}
+        ariaDisabled={!isAuthenticated}
         onClick={handleUnauthedTextClick}
         onFocus={handleUnauthedTextClick}
-        onChange={(event) => {
-          setContent(event.target.value);
-          if (textAreaRef.current) {
-            textAreaRef.current.style.height = "auto";
-            textAreaRef.current.style.height = `${textAreaRef.current.scrollHeight}px`;
-          }
-        }}
       />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 relative">

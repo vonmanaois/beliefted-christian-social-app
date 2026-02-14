@@ -5,6 +5,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
+import Mention from "@tiptap/extension-mention";
 import {
   ImageSquare,
   Quotes,
@@ -14,6 +15,43 @@ import {
   TextItalic,
   Minus,
 } from "@phosphor-icons/react";
+
+type MentionUser = {
+  id?: string | null;
+  username?: string | null;
+  name?: string | null;
+  image?: string | null;
+};
+
+const renderMentionList = (
+  container: HTMLDivElement,
+  items: MentionUser[],
+  selectedIndex: number,
+  command: (props: { id: string; label: string }) => void
+) => {
+  container.innerHTML = "";
+  const list = document.createElement("div");
+  list.className = "mention-suggestions";
+  items.forEach((item, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `mention-suggestions__item ${
+      index === selectedIndex ? "is-active" : ""
+    }`;
+    button.textContent = `${item.name ?? item.username ?? "User"}${
+      item.username ? ` @${item.username}` : ""
+    }`;
+    button.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+    });
+    button.addEventListener("click", () => {
+      if (!item.username) return;
+      command({ id: item.username, label: `@${item.username}` });
+    });
+    list.appendChild(button);
+  });
+  container.appendChild(list);
+};
 
 type FaithStoryEditorProps = {
   value: string;
@@ -63,6 +101,92 @@ export default function FaithStoryEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [2, 3] },
+      }),
+      Mention.configure({
+        HTMLAttributes: {
+          class: "mention-link",
+        },
+        suggestion: {
+          char: "@",
+          items: async ({ query }) => {
+            if (query.length < 2) return [];
+            const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
+            if (!response.ok) return [];
+            const data = (await response.json()) as MentionUser[];
+            return data.slice(0, 5);
+          },
+          render: () => {
+            let container: HTMLDivElement | null = null;
+            let selectedIndex = 0;
+
+            const update = (props: {
+              items: MentionUser[];
+              command: (props: { id: string; label: string }) => void;
+              clientRect?: () => DOMRect | null;
+            }) => {
+              if (!container) return;
+              if (!props.items.length) {
+                container.style.display = "none";
+                container.innerHTML = "";
+                return;
+              }
+              container.style.display = "block";
+              const rect = props.clientRect?.();
+              if (rect) {
+                container.style.left = `${rect.left + window.scrollX}px`;
+                container.style.top = `${rect.bottom + window.scrollY + 6}px`;
+              }
+              renderMentionList(container, props.items, selectedIndex, props.command);
+            };
+
+            return {
+              onStart: (props) => {
+                selectedIndex = 0;
+                container = document.createElement("div");
+                container.className = "mention-suggestions-wrapper";
+                container.style.position = "absolute";
+                container.style.zIndex = "50";
+                document.body.appendChild(container);
+                update(props);
+              },
+              onUpdate: (props) => {
+                update(props);
+              },
+              onKeyDown: (props) => {
+                if (!props.items.length) {
+                  return false;
+                }
+                if (props.event.key === "ArrowDown") {
+                  selectedIndex = (selectedIndex + 1) % props.items.length;
+                  update(props);
+                  return true;
+                }
+                if (props.event.key === "ArrowUp") {
+                  selectedIndex = (selectedIndex - 1 + props.items.length) % props.items.length;
+                  update(props);
+                  return true;
+                }
+                if (props.event.key === "Enter") {
+                  const item = props.items[selectedIndex];
+                  if (item?.username) {
+                    props.command({ id: item.username, label: `@${item.username}` });
+                  }
+                  return true;
+                }
+                if (props.event.key === "Escape") {
+                  return true;
+                }
+                return false;
+              },
+              onExit: () => {
+                if (container) {
+                  container.remove();
+                  container = null;
+                }
+              },
+            };
+          },
+        },
       }),
       Image.configure({
         allowBase64: false,

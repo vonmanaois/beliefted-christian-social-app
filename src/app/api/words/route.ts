@@ -10,6 +10,7 @@ import { Types } from "mongoose";
 import { revalidateTag, unstable_cache } from "next/cache";
 import { z } from "zod";
 import { rateLimit } from "@/lib/rateLimit";
+import { notifyMentions } from "@/lib/mentionNotifications";
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -331,6 +332,12 @@ export async function POST(req: Request) {
       { $inc: { sharedCount: 1 } }
     );
   }
+
+  await notifyMentions({
+    text: content,
+    actorId: session.user.id,
+    wordId: word._id.toString(),
+  });
 
   revalidateTag("words-feed", "max");
   return NextResponse.json(word, { status: 201 });

@@ -23,6 +23,7 @@ type NotificationItem = {
     | "follow"
     | "faith_like"
     | "faith_comment"
+    | "mention"
     | "moderation";
   createdAt: string;
   actorId?: NotificationActor | null;
@@ -262,6 +263,14 @@ export default function NotificationsContent({ active = false }: NotificationsCo
                                       ? "liked your faith story."
                                       : note.type === "faith_comment"
                                         ? "posted reflection on your faith story."
+                                        : note.type === "mention"
+                                          ? note.wordId
+                                            ? "mentioned you in a word."
+                                            : note.prayerId
+                                              ? "mentioned you in a prayer."
+                                              : note.faithStoryId
+                                                ? "mentioned you in a faith story."
+                                                : "mentioned you."
                                         : "followed you."}
                           </>
                         )}

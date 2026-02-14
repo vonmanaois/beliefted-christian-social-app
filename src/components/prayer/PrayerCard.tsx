@@ -7,6 +7,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Avatar from "@/components/ui/Avatar";
 import Modal from "@/components/layout/Modal";
 import YouTubeEmbed from "@/components/ui/YouTubeEmbed";
+import MentionText from "@/components/ui/MentionText";
+import MentionTextarea from "@/components/ui/MentionTextarea";
 import { useUIStore } from "@/lib/uiStore";
 import { useAdmin } from "@/hooks/useAdmin";
 
@@ -869,15 +871,15 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
                         setEditPoints(next);
                       }}
                     />
-                    <textarea
-                      className="soft-input min-h-[80px] text-sm"
-                      placeholder="Prayer description..."
+                    <MentionTextarea
                       value={point.description}
-                      onChange={(event) => {
+                      onChangeValue={(nextValue) => {
                         const next = [...editPoints];
-                        next[index] = { ...next[index], description: event.target.value };
+                        next[index] = { ...next[index], description: nextValue };
                         setEditPoints(next);
                       }}
+                      placeholder="Prayer description..."
+                      className="soft-input min-h-[80px] text-sm w-full"
                     />
                     {editPoints.length > 1 && (
                       <button
@@ -908,10 +910,10 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
                 </button>
               </div>
             ) : (
-              <textarea
-                className="soft-input min-h-[100px] text-sm"
+              <MentionTextarea
                 value={editText}
-                onChange={(event) => setEditText(event.target.value)}
+                onChangeValue={setEditText}
+                className="soft-input min-h-[100px] text-sm w-full"
               />
             )}
             {editError && (
@@ -952,10 +954,10 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
               {requestPoints.map((point, index) => (
                 <div key={`${point.title}-${index}`}>
                   <p className="text-[13px] sm:text-sm font-semibold text-[color:var(--ink)]">
-                    {point.title}
+                    <MentionText text={point.title} />
                   </p>
                   <p className="mt-2 text-[13px] sm:text-sm leading-relaxed text-[color:var(--subtle)] whitespace-pre-line">
-                    {point.description}
+                    <MentionText text={point.description} />
                   </p>
                 </div>
               ))}
@@ -975,7 +977,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
             <>
               {cleaned && (
                 <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
-                  {displayContent}
+                  <MentionText text={displayContent} />
                 </p>
               )}
               {cleaned.length > 320 && (
@@ -1081,19 +1083,18 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
         )}
 
         {showComments && (
-          <div ref={commentFormRef} className="mt-3 border-t border-slate-100 pt-3">
+          <div
+            ref={commentFormRef}
+            className="mt-3 border-t border-slate-100 pt-3 pb-6 mb-2 bg-[color:var(--surface-strong)]/10 rounded-b-2xl shadow-[0_10px_24px_-20px_rgba(0,0,0,0.45)]"
+          >
             {session?.user?.id && (
               <form onSubmit={handleCommentSubmit} className="flex flex-col gap-2">
-                <textarea
-                  className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none"
-                  placeholder="Write encouragement..."
+                <MentionTextarea
                   value={commentText}
-                  ref={commentInputRef}
-                  onChange={(event) => {
-                    setCommentText(event.target.value);
-                    event.currentTarget.style.height = "auto";
-                    event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
-                  }}
+                  onChangeValue={setCommentText}
+                  placeholder="Write encouragement..."
+                  className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full"
+                  textareaRef={commentInputRef}
                 />
                 <div className="flex justify-end">
                   <button
@@ -1232,14 +1233,10 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
                       </div>
                       {editingCommentId === comment._id ? (
                         <div ref={commentEditRef} className="mt-2 flex flex-col gap-2">
-                          <textarea
-                            className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none"
+                          <MentionTextarea
                             value={editingCommentText}
-                            onChange={(event) => {
-                              setEditingCommentText(event.target.value);
-                              event.currentTarget.style.height = "auto";
-                              event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
-                            }}
+                            onChangeValue={setEditingCommentText}
+                            className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full"
                           />
                           <div className="flex items-center gap-2">
                             <button
@@ -1270,7 +1267,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
                         </div>
                       ) : (
                         <p className="mt-1 text-[13px] sm:text-sm text-[color:var(--ink)]">
-                          {comment.content}
+                          <MentionText text={comment.content} />
                         </p>
                       )}
                     </div>

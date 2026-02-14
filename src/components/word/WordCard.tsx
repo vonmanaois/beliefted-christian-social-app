@@ -18,6 +18,8 @@ import Avatar from "@/components/ui/Avatar";
 import Modal from "@/components/layout/Modal";
 import { useUIStore } from "@/lib/uiStore";
 import YouTubeEmbed from "@/components/ui/YouTubeEmbed";
+import MentionText from "@/components/ui/MentionText";
+import MentionTextarea from "@/components/ui/MentionTextarea";
 import { useAdmin } from "@/hooks/useAdmin";
 import { cloudinaryTransform } from "@/lib/cloudinary";
 
@@ -899,10 +901,10 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
       <div>
         {isEditing ? (
           <div ref={editRef} className="mt-3 flex flex-col gap-2">
-            <textarea
-              className="soft-input min-h-[100px] text-sm"
+            <MentionTextarea
               value={editText}
-              onChange={(event) => setEditText(event.target.value)}
+              onChangeValue={setEditText}
+              className="soft-input min-h-[100px] text-sm w-full"
             />
             <div className="flex items-center gap-2">
               <button
@@ -933,7 +935,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
             )}
             {cleaned && (
               <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
-                {displayContent}
+                <MentionText text={displayContent} />
               </p>
             )}
             {cleaned.length > 320 && (
@@ -1118,19 +1120,18 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
         )}
 
         {showComments && (
-          <div className="mt-3 border-t border-slate-100 pt-3" ref={commentFormRef}>
+          <div
+            className="mt-3 border-t border-slate-100 pt-3 pb-6 mb-2 bg-[color:var(--surface-strong)]/10 rounded-b-2xl shadow-[0_10px_24px_-20px_rgba(0,0,0,0.45)]"
+            ref={commentFormRef}
+          >
             {session?.user?.id && (
               <form onSubmit={handleCommentSubmit} className="flex flex-col gap-2">
-                <textarea
-                  className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none"
-                  placeholder="Share a reflection..."
+                <MentionTextarea
                   value={commentText}
-                  ref={commentInputRef}
-                  onChange={(event) => {
-                    setCommentText(event.target.value);
-                    event.currentTarget.style.height = "auto";
-                    event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
-                  }}
+                  onChangeValue={setCommentText}
+                  placeholder="Share a reflection..."
+                  className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full"
+                  textareaRef={commentInputRef}
                 />
                 <div className="flex justify-end">
                   <button
@@ -1269,14 +1270,10 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                       </div>
                       {editingCommentId === comment._id ? (
                         <div ref={commentEditRef} className="mt-2 flex flex-col gap-2">
-                          <textarea
-                            className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none"
+                          <MentionTextarea
                             value={editingCommentText}
-                            onChange={(event) => {
-                              setEditingCommentText(event.target.value);
-                              event.currentTarget.style.height = "auto";
-                              event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
-                            }}
+                            onChangeValue={setEditingCommentText}
+                            className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full"
                           />
                           <div className="flex items-center gap-2">
                             <button
@@ -1307,7 +1304,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                         </div>
                       ) : (
                         <p className="mt-1 text-[13px] sm:text-sm text-[color:var(--ink)]">
-                          {comment.content}
+                          <MentionText text={comment.content} />
                         </p>
                       )}
                     </div>

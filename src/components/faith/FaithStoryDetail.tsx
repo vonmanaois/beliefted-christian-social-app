@@ -13,6 +13,9 @@ import PostBackHeader from "@/components/ui/PostBackHeader";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useUIStore } from "@/lib/uiStore";
 import FaithStoryEditor from "@/components/faith/FaithStoryEditor";
+import MentionText from "@/components/ui/MentionText";
+import MentionTextarea from "@/components/ui/MentionTextarea";
+import { linkifyMentionsHtml } from "@/lib/mentions";
 
 type FaithStoryDetailProps = {
   story: {
@@ -101,6 +104,11 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
     () => decodeIfEncoded(story.content ?? ""),
     [story.content]
   );
+  const [linkedContent, setLinkedContent] = useState(normalizedContent);
+  useEffect(() => {
+    setLinkedContent(linkifyMentionsHtml(normalizedContent));
+  }, [normalizedContent]);
+
   const plainContent = useMemo(() => {
     const noTags = normalizedContent.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ");
     return noTags.replace(/\s+/g, " ").trim();
@@ -709,11 +717,11 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
             {showFullContent || !isLongContent ? (
               <div
                 className="faith-story-content text-sm text-[color:var(--ink)]"
-                dangerouslySetInnerHTML={{ __html: normalizedContent }}
+                dangerouslySetInnerHTML={{ __html: linkedContent }}
               />
             ) : (
               <p className="text-sm text-[color:var(--ink)] whitespace-pre-line">
-                {previewText}
+                <MentionText text={previewText} />
               </p>
             )}
             {isLongContent && (
@@ -844,15 +852,11 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
               commentMutation.mutate();
             }}
           >
-            <textarea
-              className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none"
-              placeholder="Write a comment..."
+            <MentionTextarea
               value={commentText}
-              onChange={(event) => {
-                setCommentText(event.target.value);
-                event.currentTarget.style.height = "auto";
-                event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
-              }}
+              onChangeValue={setCommentText}
+              placeholder="Write a comment..."
+              className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full"
             />
             <div className="flex justify-end">
               <button
@@ -953,14 +957,10 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
                     </div>
                     {editingCommentId === comment._id ? (
                       <div ref={commentEditRef} className="mt-2 flex flex-col gap-2">
-                        <textarea
-                          className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none"
+                        <MentionTextarea
                           value={editingCommentText}
-                          onChange={(event) => {
-                            setEditingCommentText(event.target.value);
-                            event.currentTarget.style.height = "auto";
-                            event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
-                          }}
+                          onChangeValue={setEditingCommentText}
+                          className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full"
                         />
                         <div className="flex items-center gap-2">
                           <button
@@ -991,7 +991,7 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
                       </div>
                     ) : (
                       <p className="mt-1 text-[13px] sm:text-sm text-[color:var(--ink)]">
-                        {comment.content}
+                        <MentionText text={comment.content} />
                       </p>
                     )}
                   </div>

@@ -9,6 +9,7 @@ import { z } from "zod";
 import { rateLimit } from "@/lib/rateLimit";
 import { revalidateTag, unstable_cache } from "next/cache";
 import sanitizeHtml from "sanitize-html";
+import { notifyMentions } from "@/lib/mentionNotifications";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -188,6 +189,12 @@ export async function POST(req: Request) {
     isAnonymous,
     coverImage: body.data.coverImage?.trim() || undefined,
     likedBy: [],
+  });
+
+  await notifyMentions({
+    text: plainText,
+    actorId: session.user.id,
+    faithStoryId: story._id.toString(),
   });
 
   revalidateTag("faith-stories", "max");
