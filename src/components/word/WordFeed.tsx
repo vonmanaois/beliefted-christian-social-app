@@ -148,7 +148,7 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
     <div
       className="flex flex-col"
       onTouchStart={(event) => {
-        if (window.scrollY > 0) return;
+        if (window.scrollY > 10) return;
         pullStartRef.current = event.touches[0]?.clientY ?? null;
         setIsPulling(true);
       }}

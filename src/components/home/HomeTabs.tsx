@@ -78,6 +78,7 @@ export default function HomeTabs() {
                     return;
                   }
                   if (tab === "Following") {
+                    queryClient.invalidateQueries({ queryKey: ["following-feed"] });
                     setActiveHomeTab("following");
                     return;
                   }
@@ -126,6 +127,7 @@ export default function HomeTabs() {
                     return;
                   }
                   if (tab === "Following") {
+                    queryClient.invalidateQueries({ queryKey: ["following-feed"] });
                     setActiveHomeTab("following");
                     return;
                   }

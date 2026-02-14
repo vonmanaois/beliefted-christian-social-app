@@ -146,7 +146,7 @@ export default function PrayerFeed({ refreshKey, userId, followingOnly, reprayed
     <div
       className="flex flex-col"
       onTouchStart={(event) => {
-        if (window.scrollY > 0) return;
+        if (window.scrollY > 10) return;
         pullStartRef.current = event.touches[0]?.clientY ?? null;
         setIsPulling(true);
       }}
