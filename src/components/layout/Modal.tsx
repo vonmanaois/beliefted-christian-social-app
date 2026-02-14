@@ -95,7 +95,9 @@ export default function Modal({
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-4 top-4 h-9 w-9 rounded-full border border-slate-200 text-[color:var(--subtle)] flex items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--panel)]"
+          onMouseDown={(event) => event.preventDefault()}
+          className="absolute right-4 top-4 h-9 w-9 rounded-full text-[color:var(--subtle)] flex items-center justify-center cursor-pointer pb-5 outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 shadow-none appearance-none"
+          data-no-focus-ring="true"
           aria-label="Close"
         >
           <span className="text-lg">✕</span>

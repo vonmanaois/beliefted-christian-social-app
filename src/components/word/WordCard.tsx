@@ -229,9 +229,13 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
   const [editText, setEditText] = useState(word.content ?? "");
   const [isRemoving, setIsRemoving] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [imageOrientations, setImageOrientations] = useState<
+    Record<string, "portrait" | "landscape">
+  >({});
   const [likeError, setLikeError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const editRef = useRef<HTMLDivElement | null>(null);
+  const imageStripRef = useRef<HTMLDivElement | null>(null);
   const { openSignIn } = useUIStore();
   const isOwner =
     word.isOwner ??
@@ -871,7 +875,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
 
   return (
     <article
-      className={`wall-card flex flex-col gap-3 rounded-none cursor-pointer transition-card ${isRemoving ? "fade-out-card" : ""}`}
+      className={`wall-card flex flex-col gap-3 rounded-none cursor-pointer transition-card overflow-hidden max-w-full min-w-0 ${isRemoving ? "fade-out-card" : ""}`}
       onClick={handleCardClick}
     >
       <div className="flex items-start gap-3">
@@ -886,7 +890,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
             className="avatar-core cursor-pointer h-8 w-8 sm:h-12 sm:w-12"
           />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <a
@@ -1011,7 +1015,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
               )}
             {(sharedStory || sharedStoryMissing) && (
               <div
-                className="mt-3 overflow-hidden rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] cursor-pointer"
+                className="mt-3 w-full max-w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] cursor-pointer"
                 onClick={(event) => {
                   event.stopPropagation();
                   if (sharedStoryHref) {
@@ -1040,7 +1044,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
             )}
             {youtubeId && (
               <div
-                className="mt-3 aspect-video w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)]"
+                className="mt-3 aspect-video w-full max-w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)]"
                 onClick={(event) => event.stopPropagation()}
               >
                 <YouTubeEmbed videoId={youtubeId} className="h-full w-full" />
@@ -1048,7 +1052,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
             )}
             {spotifyEmbed && (
               <div
-                className="mt-3 w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)]"
+                className="mt-3 w-full max-w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)]"
                 onClick={(event) => event.stopPropagation()}
               >
                 <iframe
@@ -1057,36 +1061,90 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                   height="152"
                   allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                   loading="lazy"
-                  className="border-0"
+                  className="border-0 w-full"
                   title="Spotify embed"
                 />
               </div>
             )}
             {Array.isArray(word.images) && word.images.length > 0 && (
-              <div className="mt-3 grid grid-cols-3 gap-2 sm:gap-3">
-                {word.images.map((src, index) => {
+              <div className="mt-3 relative w-full max-w-full overflow-hidden">
+                {word.images.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        const node = imageStripRef.current;
+                        if (!node) return;
+                        node.scrollBy({ left: -node.clientWidth, behavior: "smooth" });
+                      }}
+                      className="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 h-9 w-9 items-center justify-center rounded-full bg-white/80 text-[color:var(--ink)] shadow-md"
+                      aria-label="Scroll images left"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        const node = imageStripRef.current;
+                        if (!node) return;
+                        node.scrollBy({ left: node.clientWidth, behavior: "smooth" });
+                      }}
+                      className="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 h-9 w-9 items-center justify-center rounded-full bg-white/80 text-[color:var(--ink)] shadow-md"
+                      aria-label="Scroll images right"
+                    >
+                      ›
+                    </button>
+                  </>
+                )}
+                <div
+                  ref={imageStripRef}
+                  className="flex min-w-0 w-full max-w-full gap-3 overflow-x-auto pb-1 snap-x snap-mandatory overscroll-x-contain"
+                  style={{ touchAction: "pan-x" }}
+                >
+                  {word.images.map((src, index) => {
                   const isCloudinary =
                     typeof src === "string" && src.includes("res.cloudinary.com");
                   const thumbSrc = isCloudinary
-                    ? cloudinaryTransform(src, { width: 720 })
+                    ? cloudinaryTransform(src, { width: 600 })
                     : src;
-                  const lightboxSrc = isCloudinary
-                    ? cloudinaryTransform(src, { width: 1200 })
-                    : src;
+                  const key = `${src}-${index}`;
+                  const orientation = imageOrientations[key] ?? "landscape";
+                  const aspectClass =
+                    orientation === "portrait" ? "aspect-[3/4]" : "aspect-[4/3]";
                   return (
                     <div
-                      key={`${src}-${index}`}
-                      className="aspect-square w-full overflow-hidden rounded-xl border border-[color:var(--panel-border)]"
+                      key={key}
+                      className={`relative shrink-0 snap-start w-[60%] sm:w-[44%] max-w-[220px] ${aspectClass} overflow-hidden rounded-md border border-transparent`}
                       onClick={(event) => {
                         event.stopPropagation();
-                        setLightboxSrc(lightboxSrc);
+                        const fullSrc = isCloudinary
+                          ? cloudinaryTransform(src, { width: 1200 })
+                          : src;
+                        setLightboxSrc(fullSrc);
                       }}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={thumbSrc} alt="" className="h-full w-full object-cover" />
+                      <img
+                        src={thumbSrc}
+                        alt=""
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                        onLoad={(event) => {
+                          const { naturalWidth, naturalHeight } = event.currentTarget;
+                          if (!naturalWidth || !naturalHeight) return;
+                          const next =
+                            naturalHeight > naturalWidth ? "portrait" : "landscape";
+                          setImageOrientations((prev) =>
+                            prev[key] === next ? prev : { ...prev, [key]: next }
+                          );
+                        }}
+                      />
                     </div>
                   );
                 })}
+                </div>
               </div>
             )}
           </>
@@ -1590,17 +1648,17 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
       </Modal>
 
       <Modal
-        title="Photo"
+        title=""
         isOpen={Boolean(lightboxSrc)}
         onClose={() => setLightboxSrc(null)}
       >
         {lightboxSrc && (
-          <div className="w-full">
+          <div className="w-full rounded-lg bg-[linear-gradient(180deg,#ffffff_0%,#f7f7f4_100%)] px-4 pt-4 pb-14 shadow-[0_16px_32px_-22px_rgba(0,0,0,0.55)] border border-black/10">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={lightboxSrc}
               alt="Word image"
-              className="w-full max-h-[70vh] object-contain rounded-xl border border-[color:var(--panel-border)]"
+              className="block w-full max-h-[68vh] object-contain rounded-none bg-white"
             />
           </div>
         )}

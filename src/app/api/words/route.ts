@@ -258,7 +258,7 @@ export async function POST(req: Request) {
   const WordSchema = z.object({
     content: z.string().trim().max(2000).optional().or(z.literal("")),
     scriptureRef: z.string().trim().max(80).optional().or(z.literal("")),
-    images: z.array(z.string().url()).max(3).optional(),
+    images: z.array(z.string().url()).max(4).optional(),
     sharedFaithStoryId: z.string().optional().or(z.literal("")),
     privacy: z.enum(["public", "followers", "private"]).optional(),
   });

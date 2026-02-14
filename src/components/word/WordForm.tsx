@@ -151,7 +151,7 @@ export default function WordForm({
   ) => {
     const files = Array.from(event.target.files ?? []);
     if (files.length === 0) return;
-    const remaining = Math.max(0, 3 - imageItems.length);
+    const remaining = Math.max(0, 4 - imageItems.length);
     const nextFiles = files.slice(0, remaining);
     if (nextFiles.length === 0) {
       event.target.value = "";
@@ -490,7 +490,7 @@ export default function WordForm({
           )}
         </div>
         <span className="text-[11px] text-[color:var(--subtle)]">
-          {imageItems.length}/3
+          {imageItems.length}/4
         </span>
       </div>
       <input

@@ -5,7 +5,7 @@ import crypto from "crypto";
 import { z } from "zod";
 
 const BodySchema = z.object({
-  count: z.number().int().min(1).max(3),
+  count: z.number().int().min(1).max(4),
 });
 
 export async function POST(req: Request) {

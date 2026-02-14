@@ -106,6 +106,7 @@ body {
     linear-gradient(135deg, var(--surface) 0%, var(--surface-strong) 55%, var(--surface) 100%);
   color: var(--ink);
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 @media (max-width: 640px) {
@@ -745,6 +746,8 @@ html[data-theme="banana"] .panel-glass {
   padding: 12px;
   border-bottom: 1px solid var(--panel-border);
   cursor: pointer;
+  width: 100%;
+  min-width: 0;
 }
 
 .transition-card {
@@ -761,7 +764,10 @@ html[data-theme="banana"] .panel-glass {
   background: var(--panel);
   border-radius: 0;
   padding: 0;
-  overflow: visible;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: calc(100vh - 180px);
   display: flex;
   flex-direction: column;
@@ -900,6 +906,10 @@ a:focus-visible,
 [role="button"]:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+
+button[data-no-focus-ring="true"]:focus-visible {
+  outline: none;
 }
 
 @keyframes slide-in-left {
