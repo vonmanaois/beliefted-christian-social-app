@@ -534,12 +534,12 @@ export default function Sidebar() {
             className="flex items-center gap-2 cursor-pointer min-w-0 justify-self-center"
           >
             <Image
-              src="/icon-192.png"
+              src="/sheep.svg"
               alt="Beliefted"
-              width={36}
-              height={36}
+              width={64}
+              height={64}
               priority
-              className="h-9 w-9 rounded-full"
+              className="h-11 w-11 object-contain"
             />
             <span className="hidden sm:inline text-sm font-semibold text-[color:var(--ink)] whitespace-nowrap">
               Beliefted
@@ -600,12 +600,12 @@ export default function Sidebar() {
                   aria-label="Go to home"
                 >
                   <Image
-                    src="/icon-192.png"
+                    src="/sheep.svg"
                     alt="Beliefted"
-                    width={40}
-                    height={40}
+                    width={72}
+                    height={72}
                     priority
-                    className="h-10 w-10 rounded-full"
+                    className="h-12 w-12 object-contain"
                   />
                   <div>
                     <p className="text-base font-semibold text-[color:var(--ink)]">
@@ -833,12 +833,12 @@ export default function Sidebar() {
         className="flex items-center gap-3 text-left cursor-pointer"
       >
         <Image
-          src="/icon-192.png"
+          src="/sheep.svg"
           alt="Beliefted"
-          width={40}
-          height={40}
+          width={84}
+          height={84}
           priority
-          className="h-10 w-10 rounded-full"
+          className="h-16 w-16 object-contain"
         />
         <div className="hidden md:block">
           <p className="text-sm font-semibold text-[color:var(--ink)]">Beliefted</p>

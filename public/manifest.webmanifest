@@ -4,17 +4,17 @@
   "description": "A Christian prayer wall and social journal.",
   "start_url": "/?source=pwa",
   "display": "standalone",
-  "background_color": "#9ad1ff",
-  "theme_color": "#9ad1ff",
+  "background_color": "#5CE1E6",
+  "theme_color": "#5CE1E6",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "/sheep-home-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/sheep-home-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"

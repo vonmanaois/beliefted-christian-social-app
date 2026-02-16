@@ -20,11 +20,12 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/sheep.svg", type: "image/svg+xml" },
+      { url: "/sheep-home-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/sheep-home-512.png", sizes: "512x512", type: "image/png" },
     ],
-    apple: "/icon-192.png",
-    shortcut: "/icon-192.png",
+    apple: "/sheep-home-192.png",
+    shortcut: "/sheep-home-192.png",
   },
   appleWebApp: {
     capable: true,
@@ -34,7 +35,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#9ad1ff",
+  themeColor: "#5CE1E6",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -49,7 +50,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="apple-touch-startup-image" href="/icon-512.png" />
+        <link rel="apple-touch-startup-image" href="/sheep-home-512.png" />
       </head>
       <body
         suppressHydrationWarning
