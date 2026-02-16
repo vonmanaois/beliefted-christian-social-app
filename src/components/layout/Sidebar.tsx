@@ -534,7 +534,7 @@ export default function Sidebar() {
             className="flex items-center gap-2 cursor-pointer min-w-0 justify-self-center"
           >
             <Image
-              src="/images/beliefted-logo.svg"
+              src="/icon-192.png"
               alt="Beliefted"
               width={36}
               height={36}
@@ -600,7 +600,7 @@ export default function Sidebar() {
                   aria-label="Go to home"
                 >
                   <Image
-                    src="/images/beliefted-logo.svg"
+                    src="/icon-192.png"
                     alt="Beliefted"
                     width={40}
                     height={40}
@@ -833,7 +833,7 @@ export default function Sidebar() {
         className="flex items-center gap-3 text-left cursor-pointer"
       >
         <Image
-          src="/images/beliefted-logo.svg"
+          src="/icon-192.png"
           alt="Beliefted"
           width={40}
           height={40}

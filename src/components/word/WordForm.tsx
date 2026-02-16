@@ -101,7 +101,6 @@ export default function WordForm({
     while (offset + 4 < view.byteLength) {
       const marker = view.getUint16(offset, false);
       if (marker === 0xffe1) {
-        const length = view.getUint16(offset + 2, false);
         const exifHeader = String.fromCharCode(
           view.getUint8(offset + 4),
           view.getUint8(offset + 5),

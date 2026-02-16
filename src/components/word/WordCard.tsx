@@ -1155,7 +1155,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                     }
                     node.scrollLeft = dragStartScrollRef.current - delta;
                   }}
-                  onPointerUp={(event) => {
+                  onPointerUp={() => {
                     if (!isDraggingImagesRef.current) return;
                     isDraggingImagesRef.current = false;
                     const shouldBlock = Math.abs(lastDragDeltaRef.current) > 6;

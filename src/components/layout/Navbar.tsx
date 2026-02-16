@@ -11,7 +11,7 @@ export default function Navbar() {
     <nav className="panel px-6 py-4 flex items-center justify-center lg:justify-between relative">
       <div className="flex items-center gap-3 absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0">
         <Image
-          src="/images/beliefted-logo.svg"
+          src="/icon-192.png"
           alt="Beliefted"
           width={36}
           height={36}

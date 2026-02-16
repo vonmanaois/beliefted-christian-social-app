@@ -47,6 +47,12 @@ export default function PostForm({
     return () => clearTimeout(id);
   }, [variant]);
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      setShowExtras(true);
+    }
+  }, [isAuthenticated]);
+
   const hasValidRequestPoints =
     points.filter((point) => point.title.trim() && point.description.trim())
       .length > 0;
@@ -160,6 +166,7 @@ export default function PostForm({
       onFocusCapture={() => setShowExtras(true)}
       onBlurCapture={() => {
         if (kind !== "prayer") return;
+        if (isAuthenticated) return;
         setTimeout(() => {
           const active = document.activeElement;
           if (formRef.current?.contains(active)) return;

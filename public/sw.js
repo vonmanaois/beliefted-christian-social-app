@@ -35,10 +35,14 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api")) return;
+  if (url.pathname.startsWith("/api/auth")) return;
+  if (url.pathname.startsWith("/auth")) return;
+  if (url.pathname.startsWith("/signin")) return;
+  if (url.pathname.startsWith("/callback")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(() => caches.match("/"))
+      fetch(request, { cache: "no-store" }).catch(() => caches.match("/"))
     );
     return;
   }
