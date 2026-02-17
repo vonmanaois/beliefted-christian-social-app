@@ -120,6 +120,7 @@ export default function Sidebar() {
   const closeInstallModal = useCallback(() => {
     if (typeof window !== "undefined") {
       window.localStorage.setItem("installPromptShown", "1");
+      window.localStorage.removeItem("installPromptPending");
     }
     installPromptShownRef.current = true;
     setShowInstallModal(false);
@@ -128,15 +129,15 @@ export default function Sidebar() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (installPromptShownRef.current) return;
-    if (pathname !== "/onboarding") return;
     if (window.localStorage.getItem("installPromptShown") === "1") {
       installPromptShownRef.current = true;
       return;
     }
-    if (isIOSClient || installPromptSupported) {
-      installPromptShownRef.current = true;
-      setShowInstallModal(true);
-    }
+    const pending = window.localStorage.getItem("installPromptPending") === "1";
+    if (!pending) return;
+    if (pathname === "/onboarding") return;
+    installPromptShownRef.current = true;
+    setShowInstallModal(true);
   }, [isIOSClient, installPromptSupported, pathname]);
 
 
@@ -735,7 +736,7 @@ export default function Sidebar() {
                     }}
                     className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface-strong)]"
                   >
-                    Add to Home Screen
+                    Download Beliefted
                   </button>
                   <button
                     type="button"
@@ -1143,7 +1144,7 @@ export default function Sidebar() {
       </Modal>
 
       <Modal
-        title="Add to Home Screen"
+        title="Download Beliefted"
         isOpen={showInstallModal}
         onClose={closeInstallModal}
       >
@@ -1172,7 +1173,7 @@ export default function Sidebar() {
                 <span>Scroll and tap</span>
                 <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--panel-border)] px-2 py-0.5 text-[11px] text-[color:var(--ink)]">
                   <span className="text-[12px]">＋</span>
-                  Add to Home Screen
+                  Download Beliefted
                 </span>
               </li>
               <li>Tap “Add”.</li>

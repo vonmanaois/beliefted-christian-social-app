@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { signIn, useSession } from "next-auth/react";
+import { SessionProvider, signIn, useSession } from "next-auth/react";
 import { useQueryClient } from "@tanstack/react-query";
 import PrayerWall from "@/components/prayer/PrayerWall";
 import WordWall from "@/components/word/WordWall";
@@ -13,6 +13,14 @@ const tabs = ["Faith Share", "Prayer Wall", "Following"] as const;
 type Tab = (typeof tabs)[number];
 
 export default function HomeTabs() {
+  return (
+    <SessionProvider>
+      <HomeTabsInner />
+    </SessionProvider>
+  );
+}
+
+function HomeTabsInner() {
   const { status } = useSession();
   const isAuthenticated = status === "authenticated";
   const queryClient = useQueryClient();

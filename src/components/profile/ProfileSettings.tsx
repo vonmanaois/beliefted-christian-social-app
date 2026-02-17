@@ -137,6 +137,9 @@ export default function ProfileSettings({
       }
       setImageChanged(false);
       setMessage("Profile updated successfully.");
+      if (required && typeof window !== "undefined") {
+        window.localStorage.setItem("installPromptPending", "1");
+      }
       window.dispatchEvent(new Event("profile:updated"));
       onUpdated?.();
       router.refresh();
