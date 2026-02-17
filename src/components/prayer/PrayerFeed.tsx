@@ -126,12 +126,14 @@ export default function PrayerFeed({ refreshKey, userId, followingOnly, reprayed
   const restoreTimeoutRef = useRef<number | null>(null);
   const virtuosoRef = useRef<VirtuosoHandle | null>(null);
   const saveTimeoutRef = useRef<number | null>(null);
+  const scrollSaveTimeoutRef = useRef<number | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const virtualizationThreshold = 30;
   const useVirtualized = prayers.length >= virtualizationThreshold;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!useVirtualized) return;
     const handleScroll = () => {
       if (saveTimeoutRef.current !== null) {
         window.clearTimeout(saveTimeoutRef.current);
@@ -154,7 +156,29 @@ export default function PrayerFeed({ refreshKey, userId, followingOnly, reprayed
         saveTimeoutRef.current = null;
       }
     };
-  }, [feedKey, prayers.length]);
+  }, [feedKey, prayers.length, useVirtualized]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (useVirtualized) return;
+    const handleScroll = () => {
+      if (scrollSaveTimeoutRef.current !== null) {
+        window.clearTimeout(scrollSaveTimeoutRef.current);
+      }
+      scrollSaveTimeoutRef.current = window.setTimeout(() => {
+        scrollSaveTimeoutRef.current = null;
+        sessionStorage.setItem(`${feedKey}:scrollY`, String(window.scrollY));
+      }, 160);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (scrollSaveTimeoutRef.current !== null) {
+        window.clearTimeout(scrollSaveTimeoutRef.current);
+        scrollSaveTimeoutRef.current = null;
+      }
+    };
+  }, [feedKey, useVirtualized]);
 
   useEffect(() => {
     if (useVirtualized) return;
@@ -175,6 +199,14 @@ export default function PrayerFeed({ refreshKey, userId, followingOnly, reprayed
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!useVirtualized) {
+      const saved = sessionStorage.getItem(`${feedKey}:scrollY`);
+      if (saved) {
+        window.scrollTo({ top: Number(saved) || 0, behavior: "auto" });
+      }
+      if (!isReady) setIsReady(true);
+      return;
+    }
     const raw = sessionStorage.getItem(feedKey);
     if (!raw) {
       savedSnapshotRef.current = null;
@@ -204,7 +236,7 @@ export default function PrayerFeed({ refreshKey, userId, followingOnly, reprayed
     } finally {
       if (!isReady) setIsReady(true);
     }
-  }, [feedKey, isReady]);
+  }, [feedKey, isReady, useVirtualized]);
   useEffect(() => {
     restoreOnceRef.current = false;
     setIsRestoring(Boolean(restoredState));

@@ -71,6 +71,7 @@ export default function FollowingWall() {
   const restoreTimeoutRef = useRef<number | null>(null);
   const virtuosoRef = useRef<VirtuosoHandle | null>(null);
   const saveTimeoutRef = useRef<number | null>(null);
+  const scrollSaveTimeoutRef = useRef<number | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const virtualizationThreshold = 30;
   const useVirtualized = items.length >= virtualizationThreshold;
@@ -106,6 +107,7 @@ export default function FollowingWall() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!useVirtualized) return;
     const handleScroll = () => {
       if (saveTimeoutRef.current !== null) {
         window.clearTimeout(saveTimeoutRef.current);
@@ -128,7 +130,29 @@ export default function FollowingWall() {
         saveTimeoutRef.current = null;
       }
     };
-  }, [feedKey, items.length]);
+  }, [feedKey, items.length, useVirtualized]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (useVirtualized) return;
+    const handleScroll = () => {
+      if (scrollSaveTimeoutRef.current !== null) {
+        window.clearTimeout(scrollSaveTimeoutRef.current);
+      }
+      scrollSaveTimeoutRef.current = window.setTimeout(() => {
+        scrollSaveTimeoutRef.current = null;
+        sessionStorage.setItem(`${feedKey}:scrollY`, String(window.scrollY));
+      }, 160);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (scrollSaveTimeoutRef.current !== null) {
+        window.clearTimeout(scrollSaveTimeoutRef.current);
+        scrollSaveTimeoutRef.current = null;
+      }
+    };
+  }, [feedKey, useVirtualized]);
 
   useEffect(() => {
     if (useVirtualized) return;
@@ -149,6 +173,14 @@ export default function FollowingWall() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!useVirtualized) {
+      const saved = sessionStorage.getItem(`${feedKey}:scrollY`);
+      if (saved) {
+        window.scrollTo({ top: Number(saved) || 0, behavior: "auto" });
+      }
+      if (!isReady) setIsReady(true);
+      return;
+    }
     const raw = sessionStorage.getItem(feedKey);
     if (!raw) {
       savedSnapshotRef.current = null;
@@ -178,7 +210,7 @@ export default function FollowingWall() {
     } finally {
       if (!isReady) setIsReady(true);
     }
-  }, [feedKey, isReady]);
+  }, [feedKey, isReady, useVirtualized]);
   useEffect(() => {
     restoreOnceRef.current = false;
     setIsRestoring(Boolean(restoredState));
