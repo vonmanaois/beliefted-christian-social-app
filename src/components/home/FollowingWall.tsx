@@ -2,7 +2,8 @@
 
 import { useSession } from "next-auth/react";
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { Virtuoso } from "react-virtuoso";
 import { UserCircle, UserPlus } from "@phosphor-icons/react";
 import Image from "next/image";
 import { useUIStore } from "@/lib/uiStore";
@@ -18,7 +19,6 @@ export default function FollowingWall() {
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
   const { openSignIn } = useUIStore();
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const {
     data,
@@ -60,23 +60,19 @@ export default function FollowingWall() {
   const [pullDistance, setPullDistance] = useState(0);
   const [isPulling, setIsPulling] = useState(false);
   const threshold = 60;
+  const schedulePullDistance = (nextValue: number) => {
+    const clamped = Math.min(nextValue, 90);
+    if (Math.abs(clamped - lastPullDistanceRef.current) < 2) return;
+    lastPullDistanceRef.current = clamped;
+    if (pullRafRef.current !== null) return;
+    pullRafRef.current = window.requestAnimationFrame(() => {
+      setPullDistance(lastPullDistanceRef.current);
+      pullRafRef.current = null;
+    });
+  };
 
-  useEffect(() => {
-    if (!hasNextPage) return;
-    const node = loadMoreRef.current;
-    if (!node) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry?.isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage();
-        }
-      },
-      { rootMargin: "200px" }
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+  const pullRafRef = useRef<number | null>(null);
+  const lastPullDistanceRef = useRef(0);
 
   if (!isAuthenticated) {
     return (
@@ -194,12 +190,17 @@ export default function FollowingWall() {
         if (!isPulling || pullStartRef.current === null) return;
         const currentY = event.touches[0]?.clientY ?? 0;
         const delta = Math.max(0, currentY - pullStartRef.current);
-        setPullDistance(Math.min(delta, 90));
+        schedulePullDistance(delta);
       }}
       onTouchEnd={() => {
         if (pullDistance >= threshold) {
           refetch();
         }
+        if (pullRafRef.current !== null) {
+          cancelAnimationFrame(pullRafRef.current);
+          pullRafRef.current = null;
+        }
+        lastPullDistanceRef.current = 0;
         setPullDistance(0);
         setIsPulling(false);
         pullStartRef.current = null;
@@ -247,22 +248,35 @@ export default function FollowingWall() {
           <div className="loading-bar__fill" />
         </div>
       )}
-      {items.map((item) =>
-        item.type === "word" ? (
-          <WordCard key={`word-${item.word._id}`} word={item.word} />
-        ) : (
-          <PrayerCard key={`prayer-${item.prayer._id}`} prayer={item.prayer} />
-        )
-      )}
-      {hasNextPage && (
-        <div ref={loadMoreRef} className="flex items-center justify-center py-4">
-          {isFetchingNextPage ? (
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--panel-border)] border-t-[color:var(--accent)]" />
+      <Virtuoso
+        data={items}
+        useWindowScroll
+        increaseViewportBy={300}
+        itemContent={(_, item) =>
+          item.type === "word" ? (
+            <WordCard key={`word-${item.word._id}`} word={item.word} />
           ) : (
-            <div className="h-2 w-2 rounded-full bg-[color:var(--panel-border)]" />
-          )}
-        </div>
-      )}
+            <PrayerCard key={`prayer-${item.prayer._id}`} prayer={item.prayer} />
+          )
+        }
+        endReached={() => {
+          if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+          }
+        }}
+        components={{
+          Footer: () =>
+            hasNextPage ? (
+              <div className="flex items-center justify-center py-4">
+                {isFetchingNextPage ? (
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--panel-border)] border-t-[color:var(--accent)]" />
+                ) : (
+                  <div className="h-2 w-2 rounded-full bg-[color:var(--panel-border)]" />
+                )}
+              </div>
+            ) : null,
+        }}
+      />
     </section>
   );
 }

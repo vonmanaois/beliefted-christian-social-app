@@ -110,7 +110,7 @@ export default function ProfileStats({
   return (
     <div className="mt-6 flex flex-wrap gap-6 text-sm text-[color:var(--subtle)]">
       <div className="flex flex-col">
-        <span>Reprayed</span>
+        <span>Prayed</span>
         <span className="text-lg font-semibold text-[color:var(--ink)]">
           {profile?.prayersLiftedCount ?? 0}
         </span>

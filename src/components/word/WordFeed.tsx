@@ -2,7 +2,9 @@
 
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import WordCard, { type Word } from "@/components/word/WordCard";
+import { Virtuoso } from "react-virtuoso";
+import WordCard from "@/components/word/WordCard";
+import type { Word } from "@/components/word/types";
 import EmptyState from "@/components/ui/EmptyState";
 import { BookOpenText } from "@phosphor-icons/react";
 import FeedSkeleton from "@/components/ui/FeedSkeleton";
@@ -85,8 +87,9 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
   const pullStartRef = useRef<number | null>(null);
   const [pullDistance, setPullDistance] = useState(0);
   const [isPulling, setIsPulling] = useState(false);
+  const pullRafRef = useRef<number | null>(null);
+  const lastPullDistanceRef = useRef(0);
   const threshold = 60;
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const handler = () => {
@@ -96,22 +99,6 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
     return () => window.removeEventListener("feed:refresh", handler);
   }, [refetch]);
 
-  useEffect(() => {
-    if (!hasNextPage) return;
-    const node = loadMoreRef.current;
-    if (!node) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry?.isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage();
-        }
-      },
-      { rootMargin: "200px" }
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   if (isLoading) {
     return <FeedSkeleton />;
@@ -147,6 +134,17 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
     );
   }
 
+  const schedulePullDistance = (nextValue: number) => {
+    const clamped = Math.min(nextValue, 90);
+    if (Math.abs(clamped - lastPullDistanceRef.current) < 2) return;
+    lastPullDistanceRef.current = clamped;
+    if (pullRafRef.current !== null) return;
+    pullRafRef.current = window.requestAnimationFrame(() => {
+      setPullDistance(lastPullDistanceRef.current);
+      pullRafRef.current = null;
+    });
+  };
+
   return (
     <div
       className="flex flex-col"
@@ -159,12 +157,17 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
         if (!isPulling || pullStartRef.current === null) return;
         const currentY = event.touches[0]?.clientY ?? 0;
         const delta = Math.max(0, currentY - pullStartRef.current);
-        setPullDistance(Math.min(delta, 90));
+        schedulePullDistance(delta);
       }}
       onTouchEnd={() => {
         if (pullDistance >= threshold) {
           refetch();
         }
+        if (pullRafRef.current !== null) {
+          cancelAnimationFrame(pullRafRef.current);
+          pullRafRef.current = null;
+        }
+        lastPullDistanceRef.current = 0;
         setPullDistance(0);
         setIsPulling(false);
         pullStartRef.current = null;
@@ -183,18 +186,31 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
           <div className="loading-bar__fill" />
         </div>
       )}
-      {words.map((word) => (
-        <WordCard key={word._id} word={word} savedOnly={savedOnly} />
-      ))}
-      {hasNextPage && (
-        <div ref={loadMoreRef} className="flex items-center justify-center py-4">
-          {isFetchingNextPage ? (
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--panel-border)] border-t-[color:var(--accent)]" />
-          ) : (
-            <div className="h-2 w-2 rounded-full bg-[color:var(--panel-border)]" />
-          )}
-        </div>
-      )}
+      <Virtuoso
+        data={words}
+        useWindowScroll
+        increaseViewportBy={300}
+        itemContent={(_, word) => (
+          <WordCard key={word._id} word={word} savedOnly={savedOnly} />
+        )}
+        endReached={() => {
+          if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+          }
+        }}
+        components={{
+          Footer: () =>
+            hasNextPage ? (
+              <div className="flex items-center justify-center py-4">
+                {isFetchingNextPage ? (
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--panel-border)] border-t-[color:var(--accent)]" />
+                ) : (
+                  <div className="h-2 w-2 rounded-full bg-[color:var(--panel-border)]" />
+                )}
+              </div>
+            ) : null,
+        }}
+      />
     </div>
   );
 }

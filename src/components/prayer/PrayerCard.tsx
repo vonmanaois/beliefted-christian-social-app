@@ -1,16 +1,27 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 import Avatar from "@/components/ui/Avatar";
-import Modal from "@/components/layout/Modal";
-import YouTubeEmbed from "@/components/ui/YouTubeEmbed";
+import DeferredEmbed from "@/components/ui/DeferredEmbed";
 import MentionText from "@/components/ui/MentionText";
 import MentionTextarea from "@/components/ui/MentionTextarea";
 import { useUIStore } from "@/lib/uiStore";
 import { useAdmin } from "@/hooks/useAdmin";
+import type { Prayer, PrayerComment } from "@/components/prayer/types";
+
+const Modal = dynamic(() => import("@/components/layout/Modal"), { ssr: false });
+const PrayerComments = dynamic(() => import("@/components/prayer/PrayerComments"), {
+  ssr: false,
+  loading: () => (
+    <div className="mt-3 border-t border-slate-100 pt-3 pb-6">
+      <div className="h-10 w-full animate-pulse rounded-xl bg-[color:var(--panel)]" />
+    </div>
+  ),
+});
 
 const extractYouTube = (value: string) => {
   let videoId: string | null = null;
@@ -49,6 +60,18 @@ const extractYouTube = (value: string) => {
 
   return { videoId, cleaned };
 };
+
+const buildYouTubeSrc = (videoId: string) => {
+  const params = new URLSearchParams({
+    enablejsapi: "1",
+    rel: "0",
+    modestbranding: "1",
+  });
+  if (typeof window !== "undefined") {
+    params.set("origin", window.location.origin);
+  }
+  return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
+};
 const ADMIN_REASONS = ["Off-topic", "Inappropriate", "Spam", "Asking money"] as const;
 import {
   BookOpenText,
@@ -64,47 +87,13 @@ import {
   UsersThree,
 } from "@phosphor-icons/react";
 
-export type PrayerUser = {
-  name?: string | null;
-  image?: string | null;
-  username?: string | null;
-};
-
-export type Prayer = {
-  _id: string | { $oid?: string };
-  content: string;
-  heading?: string | null;
-  kind?: "prayer" | "request";
-  prayerPoints?: { title: string; description: string }[];
-  scriptureRef?: string | null;
-  createdAt: string | Date;
-  isAnonymous: boolean;
-  prayedBy: string[];
-  commentCount?: number;
-  user?: PrayerUser | null;
-  userId?: string;
-  isOwner?: boolean;
-  privacy?: "public" | "followers" | "private";
-};
+export type { Prayer } from "@/components/prayer/types";
 
 type PrayerCardProps = {
   prayer: Prayer;
   defaultShowComments?: boolean;
 };
 
-type CommentUser = {
-  _id?: string | null;
-  name?: string | null;
-  image?: string | null;
-  username?: string | null;
-};
-
-type Comment = {
-  _id: string;
-  content: string;
-  createdAt: string;
-  userId?: CommentUser | null;
-};
 
 type EditPoint = {
   id: string;
@@ -172,6 +161,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     prayer.createdAt instanceof Date ? prayer.createdAt : new Date(prayer.createdAt);
   const [isPending, setIsPending] = useState(false);
   const [showComments, setShowComments] = useState(defaultShowComments);
+  const [commentsActive, setCommentsActive] = useState(defaultShowComments);
   const [showCommentConfirm, setShowCommentConfirm] = useState(false);
   const [commentText, setCommentText] = useState("");
   const commentFormRef = useRef<HTMLDivElement | null>(null);
@@ -205,7 +195,10 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
   );
   const menuRef = useRef<HTMLDivElement | null>(null);
   const editRef = useRef<HTMLDivElement | null>(null);
-  const { openSignIn } = useUIStore();
+  const openSignIn = useUIStore((state) => state.openSignIn);
+  const stopPropagation = useCallback((event: React.MouseEvent) => {
+    event.stopPropagation();
+  }, []);
   const isOwner =
     prayer.isOwner ??
     Boolean(
@@ -246,11 +239,11 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
       if (!response.ok) {
         throw new Error("Failed to load comments");
       }
-      return (await response.json()) as Comment[];
+      return (await response.json()) as PrayerComment[];
     },
-    enabled: showComments,
+    enabled: commentsActive,
   });
-  const displayedCommentCount = showComments
+  const displayedCommentCount = commentsActive
     ? comments.length
     : prayer.commentCount ?? 0;
 
@@ -290,6 +283,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [commentMenuId]);
+
 
   useEffect(() => {
     if (!isEditing) return;
@@ -353,7 +347,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
         }
         throw new Error("Failed to post comment");
       }
-      return (await response.json()) as Comment;
+      return (await response.json()) as PrayerComment;
     },
     onSuccess: async (newComment) => {
       setCommentError(null);
@@ -380,9 +374,9 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
             },
           }
         : newComment;
-      queryClient.setQueryData<Comment[]>(
+      queryClient.setQueryData<PrayerComment[]>(
         ["prayer-comments", prayerId],
-        (current = []) => [hydratedComment as Comment, ...current]
+        (current = []) => [hydratedComment as PrayerComment, ...current]
       );
     },
     onError: () => {
@@ -405,7 +399,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     onSuccess: async (data) => {
       setCommentError(null);
       if (editingCommentId) {
-        queryClient.setQueryData<Comment[]>(
+        queryClient.setQueryData<PrayerComment[]>(
           ["prayer-comments", prayerId],
           (current = []) =>
             current.map((comment) =>
@@ -438,7 +432,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     },
     onSuccess: async (deletedId) => {
       setCommentError(null);
-      queryClient.setQueryData<Comment[]>(
+      queryClient.setQueryData<PrayerComment[]>(
         ["prayer-comments", prayerId],
         (current = []) => current.filter((comment) => comment._id !== deletedId)
       );
@@ -604,7 +598,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     },
   });
 
-  const handlePray = async () => {
+  const handlePray = useCallback(async () => {
     if (!session?.user?.id) {
       openSignIn();
       return;
@@ -620,9 +614,23 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     } finally {
       setIsPending(false);
     }
-  };
+  }, [session?.user?.id, openSignIn, prayMutation]);
 
-  const toggleComments = () => {
+  const scheduleCommentsActivation = useCallback(() => {
+    if (commentsActive) return;
+    if (typeof window === "undefined") {
+      setCommentsActive(true);
+      return;
+    }
+    if ("requestIdleCallback" in window) {
+      (window as Window & { requestIdleCallback?: (cb: () => void) => number })
+        .requestIdleCallback?.(() => setCommentsActive(true));
+      return;
+    }
+    setTimeout(() => setCommentsActive(true), 0);
+  }, [commentsActive]);
+
+  const toggleComments = useCallback(() => {
     setShowComments((prev) => {
       if (prev) {
         if (commentText.trim().length > 0) {
@@ -632,10 +640,17 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
         setCommentText("");
         return false;
       }
+      scheduleCommentsActivation();
       setTimeout(() => commentInputRef.current?.focus(), 0);
       return true;
     });
-  };
+  }, [commentText, scheduleCommentsActivation]);
+
+  useEffect(() => {
+    if (showComments) {
+      scheduleCommentsActivation();
+    }
+  }, [showComments, scheduleCommentsActivation]);
 
   const handleCardClick = (event: React.MouseEvent) => {
     const target = event.target as HTMLElement | null;
@@ -663,6 +678,32 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
 
     commentMutation.mutate();
   };
+
+  const handleStartEditComment = useCallback((comment: PrayerComment) => {
+    setEditingCommentId(comment._id);
+    setEditingCommentText(comment.content);
+    setEditingCommentOriginal(comment.content);
+    setCommentMenuId(null);
+  }, []);
+
+  const handleCancelEditComment = useCallback(() => {
+    setEditingCommentId(null);
+    setEditingCommentText("");
+    setEditingCommentOriginal("");
+  }, []);
+
+  const handleSaveEditComment = useCallback(
+    (id: string, content: string) => {
+      commentEditMutation.mutate({ id, content: content.trim() });
+    },
+    [commentEditMutation]
+  );
+
+  const handleRequestDeleteComment = useCallback((id: string) => {
+    setCommentMenuId(null);
+    setPendingDeleteCommentId(id);
+    setShowCommentDeleteConfirm(true);
+  }, []);
 
   useEffect(() => {
     if (!showComments) return;
@@ -738,122 +779,39 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
       ? cleaned
       : `${cleaned.slice(0, 320).trimEnd()}…`;
 
+  const toggleMenu = useCallback(() => {
+    setShowMenu((prev) => !prev);
+  }, []);
+  const openDeleteConfirm = useCallback(() => {
+    setShowMenu(false);
+    setShowDeleteConfirm(true);
+  }, []);
+  const openAdminDeleteConfirm = useCallback(() => {
+    setShowMenu(false);
+    setAdminReason("");
+    setShowAdminDeleteConfirm(true);
+  }, []);
+
   return (
     <article
       className={`wall-card flex flex-col gap-3 rounded-none cursor-pointer transition-card ${
         isRemoving ? "fade-out-card" : ""
       }`}
       onClick={handleCardClick}
+      style={{ contentVisibility: "auto", containIntrinsicSize: "1px 900px" }}
     >
-      <div className="flex items-start gap-3">
-        <div className="avatar-ring">
-          {prayer.isAnonymous ? (
-            <div className="avatar-core">
-              <UserCircle size={28} weight="regular" />
-            </div>
-          ) : (
-            <Avatar
-              src={prayer.user?.image ?? null}
-              alt={prayer.user?.name ?? "User"}
-              size={64}
-              sizes="(min-width: 640px) 48px, 32px"
-              href={
-                prayer.user?.username
-                  ? `/profile/${prayer.user.username}`
-                  : "/profile"
-              }
-              fallback={(prayer.user?.name?.[0] ?? "U").toUpperCase()}
-              className="avatar-core cursor-pointer h-8 w-8 sm:h-12 sm:w-12"
-            />
-          )}
-        </div>
-        <div className="flex-1">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                {prayer.isAnonymous ? (
-                  <p className="text-xs sm:text-sm font-semibold text-[color:var(--ink)]">
-                    Anonymous
-                  </p>
-                ) : (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <a
-                      href={
-                        prayer.user?.username
-                          ? `/profile/${prayer.user.username}`
-                          : "/profile"
-                      }
-                      className="text-xs sm:text-sm font-semibold text-[color:var(--ink)] hover:underline"
-                    >
-                      {prayer.user?.name ?? "User"}
-                    </a>
-                    {prayer.user?.username && (
-                      <span className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
-                        @{prayer.user.username}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          <div className="flex items-center gap-2 pr-1">
-            <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
-              {formatPostTime(createdAtValue.toISOString())}
-            </p>
-            {(isOwner || isAdmin) && (
-                <div className="relative" ref={menuRef}>
-                  <button
-                    type="button"
-                    onClick={() => setShowMenu((prev) => !prev)}
-                    className="h-8 w-8 rounded-full text-[color:var(--subtle)] hover:text-[color:var(--ink)] cursor-pointer"
-                    aria-label="More actions"
-                  >
-                    <DotsThreeOutline size={20} weight="regular" />
-                  </button>
-                  {showMenu && (
-                    <div className="absolute right-0 top-10 z-10 min-w-[200px] rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-2 shadow-lg">
-                      {isOwner && (
-                        <button
-                          type="button"
-                          onClick={handleEditStart}
-                          className="mb-1 w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
-                        >
-                          Edit Prayer
-                        </button>
-                      )}
-                      {isOwner && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowMenu(false);
-                            setShowDeleteConfirm(true);
-                          }}
-                          className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
-                        >
-                          Delete Prayer
-                        </button>
-                      )}
-                      {isAdmin && !isOwner && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowMenu(false);
-                            setAdminReason("");
-                            setShowAdminDeleteConfirm(true);
-                          }}
-                          className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
-                        >
-                          Admin Delete
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      <PrayerHeader
+        prayer={prayer}
+        createdAtIso={createdAtValue.toISOString()}
+        isOwner={isOwner}
+        isAdmin={isAdmin}
+        showMenu={showMenu}
+        menuRef={menuRef}
+        onToggleMenu={toggleMenu}
+        onEdit={handleEditStart}
+        onDelete={openDeleteConfirm}
+        onAdminDelete={openAdminDeleteConfirm}
+      />
       <div>
         {isEditing ? (
           <div ref={editRef} className="mt-3 flex flex-col gap-2">
@@ -993,82 +951,25 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
                 </button>
               )}
               {videoId && (
-                <div
-                  className="mt-4 aspect-video w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)] bg-black/5"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <YouTubeEmbed videoId={videoId} className="h-full w-full" />
-                </div>
+                <PrayerEmbeds
+                  videoId={videoId}
+                  onStopPropagation={stopPropagation}
+                />
               )}
             </>
           </>
         )}
-        <div className="mt-2 sm:mt-3 flex items-center gap-1.5 sm:gap-3 text-[11px] sm:text-xs">
-          {isOwner ? (
-            <span className="text-xs font-semibold text-[color:var(--subtle)]">
-              Your prayer
-            </span>
-          ) : (
-            <button
-              type="button"
-              onClick={handlePray}
-              disabled={!session?.user?.id || isPending || hasPrayed}
-              className={`pill-button inline-flex items-center justify-center gap-2 rounded-lg transition-colors ${
-                hasPrayed
-                  ? "cursor-not-allowed text-[color:var(--accent-strong)] opacity-60"
-                  : "cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
-              }`}
-              aria-label={hasPrayed ? "Reprayed" : "Repray"}
-            >
-              <HandsClapping
-                size={22}
-                weight={hasPrayed ? "fill" : "regular"}
-                className={hasPrayed ? "text-[color:var(--accent-strong)]" : undefined}
-              />
-              <span className="text-xs font-semibold">
-                {hasPrayed ? "Reprayed" : "Repray"}
-              </span>
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={toggleComments}
-            aria-label="Encourage prayer"
-            className="inline-flex items-center justify-center gap-2 rounded-lg px-2 py-1.5 cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
-            ref={commentButtonRef}
-          >
-            <span className="inline-flex items-center gap-2">
-              <ChatCircle size={22} weight="regular" />
-              <span className="text-xs font-semibold text-[color:var(--subtle)]">
-                Encourage
-              </span>
-              {displayedCommentCount > 0 && (
-                <span className="text-xs font-semibold text-[color:var(--ink)]">
-                  {displayedCommentCount}
-                </span>
-              )}
-            </span>
-          </button>
-          <div className="ml-auto flex items-center gap-2 text-[10px] sm:text-xs text-[color:var(--subtle)]">
-            {prayedBy.length > 0 && (
-              <span>
-                <span className="font-semibold text-[color:var(--ink)]">
-                  {prayedBy.length}
-                </span>{" "}
-                people prayed
-              </span>
-            )}
-            <span className="text-[color:var(--subtle)]">
-              {prayer.privacy === "private" ? (
-                <LockSimple size={16} weight="regular" />
-              ) : prayer.privacy === "followers" ? (
-                <UsersThree size={16} weight="regular" />
-              ) : (
-                <Globe size={16} weight="regular" />
-              )}
-            </span>
-          </div>
-        </div>
+        <PrayerActions
+          isOwner={isOwner}
+          hasPrayed={hasPrayed}
+          isPending={isPending}
+          onPray={handlePray}
+          onToggleComments={toggleComments}
+          commentCount={displayedCommentCount}
+          prayedCount={prayedBy.length}
+          privacy={prayer.privacy ?? "public"}
+          commentButtonRef={commentButtonRef}
+        />
         {prayError && !isOwner && (
           <div className="mt-2 text-[11px] text-[color:var(--subtle)] flex items-center gap-2">
             <span>{prayError}</span>
@@ -1083,200 +984,29 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
         )}
 
         {showComments && (
-          <div
-            ref={commentFormRef}
-            className="mt-3 border-t border-slate-100 pt-3 pb-6 mb-2 bg-[color:var(--surface-strong)]/10 rounded-b-2xl shadow-[0_10px_24px_-20px_rgba(0,0,0,0.45)]"
-          >
-            {session?.user?.id && (
-              <form onSubmit={handleCommentSubmit} className="flex flex-col gap-2">
-                <MentionTextarea
-                  value={commentText}
-                  onChangeValue={setCommentText}
-                  placeholder="Write encouragement..."
-                  className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full"
-                  textareaRef={commentInputRef}
-                />
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    className="post-button"
-                    disabled={!commentText.trim()}
-                  >
-                    Post encouragement
-                  </button>
-                </div>
-              </form>
-            )}
-            {commentError && (
-              <div className="mt-2 text-[11px] text-[color:var(--subtle)] flex items-center gap-2">
-                <span>{commentError}</span>
-                <button
-                  type="button"
-                  onClick={() => handleCommentSubmit()}
-                  className="text-[color:var(--accent)] hover:text-[color:var(--accent-strong)] text-xs font-semibold"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-
-            <div className="mt-3 flex flex-col gap-3 text-[13px] sm:text-sm">
-              {isLoadingComments ? (
-                <div className="flex flex-col gap-3">
-                  {Array.from({ length: 2 }).map((_, index) => (
-                    <div key={index} className="flex gap-3">
-                      <div className="h-9 w-9 rounded-full bg-slate-200 animate-pulse" />
-                      <div className="flex-1">
-                        <div className="h-3 w-24 bg-slate-200 rounded-full animate-pulse" />
-                        <div className="mt-2 h-3 w-full bg-slate-200 rounded-full animate-pulse" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : comments.length === 0 ? (
-                <div className="text-[color:var(--subtle)] text-[13px] sm:text-sm">
-                  No comments yet.
-                </div>
-              ) : (
-                comments.map((comment, index) => {
-                  const commentOwnerId = comment.userId?._id
-                    ? String(comment.userId._id)
-                    : null;
-                  const isCommentOwner = Boolean(
-                    session?.user?.id && commentOwnerId === String(session.user.id)
-                  );
-
-                  return (
-                    <div
-                      key={comment._id ?? `${index}`}
-                      className={`flex gap-3 pt-3 ${
-                        index === 0 ? "" : "border-t border-[color:var(--panel-border)]"
-                      }`}
-                    >
-                    <Avatar
-                      src={comment.userId?.image ?? null}
-                      alt={comment.userId?.name ?? "User"}
-                      size={36}
-                      href={
-                        comment.userId?.username
-                          ? `/profile/${comment.userId.username}`
-                          : "/profile"
-                      }
-                      fallback={(comment.userId?.name?.[0] ?? "U").toUpperCase()}
-                      className="h-8 w-8 sm:h-9 sm:w-9 text-[11px] sm:text-xs cursor-pointer"
-                    />
-                    <div className="flex-1">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <a
-                            href={
-                              comment.userId?.username
-                                ? `/profile/${comment.userId.username}`
-                                : "/profile"
-                            }
-                            className="text-[11px] sm:text-xs font-semibold text-[color:var(--ink)] cursor-pointer hover:underline"
-                          >
-                            {comment.userId?.name ?? "User"}
-                          </a>
-                          {comment.userId?.username && (
-                            <span className="text-[11px] sm:text-xs text-[color:var(--subtle)]">
-                              @{comment.userId.username}
-                            </span>
-                          )}
-                          <p className="text-[11px] sm:text-xs text-[color:var(--subtle)]">
-                            {formatPostTime(comment.createdAt)}
-                          </p>
-                        </div>
-                        {isCommentOwner && (
-                          <div className="relative" data-comment-menu>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setCommentMenuId((prev) =>
-                                  prev === comment._id ? null : comment._id
-                                )
-                              }
-                              className="h-7 w-7 rounded-full text-[color:var(--subtle)] hover:text-[color:var(--ink)] cursor-pointer"
-                              aria-label="Comment actions"
-                            >
-                              <DotsThreeOutline size={16} weight="regular" />
-                            </button>
-                            {commentMenuId === comment._id && (
-                              <div className="absolute right-0 top-8 z-10 min-w-[160px] rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-2 shadow-lg">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingCommentId(comment._id);
-                                    setEditingCommentText(comment.content);
-                                    setEditingCommentOriginal(comment.content);
-                                    setCommentMenuId(null);
-                                  }}
-                                  className="mb-1 w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setCommentMenuId(null);
-                                    setPendingDeleteCommentId(comment._id);
-                                    setShowCommentDeleteConfirm(true);
-                                  }}
-                                  className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      {editingCommentId === comment._id ? (
-                        <div ref={commentEditRef} className="mt-2 flex flex-col gap-2">
-                          <MentionTextarea
-                            value={editingCommentText}
-                            onChangeValue={setEditingCommentText}
-                            className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full"
-                          />
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                commentEditMutation.mutate({
-                                  id: comment._id,
-                                  content: editingCommentText.trim(),
-                                })
-                              }
-                              className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--accent)] text-[color:var(--accent-contrast)] cursor-pointer"
-                              disabled={!editingCommentText.trim()}
-                            >
-                              Save
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingCommentId(null);
-                                setEditingCommentText("");
-                                setEditingCommentOriginal("");
-                              }}
-                              className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="mt-1 text-[13px] sm:text-sm text-[color:var(--ink)]">
-                          <MentionText text={comment.content} />
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
+          <PrayerComments
+            sessionUserId={session?.user?.id ? String(session.user.id) : null}
+            commentText={commentText}
+            onCommentTextChange={setCommentText}
+            commentInputRef={commentInputRef}
+            commentFormRef={commentFormRef}
+            onSubmit={handleCommentSubmit}
+            onRetrySubmit={handleCommentSubmit}
+            commentError={commentError}
+            isLoading={isLoadingComments}
+            comments={comments}
+            commentMenuId={commentMenuId}
+            onToggleCommentMenu={setCommentMenuId}
+            editingCommentId={editingCommentId}
+            editingCommentText={editingCommentText}
+            onEditingCommentTextChange={setEditingCommentText}
+            onStartEdit={handleStartEditComment}
+            onCancelEdit={handleCancelEditComment}
+            onSaveEdit={handleSaveEditComment}
+            onRequestDelete={handleRequestDeleteComment}
+            commentEditRef={commentEditRef}
+            formatPostTime={formatPostTime}
+          />
         )}
       </div>
 
@@ -1497,3 +1227,256 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
 };
 
 export default memo(PrayerCard);
+
+type PrayerEmbedsProps = {
+  videoId: string;
+  onStopPropagation: (event: React.MouseEvent) => void;
+};
+
+const PrayerEmbeds = memo(function PrayerEmbeds({
+  videoId,
+  onStopPropagation,
+}: PrayerEmbedsProps) {
+  return (
+    <div
+      className="mt-4 aspect-video w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)] bg-black/5"
+      onClick={onStopPropagation}
+    >
+      <DeferredEmbed
+        title="YouTube embed"
+        className="h-full w-full"
+        src={buildYouTubeSrc(videoId)}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        placeholder={
+          <div className="flex h-full w-full items-center justify-center bg-[color:var(--panel)] text-xs font-semibold text-[color:var(--subtle)]">
+            Tap to load video
+          </div>
+        }
+      />
+    </div>
+  );
+});
+
+type PrayerHeaderProps = {
+  prayer: Prayer;
+  createdAtIso: string;
+  isOwner: boolean;
+  isAdmin: boolean;
+  showMenu: boolean;
+  menuRef: React.RefObject<HTMLDivElement | null>;
+  onToggleMenu: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onAdminDelete: () => void;
+};
+
+const PrayerHeader = memo(function PrayerHeader({
+  prayer,
+  createdAtIso,
+  isOwner,
+  isAdmin,
+  showMenu,
+  menuRef,
+  onToggleMenu,
+  onEdit,
+  onDelete,
+  onAdminDelete,
+}: PrayerHeaderProps) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="avatar-ring">
+        {prayer.isAnonymous ? (
+          <div className="avatar-core">
+            <UserCircle size={28} weight="regular" />
+          </div>
+        ) : (
+          <Avatar
+            src={prayer.user?.image ?? null}
+            alt={prayer.user?.name ?? "User"}
+            size={64}
+            sizes="(min-width: 640px) 48px, 32px"
+            href={
+              prayer.user?.username
+                ? `/profile/${prayer.user.username}`
+                : "/profile"
+            }
+            fallback={(prayer.user?.name?.[0] ?? "U").toUpperCase()}
+            className="avatar-core cursor-pointer h-8 w-8 sm:h-12 sm:w-12"
+          />
+        )}
+      </div>
+      <div className="flex-1">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              {prayer.isAnonymous ? (
+                <p className="text-xs sm:text-sm font-semibold text-[color:var(--ink)]">
+                  Anonymous
+                </p>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2">
+                  <a
+                    href={
+                      prayer.user?.username
+                        ? `/profile/${prayer.user.username}`
+                        : "/profile"
+                    }
+                    className="text-xs sm:text-sm font-semibold text-[color:var(--ink)] hover:underline"
+                  >
+                    {prayer.user?.name ?? "User"}
+                  </a>
+                  {prayer.user?.username && (
+                    <span className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
+                      @{prayer.user.username}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 pr-1">
+            <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
+              {formatPostTime(createdAtIso)}
+            </p>
+            {(isOwner || isAdmin) && (
+              <div className="relative" ref={menuRef}>
+                <button
+                  type="button"
+                  onClick={onToggleMenu}
+                  className="h-8 w-8 rounded-full text-[color:var(--subtle)] hover:text-[color:var(--ink)] cursor-pointer"
+                  aria-label="More actions"
+                >
+                  <DotsThreeOutline size={20} weight="regular" />
+                </button>
+                {showMenu && (
+                  <div className="absolute right-0 top-10 z-10 min-w-[200px] rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-2 shadow-lg">
+                    {isOwner && (
+                      <button
+                        type="button"
+                        onClick={onEdit}
+                        className="mb-1 w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
+                      >
+                        Edit Prayer
+                      </button>
+                    )}
+                    {isOwner && (
+                      <button
+                        type="button"
+                        onClick={onDelete}
+                        className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
+                      >
+                        Delete Prayer
+                      </button>
+                    )}
+                    {isAdmin && !isOwner && (
+                      <button
+                        type="button"
+                        onClick={onAdminDelete}
+                        className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
+                      >
+                        Admin Delete
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+type PrayerActionsProps = {
+  isOwner: boolean;
+  hasPrayed: boolean;
+  isPending: boolean;
+  onPray: () => void;
+  onToggleComments: () => void;
+  commentCount: number;
+  prayedCount: number;
+  privacy: Prayer["privacy"];
+  commentButtonRef: React.RefObject<HTMLButtonElement | null>;
+};
+
+const PrayerActions = memo(function PrayerActions({
+  isOwner,
+  hasPrayed,
+  isPending,
+  onPray,
+  onToggleComments,
+  commentCount,
+  prayedCount,
+  privacy,
+  commentButtonRef,
+}: PrayerActionsProps) {
+  return (
+    <div className="mt-2 sm:mt-3 flex items-center gap-1.5 sm:gap-3 text-[11px] sm:text-xs">
+      {isOwner ? (
+        <span className="text-xs font-semibold text-[color:var(--subtle)]">
+          Your prayer
+        </span>
+      ) : (
+        <button
+          type="button"
+          onClick={onPray}
+          disabled={isPending || hasPrayed}
+          className={`pill-button inline-flex items-center justify-center gap-2 rounded-lg transition-colors ${
+            hasPrayed
+              ? "cursor-not-allowed text-[color:var(--accent-strong)] opacity-60"
+              : "cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
+          }`}
+          aria-label={hasPrayed ? "Prayed" : "Pray"}
+        >
+          <HandsClapping
+            size={22}
+            weight={hasPrayed ? "fill" : "regular"}
+            className={hasPrayed ? "text-[color:var(--accent-strong)]" : undefined}
+          />
+          <span className="text-xs font-semibold">
+            {hasPrayed ? "Prayed" : "Pray"}
+          </span>
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={onToggleComments}
+        aria-label="Encourage prayer"
+        className="inline-flex items-center justify-center gap-2 rounded-lg px-2 py-1.5 cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
+        ref={commentButtonRef}
+      >
+        <span className="inline-flex items-center gap-2">
+          <ChatCircle size={22} weight="regular" />
+          <span className="text-xs font-semibold text-[color:var(--subtle)]">
+            Encourage
+          </span>
+          {commentCount > 0 && (
+            <span className="text-xs font-semibold text-[color:var(--ink)]">
+              {commentCount}
+            </span>
+          )}
+        </span>
+      </button>
+      <div className="ml-auto flex items-center gap-2 text-[10px] sm:text-xs text-[color:var(--subtle)]">
+        {prayedCount > 0 && (
+          <span>
+            <span className="font-semibold text-[color:var(--ink)]">
+              {prayedCount}
+            </span>{" "}
+            people prayed
+          </span>
+        )}
+        <span className="text-[color:var(--subtle)]">
+          {privacy === "private" ? (
+            <LockSimple size={16} weight="regular" />
+          ) : privacy === "followers" ? (
+            <UsersThree size={16} weight="regular" />
+          ) : (
+            <Globe size={16} weight="regular" />
+          )}
+        </span>
+      </div>
+    </div>
+  );
+});

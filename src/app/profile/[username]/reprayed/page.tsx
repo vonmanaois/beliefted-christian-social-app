@@ -114,7 +114,7 @@ export default async function PublicProfileReprayedPage({
           <ProfileTabs
             userId={user._id.toString()}
             showComposer={isSelf}
-            initialTab="Reprayed"
+            initialTab="Prayed"
           />
         </PanelMotion>
       </div>

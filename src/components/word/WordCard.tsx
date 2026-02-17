@@ -1,8 +1,9 @@
 "use client";
 
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 import {
   BookOpenText,
   BookmarkSimple,
@@ -15,13 +16,23 @@ import {
 } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import Avatar from "@/components/ui/Avatar";
-import Modal from "@/components/layout/Modal";
 import { useUIStore } from "@/lib/uiStore";
-import YouTubeEmbed from "@/components/ui/YouTubeEmbed";
 import MentionText from "@/components/ui/MentionText";
 import MentionTextarea from "@/components/ui/MentionTextarea";
 import { useAdmin } from "@/hooks/useAdmin";
 import { cloudinaryTransform } from "@/lib/cloudinary";
+import DeferredEmbed from "@/components/ui/DeferredEmbed";
+import type { Word, WordCommentData, CommentUser } from "@/components/word/types";
+
+const Modal = dynamic(() => import("@/components/layout/Modal"), { ssr: false });
+const WordComments = dynamic(() => import("@/components/word/WordComments"), {
+  ssr: false,
+  loading: () => (
+    <div className="mt-3 border-t border-slate-100 pt-3 pb-6">
+      <div className="h-10 w-full animate-pulse rounded-xl bg-[color:var(--panel)]" />
+    </div>
+  ),
+});
 
 const extractYouTube = (value: string) => {
   let videoId: string | null = null;
@@ -95,48 +106,19 @@ const extractSpotify = (value: string) => {
   return { embedUrl, cleaned };
 };
 
-export type WordUser = {
-  name?: string | null;
-  image?: string | null;
-  username?: string | null;
+const buildYouTubeSrc = (videoId: string) => {
+  const params = new URLSearchParams({
+    enablejsapi: "1",
+    rel: "0",
+    modestbranding: "1",
+  });
+  if (typeof window !== "undefined") {
+    params.set("origin", window.location.origin);
+  }
+  return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
 };
 
-export type Word = {
-  _id: string | { $oid?: string };
-  content: string;
-  createdAt: string | Date;
-  likedBy?: string[];
-  savedBy?: string[];
-  commentCount?: number;
-  user?: WordUser | null;
-  userId?: string | null;
-  isOwner?: boolean;
-  scriptureRef?: string | null;
-  images?: string[];
-  imageOrientations?: ("portrait" | "landscape")[];
-  privacy?: "public" | "followers" | "private";
-  sharedFaithStoryId?: string | null;
-  sharedFaithStory?: {
-    id: string;
-    title: string;
-    coverImage?: string | null;
-    authorUsername?: string | null;
-  } | null;
-};
-
-type WordCommentData = {
-  _id: string;
-  content: string;
-  createdAt: string;
-  userId?: CommentUser | null;
-};
-
-type CommentUser = {
-  _id?: string | null;
-  name?: string | null;
-  image?: string | null;
-  username?: string | null;
-};
+export type { Word } from "@/components/word/types";
 
 type WordCardProps = {
   word: Word;
@@ -227,11 +209,13 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
       return didUpdate ? next : prev;
     });
   }, [word.images]);
+
   const hasSaved = session?.user?.id
     ? savedBy.includes(String(session.user.id))
     : false;
   const [likeBurst, setLikeBurst] = useState(false);
   const [showComments, setShowComments] = useState(defaultShowComments);
+  const [commentsActive, setCommentsActive] = useState(defaultShowComments);
   const [commentText, setCommentText] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentText, setEditingCommentText] = useState("");
@@ -259,16 +243,46 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
   const [imageOrientations, setImageOrientations] = useState<
     Record<string, "portrait" | "landscape">
   >({});
+  const stopPropagation = useCallback((event: React.MouseEvent) => {
+    event.stopPropagation();
+  }, []);
   const isDraggingImagesRef = useRef(false);
   const dragMovedRef = useRef(false);
   const lastDragDeltaRef = useRef(0);
+  const dragRafRef = useRef<number | null>(null);
+  const dragPendingDeltaRef = useRef(0);
   const dragStartXRef = useRef(0);
   const dragStartScrollRef = useRef(0);
   const [likeError, setLikeError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const editRef = useRef<HTMLDivElement | null>(null);
   const imageStripRef = useRef<HTMLDivElement | null>(null);
-  const { openSignIn } = useUIStore();
+  const imageSectionRef = useRef<HTMLDivElement | null>(null);
+  const [imagesActive, setImagesActive] = useState(false);
+  useEffect(() => {
+    if (!Array.isArray(word.images) || word.images.length === 0) return;
+    const node = imageSectionRef.current;
+    if (!node) return;
+    if (imagesActive) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting) {
+          if ("requestIdleCallback" in window) {
+            (window as Window & { requestIdleCallback?: (cb: () => void) => number })
+              .requestIdleCallback?.(() => setImagesActive(true));
+          } else {
+            setImagesActive(true);
+          }
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [imagesActive, word.images]);
+  const openSignIn = useUIStore((state) => state.openSignIn);
   const isOwner =
     word.isOwner ??
     Boolean(
@@ -366,9 +380,9 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
       }
       return (await response.json()) as WordCommentData[];
     },
-    enabled: showComments,
+    enabled: commentsActive,
   });
-  const displayedCommentCount = showComments
+  const displayedCommentCount = commentsActive
     ? comments.length
     : word.commentCount ?? 0;
 
@@ -389,6 +403,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showMenu]);
+
 
   useEffect(() => {
     if (!commentMenuId) return;
@@ -763,7 +778,21 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
   });
   const isDeleting = deleteMutation.isPending;
 
-  const toggleComments = (event?: React.MouseEvent) => {
+  const scheduleCommentsActivation = useCallback(() => {
+    if (commentsActive) return;
+    if (typeof window === "undefined") {
+      setCommentsActive(true);
+      return;
+    }
+    if ("requestIdleCallback" in window) {
+      (window as Window & { requestIdleCallback?: (cb: () => void) => number })
+        .requestIdleCallback?.(() => setCommentsActive(true));
+      return;
+    }
+    setTimeout(() => setCommentsActive(true), 0);
+  }, [commentsActive]);
+
+  const toggleComments = useCallback((event?: React.MouseEvent) => {
     event?.stopPropagation();
     setShowComments((prev) => {
       if (prev) {
@@ -774,12 +803,19 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
         setCommentText("");
         return false;
       }
+      scheduleCommentsActivation();
       setTimeout(() => commentInputRef.current?.focus(), 0);
       return true;
     });
-  };
+  }, [commentText, scheduleCommentsActivation]);
 
-  const handleLike = async (event?: React.MouseEvent) => {
+  useEffect(() => {
+    if (showComments) {
+      scheduleCommentsActivation();
+    }
+  }, [showComments, scheduleCommentsActivation]);
+
+  const handleLike = useCallback(async (event?: React.MouseEvent) => {
     event?.stopPropagation();
     if (!session?.user?.id) {
       openSignIn();
@@ -795,9 +831,9 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
     } finally {
       setIsLiking(false);
     }
-  };
+  }, [session?.user?.id, openSignIn, likeMutation]);
 
-  const handleSave = async (event?: React.MouseEvent) => {
+  const handleSave = useCallback(async (event?: React.MouseEvent) => {
     event?.stopPropagation();
     if (!session?.user?.id) {
       openSignIn();
@@ -811,7 +847,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [session?.user?.id, openSignIn, saveMutation]);
 
   const handleCommentSubmit = async (event?: React.FormEvent) => {
     if (event) {
@@ -827,6 +863,32 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
 
     commentMutation.mutate();
   };
+
+  const handleStartEditComment = useCallback((comment: WordCommentData) => {
+    setEditingCommentId(comment._id);
+    setEditingCommentText(comment.content);
+    setEditingCommentOriginal(comment.content);
+    setCommentMenuId(null);
+  }, []);
+
+  const handleCancelEditComment = useCallback(() => {
+    setEditingCommentId(null);
+    setEditingCommentText("");
+    setEditingCommentOriginal("");
+  }, []);
+
+  const handleSaveEditComment = useCallback(
+    (id: string, content: string) => {
+      commentEditMutation.mutate({ id, content: content.trim() });
+    },
+    [commentEditMutation]
+  );
+
+  const handleRequestDeleteComment = useCallback((id: string) => {
+    setCommentMenuId(null);
+    setPendingDeleteCommentId(id);
+    setShowCommentDeleteConfirm(true);
+  }, []);
 
   const handleCardClick = (event: React.MouseEvent) => {
     const target = event.target as HTMLElement | null;
@@ -905,94 +967,37 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
       ? `/faith-story/${sharedStory.authorUsername}/${sharedStory.id}`
       : null;
 
+  const toggleMenu = useCallback(() => {
+    setShowMenu((prev) => !prev);
+  }, []);
+  const openDeleteConfirm = useCallback(() => {
+    setShowMenu(false);
+    setShowDeleteConfirm(true);
+  }, []);
+  const openAdminDeleteConfirm = useCallback(() => {
+    setShowMenu(false);
+    setAdminReason("");
+    setShowAdminDeleteConfirm(true);
+  }, []);
+
   return (
     <article
       className={`wall-card flex flex-col gap-3 rounded-none cursor-pointer transition-card overflow-hidden max-w-full min-w-0 ${isRemoving ? "fade-out-card" : ""}`}
       onClick={handleCardClick}
+      style={{ contentVisibility: "auto", containIntrinsicSize: "1px 900px" }}
     >
-      <div className="flex items-start gap-3">
-        <div className="avatar-ring">
-          <Avatar
-            src={word.user?.image ?? null}
-            alt={word.user?.name ?? "User"}
-            size={64}
-            sizes="(min-width: 640px) 48px, 32px"
-            href={word.user?.username ? `/profile/${word.user.username}` : "/profile"}
-            fallback={(word.user?.name?.[0] ?? "W").toUpperCase()}
-            className="avatar-core cursor-pointer h-8 w-8 sm:h-12 sm:w-12"
-          />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <a
-                href={word.user?.username ? `/profile/${word.user.username}` : "/profile"}
-                className="text-xs sm:text-sm font-semibold text-[color:var(--ink)] hover:underline"
-              >
-                {word.user?.name ?? "User"}
-              </a>
-              <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
-                {word.user?.username ? `@${word.user.username}` : ""}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 pr-1">
-              <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
-                {formatPostTime(createdAtValue.toISOString())}
-              </p>
-              {(isOwner || isAdmin) && (
-                <div className="relative" ref={menuRef}>
-                  <button
-                    type="button"
-                    onClick={() => setShowMenu((prev) => !prev)}
-                    className="h-8 w-8 rounded-full text-[color:var(--subtle)] hover:text-[color:var(--ink)] cursor-pointer"
-                    aria-label="More actions"
-                  >
-                    <DotsThreeOutline size={20} weight="regular" />
-                  </button>
-                  {showMenu && (
-                    <div className="absolute right-0 top-10 z-10 min-w-[200px] rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-2 shadow-lg">
-                      {isOwner && (
-                        <button
-                          type="button"
-                          onClick={handleEditStart}
-                          className="mb-1 w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
-                        >
-                          Edit Post
-                        </button>
-                      )}
-                      {isOwner && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowMenu(false);
-                            setShowDeleteConfirm(true);
-                          }}
-                          className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
-                        >
-                          Delete Post
-                        </button>
-                      )}
-                      {isAdmin && !isOwner && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowMenu(false);
-                            setAdminReason("");
-                            setShowAdminDeleteConfirm(true);
-                          }}
-                          className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
-                        >
-                          Admin Delete
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      <WordHeader
+        user={word.user}
+        createdAtIso={createdAtValue.toISOString()}
+        isOwner={isOwner}
+        isAdmin={isAdmin}
+        showMenu={showMenu}
+        menuRef={menuRef}
+        onToggleMenu={toggleMenu}
+        onEdit={handleEditStart}
+        onDelete={openDeleteConfirm}
+        onAdminDelete={openAdminDeleteConfirm}
+      />
       <div>
         {isEditing ? (
           <div ref={editRef} className="mt-3 flex flex-col gap-2">
@@ -1074,233 +1079,199 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                 </div>
               </div>
             )}
-            {youtubeId && (
-              <div
-                className="mt-3 aspect-video w-full max-w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)]"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <YouTubeEmbed videoId={youtubeId} className="h-full w-full" />
-              </div>
-            )}
-            {spotifyEmbed && (
-              <div
-                className="mt-3 w-full max-w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)]"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <iframe
-                  src={spotifyEmbed}
-                  width="100%"
-                  height="152"
-                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                  loading="lazy"
-                  className="border-0 w-full"
-                  title="Spotify embed"
-                />
-              </div>
+            {(youtubeId || spotifyEmbed) && (
+              <WordEmbeds
+                youtubeId={youtubeId}
+                spotifyEmbed={spotifyEmbed}
+                onStopPropagation={stopPropagation}
+              />
             )}
             {Array.isArray(word.images) && word.images.length > 0 && (
-              <div className="mt-3 relative w-full max-w-full overflow-hidden">
-                {word.images.length > 1 && (
+              <div
+                ref={imageSectionRef}
+                className="mt-3 relative w-full max-w-full overflow-hidden"
+              >
+                {!imagesActive ? (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setImagesActive(true);
+                    }}
+                    className="flex w-full items-center justify-center rounded-md border border-dashed border-[color:var(--border)] bg-white/70 px-4 py-6 text-sm font-medium text-[color:var(--ink)]"
+                  >
+                    Tap to load photos ({word.images.length})
+                  </button>
+                ) : (
                   <>
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
+                    {word.images.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            const node = imageStripRef.current;
+                            if (!node) return;
+                            node.scrollBy({ left: -node.clientWidth, behavior: "smooth" });
+                          }}
+                          className="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 h-9 w-9 items-center justify-center rounded-full bg-white/80 text-[color:var(--ink)] shadow-md"
+                          aria-label="Scroll images left"
+                        >
+                          ‹
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            const node = imageStripRef.current;
+                            if (!node) return;
+                            node.scrollBy({ left: node.clientWidth, behavior: "smooth" });
+                          }}
+                          className="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 h-9 w-9 items-center justify-center rounded-full bg-white/80 text-[color:var(--ink)] shadow-md"
+                          aria-label="Scroll images right"
+                        >
+                          ›
+                        </button>
+                      </>
+                    )}
+                    <div
+                      ref={imageStripRef}
+                      className="flex min-w-0 w-full max-w-full gap-3 overflow-x-auto pb-1 snap-x snap-mandatory overscroll-x-contain sm:cursor-grab sm:active:cursor-grabbing"
+                      style={{ touchAction: "pan-x" }}
+                      onPointerDown={(event) => {
+                        if (event.pointerType !== "mouse") return;
                         const node = imageStripRef.current;
                         if (!node) return;
-                        node.scrollBy({ left: -node.clientWidth, behavior: "smooth" });
+                        node.setPointerCapture?.(event.pointerId);
+                        isDraggingImagesRef.current = true;
+                        dragMovedRef.current = false;
+                        lastDragDeltaRef.current = 0;
+                        dragPendingDeltaRef.current = 0;
+                        dragStartXRef.current = event.clientX;
+                        dragStartScrollRef.current = node.scrollLeft;
                       }}
-                      className="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 h-9 w-9 items-center justify-center rounded-full bg-white/80 text-[color:var(--ink)] shadow-md"
-                      aria-label="Scroll images left"
-                    >
-                      ‹
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
+                      onPointerMove={(event) => {
+                        if (!isDraggingImagesRef.current) return;
                         const node = imageStripRef.current;
                         if (!node) return;
-                        node.scrollBy({ left: node.clientWidth, behavior: "smooth" });
+                        const delta = event.clientX - dragStartXRef.current;
+                        lastDragDeltaRef.current = delta;
+                        if (Math.abs(delta) > 4) {
+                          dragMovedRef.current = true;
+                        }
+                        dragPendingDeltaRef.current = delta;
+                        if (dragRafRef.current == null) {
+                          dragRafRef.current = window.requestAnimationFrame(() => {
+                            if (imageStripRef.current) {
+                              imageStripRef.current.scrollLeft =
+                                dragStartScrollRef.current - dragPendingDeltaRef.current;
+                            }
+                            dragRafRef.current = null;
+                          });
+                        }
                       }}
-                      className="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 h-9 w-9 items-center justify-center rounded-full bg-white/80 text-[color:var(--ink)] shadow-md"
-                      aria-label="Scroll images right"
+                      onPointerUp={() => {
+                        if (!isDraggingImagesRef.current) return;
+                        isDraggingImagesRef.current = false;
+                        if (dragRafRef.current != null) {
+                          window.cancelAnimationFrame(dragRafRef.current);
+                          dragRafRef.current = null;
+                        }
+                        const shouldBlock = Math.abs(lastDragDeltaRef.current) > 6;
+                        dragMovedRef.current = shouldBlock;
+                        window.setTimeout(() => {
+                          dragMovedRef.current = false;
+                          lastDragDeltaRef.current = 0;
+                        }, 0);
+                      }}
+                      onPointerCancel={() => {
+                        isDraggingImagesRef.current = false;
+                        dragMovedRef.current = false;
+                        lastDragDeltaRef.current = 0;
+                        if (dragRafRef.current != null) {
+                          window.cancelAnimationFrame(dragRafRef.current);
+                          dragRafRef.current = null;
+                        }
+                      }}
+                      onPointerLeave={() => {
+                        isDraggingImagesRef.current = false;
+                        dragMovedRef.current = false;
+                        lastDragDeltaRef.current = 0;
+                        if (dragRafRef.current != null) {
+                          window.cancelAnimationFrame(dragRafRef.current);
+                          dragRafRef.current = null;
+                        }
+                      }}
                     >
-                      ›
-                    </button>
+                      {word.images.map((src, index) => {
+                      const isCloudinary =
+                        typeof src === "string" && src.includes("res.cloudinary.com");
+                      const thumbSrc = isCloudinary
+                        ? cloudinaryTransform(src, { width: 600 })
+                        : src;
+                      const key = `${src}-${index}`;
+                      const storedOrientation = word.imageOrientations?.[index];
+                      const orientation =
+                        storedOrientation ?? imageOrientations[key] ?? "landscape";
+                      const aspectClass =
+                        orientation === "portrait" ? "aspect-[3/4]" : "aspect-[4/3]";
+                      return (
+                        <div
+                          key={key}
+                          className={`relative shrink-0 snap-start w-[60%] sm:w-[44%] max-w-[220px] ${aspectClass} overflow-hidden rounded-md border border-transparent`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            if (dragMovedRef.current || Math.abs(lastDragDeltaRef.current) > 6) {
+                              return;
+                            }
+                            const fullSrc = isCloudinary
+                              ? cloudinaryTransform(src, { width: 1200 })
+                              : src;
+                            setLightboxSrc(fullSrc);
+                          }}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={thumbSrc}
+                            alt=""
+                            data-orientation-key={key}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                            onLoad={(event) => {
+                              const { naturalWidth, naturalHeight } = event.currentTarget;
+                              if (!naturalWidth || !naturalHeight) return;
+                              const next =
+                                naturalHeight > naturalWidth ? "portrait" : "landscape";
+                              setImageOrientations((prev) =>
+                                prev[key] === next ? prev : { ...prev, [key]: next }
+                              );
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
+                    </div>
                   </>
                 )}
-                <div
-                  ref={imageStripRef}
-                  className="flex min-w-0 w-full max-w-full gap-3 overflow-x-auto pb-1 snap-x snap-mandatory overscroll-x-contain sm:cursor-grab sm:active:cursor-grabbing"
-                  style={{ touchAction: "pan-x" }}
-                  onPointerDown={(event) => {
-                    if (event.pointerType !== "mouse") return;
-                    const node = imageStripRef.current;
-                    if (!node) return;
-                    isDraggingImagesRef.current = true;
-                    dragMovedRef.current = false;
-                    lastDragDeltaRef.current = 0;
-                    dragStartXRef.current = event.clientX;
-                    dragStartScrollRef.current = node.scrollLeft;
-                  }}
-                  onPointerMove={(event) => {
-                    if (!isDraggingImagesRef.current) return;
-                    const node = imageStripRef.current;
-                    if (!node) return;
-                    const delta = event.clientX - dragStartXRef.current;
-                    lastDragDeltaRef.current = delta;
-                    if (Math.abs(delta) > 4) {
-                      dragMovedRef.current = true;
-                    }
-                    node.scrollLeft = dragStartScrollRef.current - delta;
-                  }}
-                  onPointerUp={() => {
-                    if (!isDraggingImagesRef.current) return;
-                    isDraggingImagesRef.current = false;
-                    const shouldBlock = Math.abs(lastDragDeltaRef.current) > 6;
-                    dragMovedRef.current = shouldBlock;
-                    window.setTimeout(() => {
-                      dragMovedRef.current = false;
-                      lastDragDeltaRef.current = 0;
-                    }, 0);
-                  }}
-                  onPointerCancel={() => {
-                    isDraggingImagesRef.current = false;
-                    dragMovedRef.current = false;
-                    lastDragDeltaRef.current = 0;
-                  }}
-                  onPointerLeave={() => {
-                    isDraggingImagesRef.current = false;
-                    dragMovedRef.current = false;
-                    lastDragDeltaRef.current = 0;
-                  }}
-                >
-                  {word.images.map((src, index) => {
-                  const isCloudinary =
-                    typeof src === "string" && src.includes("res.cloudinary.com");
-                  const thumbSrc = isCloudinary
-                    ? cloudinaryTransform(src, { width: 600 })
-                    : src;
-                  const key = `${src}-${index}`;
-                  const storedOrientation = word.imageOrientations?.[index];
-                  const orientation = storedOrientation ?? imageOrientations[key] ?? "landscape";
-                  const aspectClass =
-                    orientation === "portrait" ? "aspect-[3/4]" : "aspect-[4/3]";
-                  return (
-                    <div
-                      key={key}
-                      className={`relative shrink-0 snap-start w-[60%] sm:w-[44%] max-w-[220px] ${aspectClass} overflow-hidden rounded-md border border-transparent`}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        if (dragMovedRef.current || Math.abs(lastDragDeltaRef.current) > 6) {
-                          return;
-                        }
-                        const fullSrc = isCloudinary
-                          ? cloudinaryTransform(src, { width: 1200 })
-                          : src;
-                        setLightboxSrc(fullSrc);
-                      }}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={thumbSrc}
-                        alt=""
-                        data-orientation-key={key}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                        onLoad={(event) => {
-                          const { naturalWidth, naturalHeight } = event.currentTarget;
-                          if (!naturalWidth || !naturalHeight) return;
-                          const next =
-                            naturalHeight > naturalWidth ? "portrait" : "landscape";
-                          setImageOrientations((prev) =>
-                            prev[key] === next ? prev : { ...prev, [key]: next }
-                          );
-                        }}
-                      />
-                    </div>
-                  );
-                })}
-                </div>
               </div>
             )}
           </>
         )}
-        <div className="mt-2 sm:mt-3 flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs">
-          <button
-            type="button"
-            onClick={handleLike}
-            disabled={isLiking}
-            aria-label={hasLiked ? "Unlike word" : "Like word"}
-            className={`pill-button cursor-pointer transition-colors ${
-              hasLiked
-                ? "text-[color:var(--accent-strong)]"
-                : "text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
-            }`}
-          >
-            <span className="inline-flex items-center gap-2">
-              <Heart
-                size={22}
-                weight={hasLiked ? "fill" : "regular"}
-                className={likeBurst ? "scale-110 transition-transform duration-150" : "transition-transform duration-150"}
-              />
-              {localLikedBy.length > 0 && (
-                <span className="text-xs font-semibold text-[color:var(--ink)] transition-all duration-200">
-                  {localLikedBy.length}
-                </span>
-              )}
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={toggleComments}
-            aria-label="Reflect on word"
-            className="pill-button cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
-            ref={commentButtonRef}
-          >
-            <span className="inline-flex items-center gap-2">
-              <ChatCircle size={22} weight="regular" />
-              <span className="text-xs font-semibold text-[color:var(--subtle)]">
-                Reflect
-              </span>
-              {displayedCommentCount > 0 && (
-                <span className="text-xs font-semibold text-[color:var(--ink)] transition-all duration-200">
-                  {displayedCommentCount}
-                </span>
-              )}
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isSaving}
-            aria-label={hasSaved ? "Unsave word" : "Save word"}
-            className={`pill-button cursor-pointer transition-colors ${
-              hasSaved
-                ? "text-[color:var(--accent-strong)]"
-                : "text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
-            }`}
-          >
-            <span className="inline-flex items-center gap-2">
-              <BookmarkSimple size={22} weight={hasSaved ? "fill" : "regular"} />
-              {savedCount > 0 && (
-                <span className="text-xs font-semibold text-[color:var(--ink)] transition-all duration-200">
-                  {savedCount}
-                </span>
-              )}
-            </span>
-          </button>
-          <span className="ml-auto text-[color:var(--subtle)]">
-            {word.privacy === "private" ? (
-              <LockSimple size={16} weight="regular" />
-            ) : word.privacy === "followers" ? (
-              <UsersThree size={16} weight="regular" />
-            ) : (
-              <Globe size={16} weight="regular" />
-            )}
-          </span>
-        </div>
+        <WordActions
+          hasLiked={hasLiked}
+          likeCount={localLikedBy.length}
+          likeBurst={likeBurst}
+          isLiking={isLiking}
+          onLike={handleLike}
+          onToggleComments={toggleComments}
+          commentCount={displayedCommentCount}
+          hasSaved={hasSaved}
+          savedCount={savedCount}
+          isSaving={isSaving}
+          onSave={handleSave}
+          privacy={word.privacy ?? "public"}
+          commentButtonRef={commentButtonRef}
+        />
         {likeError && (
           <div className="mt-2 text-[11px] text-[color:var(--subtle)] flex items-center gap-2">
             <span>{likeError}</span>
@@ -1315,200 +1286,29 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
         )}
 
         {showComments && (
-          <div
-            className="mt-3 border-t border-slate-100 pt-3 pb-6 mb-2 bg-[color:var(--surface-strong)]/10 rounded-b-2xl shadow-[0_10px_24px_-20px_rgba(0,0,0,0.45)]"
-            ref={commentFormRef}
-          >
-            {session?.user?.id && (
-              <form onSubmit={handleCommentSubmit} className="flex flex-col gap-2">
-                <MentionTextarea
-                  value={commentText}
-                  onChangeValue={setCommentText}
-                  placeholder="Share a reflection..."
-                  className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full"
-                  textareaRef={commentInputRef}
-                />
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    className="post-button"
-                    disabled={!commentText.trim()}
-                  >
-                    Post reflection
-                  </button>
-                </div>
-              </form>
-            )}
-            {commentError && (
-              <div className="mt-2 text-[11px] text-[color:var(--subtle)] flex items-center gap-2">
-                <span>{commentError}</span>
-                <button
-                  type="button"
-                  onClick={() => handleCommentSubmit()}
-                  className="text-[color:var(--accent)] hover:text-[color:var(--accent-strong)] text-xs font-semibold"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-
-            <div className="mt-3 flex flex-col gap-3 text-[13px] sm:text-sm">
-              {isLoadingComments ? (
-                <div className="flex flex-col gap-3">
-                  {Array.from({ length: 2 }).map((_, index) => (
-                    <div key={index} className="flex gap-3">
-                      <div className="h-9 w-9 rounded-full bg-slate-200 animate-pulse" />
-                      <div className="flex-1">
-                        <div className="h-3 w-24 bg-slate-200 rounded-full animate-pulse" />
-                        <div className="mt-2 h-3 w-full bg-slate-200 rounded-full animate-pulse" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : comments.length === 0 ? (
-                <div className="text-[color:var(--subtle)] text-[13px] sm:text-sm">
-                  No comments yet.
-                </div>
-              ) : (
-                comments.map((comment, index) => {
-                  const commentOwnerId = comment.userId?._id
-                    ? String(comment.userId._id)
-                    : null;
-                  const isCommentOwner = Boolean(
-                    session?.user?.id && commentOwnerId === String(session.user.id)
-                  );
-
-                  return (
-                    <div
-                      key={comment._id}
-                      className={`flex gap-3 pt-3 ${
-                        index === 0 ? "" : "border-t border-[color:var(--panel-border)]"
-                      }`}
-                    >
-                    <Avatar
-                      src={comment.userId?.image ?? null}
-                      alt={comment.userId?.name ?? "User"}
-                      size={36}
-                      href={
-                        comment.userId?.username
-                          ? `/profile/${comment.userId.username}`
-                          : "/profile"
-                      }
-                      fallback={(comment.userId?.name?.[0] ?? "U").toUpperCase()}
-                      className="h-8 w-8 sm:h-9 sm:w-9 text-[11px] sm:text-xs cursor-pointer"
-                    />
-                    <div className="flex-1">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <a
-                            href={
-                              comment.userId?.username
-                                ? `/profile/${comment.userId.username}`
-                                : "/profile"
-                            }
-                            className="text-[11px] sm:text-xs font-semibold text-[color:var(--ink)] cursor-pointer hover:underline"
-                          >
-                            {comment.userId?.name ?? "User"}
-                          </a>
-                          {comment.userId?.username && (
-                            <span className="text-[11px] sm:text-xs text-[color:var(--subtle)]">
-                              @{comment.userId.username}
-                            </span>
-                          )}
-                          <p className="text-[11px] sm:text-xs text-[color:var(--subtle)]">
-                            {formatPostTime(comment.createdAt)}
-                          </p>
-                        </div>
-                        {isCommentOwner && (
-                          <div className="relative" data-comment-menu>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setCommentMenuId((prev) =>
-                                  prev === comment._id ? null : comment._id
-                                )
-                              }
-                              className="h-7 w-7 rounded-full text-[color:var(--subtle)] hover:text-[color:var(--ink)] cursor-pointer"
-                              aria-label="Comment actions"
-                            >
-                              <DotsThreeOutline size={16} weight="regular" />
-                            </button>
-                            {commentMenuId === comment._id && (
-                              <div className="absolute right-0 top-8 z-10 min-w-[160px] rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-2 shadow-lg">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingCommentId(comment._id);
-                                    setEditingCommentText(comment.content);
-                                    setEditingCommentOriginal(comment.content);
-                                    setCommentMenuId(null);
-                                  }}
-                                  className="mb-1 w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setCommentMenuId(null);
-                                    setPendingDeleteCommentId(comment._id);
-                                    setShowCommentDeleteConfirm(true);
-                                  }}
-                                  className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      {editingCommentId === comment._id ? (
-                        <div ref={commentEditRef} className="mt-2 flex flex-col gap-2">
-                          <MentionTextarea
-                            value={editingCommentText}
-                            onChangeValue={setEditingCommentText}
-                            className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full"
-                          />
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                commentEditMutation.mutate({
-                                  id: comment._id,
-                                  content: editingCommentText.trim(),
-                                })
-                              }
-                              className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--accent)] text-[color:var(--accent-contrast)] cursor-pointer"
-                              disabled={!editingCommentText.trim()}
-                            >
-                              Save
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingCommentId(null);
-                                setEditingCommentText("");
-                                setEditingCommentOriginal("");
-                              }}
-                              className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="mt-1 text-[13px] sm:text-sm text-[color:var(--ink)]">
-                          <MentionText text={comment.content} />
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
+          <WordComments
+            sessionUserId={session?.user?.id ? String(session.user.id) : null}
+            commentText={commentText}
+            onCommentTextChange={setCommentText}
+            commentInputRef={commentInputRef}
+            commentFormRef={commentFormRef}
+            onSubmit={handleCommentSubmit}
+            commentError={commentError}
+            isLoading={isLoadingComments}
+            comments={comments}
+            commentMenuId={commentMenuId}
+            onToggleCommentMenu={setCommentMenuId}
+            editingCommentId={editingCommentId}
+            editingCommentText={editingCommentText}
+            onEditingCommentTextChange={setEditingCommentText}
+            onStartEdit={handleStartEditComment}
+            onCancelEdit={handleCancelEditComment}
+            onSaveEdit={handleSaveEditComment}
+            onRequestDelete={handleRequestDeleteComment}
+            commentEditRef={commentEditRef}
+            onRetrySubmit={handleCommentSubmit}
+            formatPostTime={formatPostTime}
+          />
         )}
       </div>
 
@@ -1746,3 +1546,271 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
 };
 
 export default memo(WordCard);
+
+type WordEmbedsProps = {
+  youtubeId: string | null;
+  spotifyEmbed: string | null;
+  onStopPropagation: (event: React.MouseEvent) => void;
+};
+
+const WordEmbeds = memo(function WordEmbeds({
+  youtubeId,
+  spotifyEmbed,
+  onStopPropagation,
+}: WordEmbedsProps) {
+  return (
+    <>
+      {youtubeId && (
+        <div
+          className="mt-3 aspect-video w-full max-w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)]"
+          onClick={onStopPropagation}
+        >
+          <DeferredEmbed
+            title="YouTube embed"
+            className="h-full w-full"
+            src={buildYouTubeSrc(youtubeId)}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            placeholder={
+              <div className="flex h-full w-full items-center justify-center bg-[color:var(--panel)] text-xs font-semibold text-[color:var(--subtle)]">
+                Tap to load video
+              </div>
+            }
+          />
+        </div>
+      )}
+      {spotifyEmbed && (
+        <div
+          className="mt-3 w-full max-w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)]"
+          onClick={onStopPropagation}
+        >
+          <DeferredEmbed
+            title="Spotify embed"
+            className="h-[152px] w-full"
+            src={spotifyEmbed}
+            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+            height={152}
+            placeholder={
+              <div className="flex h-full w-full items-center justify-center bg-[color:var(--panel)] text-xs font-semibold text-[color:var(--subtle)]">
+                Tap to load audio
+              </div>
+            }
+          />
+        </div>
+      )}
+    </>
+  );
+});
+
+type WordHeaderProps = {
+  user: Word["user"] | undefined;
+  createdAtIso: string;
+  isOwner: boolean;
+  isAdmin: boolean;
+  showMenu: boolean;
+  menuRef: React.RefObject<HTMLDivElement | null>;
+  onToggleMenu: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onAdminDelete: () => void;
+};
+
+const WordHeader = memo(function WordHeader({
+  user,
+  createdAtIso,
+  isOwner,
+  isAdmin,
+  showMenu,
+  menuRef,
+  onToggleMenu,
+  onEdit,
+  onDelete,
+  onAdminDelete,
+}: WordHeaderProps) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="avatar-ring">
+        <Avatar
+          src={user?.image ?? null}
+          alt={user?.name ?? "User"}
+          size={64}
+          sizes="(min-width: 640px) 48px, 32px"
+          href={user?.username ? `/profile/${user.username}` : "/profile"}
+          fallback={(user?.name?.[0] ?? "W").toUpperCase()}
+          className="avatar-core cursor-pointer h-8 w-8 sm:h-12 sm:w-12"
+        />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <a
+              href={user?.username ? `/profile/${user.username}` : "/profile"}
+              className="text-xs sm:text-sm font-semibold text-[color:var(--ink)] hover:underline"
+            >
+              {user?.name ?? "User"}
+            </a>
+            <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
+              {user?.username ? `@${user.username}` : ""}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 pr-1">
+            <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
+              {formatPostTime(createdAtIso)}
+            </p>
+            {(isOwner || isAdmin) && (
+              <div className="relative" ref={menuRef}>
+                <button
+                  type="button"
+                  onClick={onToggleMenu}
+                  className="h-8 w-8 rounded-full text-[color:var(--subtle)] hover:text-[color:var(--ink)] cursor-pointer"
+                  aria-label="More actions"
+                >
+                  <DotsThreeOutline size={20} weight="regular" />
+                </button>
+                {showMenu && (
+                  <div className="absolute right-0 top-10 z-10 min-w-[200px] rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-2 shadow-lg">
+                    {isOwner && (
+                      <button
+                        type="button"
+                        onClick={onEdit}
+                        className="mb-1 w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
+                      >
+                        Edit Post
+                      </button>
+                    )}
+                    {isOwner && (
+                      <button
+                        type="button"
+                        onClick={onDelete}
+                        className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
+                      >
+                        Delete Post
+                      </button>
+                    )}
+                    {isAdmin && !isOwner && (
+                      <button
+                        type="button"
+                        onClick={onAdminDelete}
+                        className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
+                      >
+                        Admin Delete
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+type WordActionsProps = {
+  hasLiked: boolean;
+  likeCount: number;
+  likeBurst: boolean;
+  isLiking: boolean;
+  onLike: (event?: React.MouseEvent) => void;
+  onToggleComments: (event?: React.MouseEvent) => void;
+  commentCount: number;
+  hasSaved: boolean;
+  savedCount: number;
+  isSaving: boolean;
+  onSave: (event?: React.MouseEvent) => void;
+  privacy: Word["privacy"];
+  commentButtonRef: React.RefObject<HTMLButtonElement | null>;
+};
+
+const WordActions = memo(function WordActions({
+  hasLiked,
+  likeCount,
+  likeBurst,
+  isLiking,
+  onLike,
+  onToggleComments,
+  commentCount,
+  hasSaved,
+  savedCount,
+  isSaving,
+  onSave,
+  privacy,
+  commentButtonRef,
+}: WordActionsProps) {
+  return (
+    <div className="mt-2 sm:mt-3 flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs">
+      <button
+        type="button"
+        onClick={onLike}
+        disabled={isLiking}
+        aria-label={hasLiked ? "Unlike word" : "Like word"}
+        className={`pill-button cursor-pointer transition-colors ${
+          hasLiked
+            ? "text-[color:var(--accent-strong)]"
+            : "text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
+        }`}
+      >
+        <span className="inline-flex items-center gap-2">
+          <Heart
+            size={22}
+            weight={hasLiked ? "fill" : "regular"}
+            className={likeBurst ? "scale-110 transition-transform duration-150" : "transition-transform duration-150"}
+          />
+          {likeCount > 0 && (
+            <span className="text-xs font-semibold text-[color:var(--ink)] transition-all duration-200">
+              {likeCount}
+            </span>
+          )}
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={onToggleComments}
+        aria-label="Reflect on word"
+        className="pill-button cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
+        ref={commentButtonRef}
+      >
+        <span className="inline-flex items-center gap-2">
+          <ChatCircle size={22} weight="regular" />
+          <span className="text-xs font-semibold text-[color:var(--subtle)]">
+            Reflect
+          </span>
+          {commentCount > 0 && (
+            <span className="text-xs font-semibold text-[color:var(--ink)] transition-all duration-200">
+              {commentCount}
+            </span>
+          )}
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={onSave}
+        disabled={isSaving}
+        aria-label={hasSaved ? "Unsave word" : "Save word"}
+        className={`pill-button cursor-pointer transition-colors ${
+          hasSaved
+            ? "text-[color:var(--accent-strong)]"
+            : "text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
+        }`}
+      >
+        <span className="inline-flex items-center gap-2">
+          <BookmarkSimple size={22} weight={hasSaved ? "fill" : "regular"} />
+          {savedCount > 0 && (
+            <span className="text-xs font-semibold text-[color:var(--ink)] transition-all duration-200">
+              {savedCount}
+            </span>
+          )}
+        </span>
+      </button>
+      <span className="ml-auto text-[color:var(--subtle)]">
+        {privacy === "private" ? (
+          <LockSimple size={16} weight="regular" />
+        ) : privacy === "followers" ? (
+          <UsersThree size={16} weight="regular" />
+        ) : (
+          <Globe size={16} weight="regular" />
+        )}
+      </span>
+    </div>
+  );
+});

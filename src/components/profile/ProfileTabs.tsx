@@ -17,7 +17,7 @@ import {
 import { cloudinaryTransform } from "@/lib/cloudinary";
 import Spinner from "@/components/ui/Spinner";
 
-const tabs = ["Word", "Prayers", "Reprayed", "Saved"] as const;
+const tabs = ["Word", "Prayers", "Prayed", "Saved"] as const;
 
 const PostForm = dynamic(() => import("@/components/prayer/PostForm"), {
   ssr: false,
@@ -47,7 +47,7 @@ const tabIcon = (tab: Tab) => {
       return <Book size={18} weight="regular" />;
     case "Prayers":
       return <HandsPraying size={18} weight="regular" />;
-    case "Reprayed":
+    case "Prayed":
       return <HandsClapping size={18} weight="fill" />;
     case "Saved":
       return <BookmarkSimple size={18} weight="regular" />;
