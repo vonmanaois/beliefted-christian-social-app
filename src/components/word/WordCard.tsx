@@ -1063,7 +1063,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                 onClick={(event) => {
                   event.stopPropagation();
                   if (sharedStoryHref) {
-                    router.push(sharedStoryHref);
+                    router.push(sharedStoryHref, { scroll: false });
                   }
                 }}
               >

@@ -173,7 +173,7 @@ export default function JournalBoard() {
               setShowDiscardConfirm(true);
               return;
             }
-            router.push(`/journal/${journal._id}`);
+            router.push(`/journal/${journal._id}`, { scroll: false });
           }}
           onKeyDown={(event) => {
             if (event.key !== "Enter" && event.key !== " ") return;
@@ -186,7 +186,7 @@ export default function JournalBoard() {
               setShowDiscardConfirm(true);
               return;
             }
-            router.push(`/journal/${journal._id}`);
+            router.push(`/journal/${journal._id}`, { scroll: false });
           }}
           className="panel p-5 text-left flex flex-col justify-between cursor-pointer hover:border-[color:var(--accent)] min-h-[180px] max-h-[260px]"
         >
@@ -211,7 +211,7 @@ export default function JournalBoard() {
                     onClick={(event) => {
                       event.stopPropagation();
                       setMenuId(null);
-                      router.push(`/journal/${journal._id}?edit=1`);
+                      router.push(`/journal/${journal._id}?edit=1`, { scroll: false });
                     }}
                     className="mb-1 w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
                   >

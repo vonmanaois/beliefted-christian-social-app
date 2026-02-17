@@ -74,6 +74,7 @@ export default function Sidebar() {
   const deferredInstallPrompt = useRef<BeforeInstallPromptEvent | null>(null);
   const [menuMounted] = useState(true);
   const touchStartX = useRef<number | null>(null);
+  const isPostDetailRef = useRef(false);
   const triggerPanelClose = (target: "search") => {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("panel:close", { detail: { target } }));
@@ -464,10 +465,36 @@ export default function Sidebar() {
   }, [notificationsOpen]);
 
   useEffect(() => {
+    if (!pathname) {
+      isPostDetailRef.current = false;
+      return;
+    }
+    const segments = pathname.split("/").filter(Boolean);
+    if (segments.length !== 2) {
+      isPostDetailRef.current = false;
+      return;
+    }
+    const reserved = new Set([
+      "profile",
+      "journal",
+      "faith-story",
+      "faith-stories",
+      "search",
+      "wordoftheday",
+      "onboarding",
+      "privacy",
+      "terms",
+    ]);
+    isPostDetailRef.current = !reserved.has(segments[0]);
+  }, [pathname]);
+
+  useEffect(() => {
     const handleTouchStart = (event: TouchEvent) => {
+      if (isPostDetailRef.current) return;
       touchStartX.current = event.touches[0]?.clientX ?? null;
     };
     const handleTouchEnd = (event: TouchEvent) => {
+      if (isPostDetailRef.current) return;
       const startX = touchStartX.current;
       if (startX === null) return;
       const endX = event.changedTouches[0]?.clientX ?? startX;
@@ -498,7 +525,14 @@ export default function Sidebar() {
       window.removeEventListener("touchstart", handleTouchStart);
       window.removeEventListener("touchend", handleTouchEnd);
     };
-  }, [showMobileMenu, notificationsOpen, infoPanel, closeMenu, closeNotifications, closeInfoPanel]);
+  }, [
+    showMobileMenu,
+    notificationsOpen,
+    infoPanel,
+    closeMenu,
+    closeNotifications,
+    closeInfoPanel,
+  ]);
 
   useEffect(() => {
     if (typeof document === "undefined") return;

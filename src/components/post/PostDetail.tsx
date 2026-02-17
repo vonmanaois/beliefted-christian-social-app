@@ -67,12 +67,12 @@ export default async function PostDetail({
   if (prayer) {
     const allow = await canView(prayer.privacy, prayer.userId?.toString() ?? null);
     if (!allow) {
-      return (
-        <div>
-          {showBackHeader && <PostBackHeader label="Prayer" refreshOnBack />}
-          <div className="panel p-6 text-sm text-[color:var(--subtle)]">
-            <p className="text-[color:var(--ink)] font-semibold">
-              This post is not available anymore.
+    return (
+      <div>
+        {showBackHeader && <PostBackHeader label="Prayer" refreshOnBack />}
+        <div className="panel p-6 text-sm text-[color:var(--subtle)]">
+          <p className="text-[color:var(--ink)] font-semibold">
+            This post is not available anymore.
             </p>
             <p className="mt-1">It may be private or deleted by the author.</p>
           </div>
@@ -148,8 +148,8 @@ export default async function PostDetail({
   if (word) {
     const allow = await canView(word.privacy, word.userId?.toString() ?? null);
     if (!allow) {
-      return (
-        <div>
+    return (
+      <div>
         {showBackHeader && <PostBackHeader label="Word" refreshOnBack />}
           <div className="panel p-6 text-sm text-[color:var(--subtle)]">
             <p className="text-[color:var(--ink)] font-semibold">

@@ -286,6 +286,7 @@ export default function NotificationsContent({
                       href={href}
                       prefetch={false}
                       className="flex-1 cursor-pointer"
+                      scroll={false}
                       onClick={onNavigate}
                     >
                       {content}

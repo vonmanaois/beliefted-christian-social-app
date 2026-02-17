@@ -205,7 +205,7 @@ export default function FaithStoryList() {
       await queryClient.invalidateQueries({ queryKey: ["faith-stories"] });
       const username = story.authorUsername ?? story.user?.username;
       if (username) {
-        router.push(`/faith-story/${username}/${story._id}`);
+        router.push(`/faith-story/${username}/${story._id}`, { scroll: false });
       }
     },
   });
@@ -322,7 +322,7 @@ export default function FaithStoryList() {
                 type="button"
                 onClick={() => {
                   if (!username) return;
-                  router.push(`/faith-story/${username}/${story._id}`);
+                  router.push(`/faith-story/${username}/${story._id}`, { scroll: false });
                 }}
                 className="panel p-6 text-left flex flex-col gap-3 cursor-pointer hover:border-[color:var(--accent)]"
               >

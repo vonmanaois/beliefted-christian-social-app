@@ -406,6 +406,7 @@ html.menu-open body {
   overflow: hidden;
 }
 
+
 .notification-drawer-panel {
   transform: translateX(100%);
   transition: transform 220ms ease;

@@ -1,9 +1,10 @@
 "use client";
 
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Virtuoso,
+  type ListRange,
   type VirtuosoHandle,
   type StateSnapshot,
 } from "react-virtuoso";
@@ -19,8 +20,6 @@ type WordFeedProps = {
   followingOnly?: boolean;
   savedOnly?: boolean;
 };
-
-type RestoreState = { ranges: unknown; scrollTop: number };
 
 export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly }: WordFeedProps) {
   const {
@@ -96,35 +95,51 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
       }`,
     [userId, followingOnly, savedOnly]
   );
-  const savedSnapshotRef = useRef<{ state: RestoreState; count: number } | null>(null);
-  const [restoredState, setRestoredState] = useState<RestoreState | undefined>(undefined);
+  const savedSnapshotRef = useRef<{ state: StateSnapshot; count: number } | null>(null);
+  const [restoredState, setRestoredState] = useState<StateSnapshot | undefined>(undefined);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [isReady, setIsReady] = useState(false);
   const restoreOnceRef = useRef(false);
   const restoreRafRef = useRef<number | null>(null);
   const restoreRaf2Ref = useRef<number | null>(null);
   const restoreTimeoutRef = useRef<number | null>(null);
   const virtuosoRef = useRef<VirtuosoHandle | null>(null);
-  const saveRafRef = useRef<number | null>(null);
+  const saveTimeoutRef = useRef<number | null>(null);
+
+  const prefetchThreshold = 6;
+
+  const handleRangeChanged = useCallback(
+    (range: ListRange) => {
+      if (!hasNextPage || isFetchingNextPage || isFetching) return;
+      if (range.endIndex >= words.length - prefetchThreshold) {
+        fetchNextPage();
+      }
+    },
+    [hasNextPage, isFetchingNextPage, isFetching, words.length, fetchNextPage]
+  );
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
     const handleScroll = () => {
-      if (saveRafRef.current !== null) return;
-      saveRafRef.current = window.requestAnimationFrame(() => {
-        saveRafRef.current = null;
+      if (saveTimeoutRef.current !== null) {
+        window.clearTimeout(saveTimeoutRef.current);
+      }
+      saveTimeoutRef.current = window.setTimeout(() => {
+        saveTimeoutRef.current = null;
         virtuosoRef.current?.getState((state) => {
           sessionStorage.setItem(
             feedKey,
             JSON.stringify({ state, count: words.length })
           );
         });
-      });
+      }, 220);
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => {
       window.removeEventListener("scroll", handleScroll);
-      if (saveRafRef.current !== null) {
-        cancelAnimationFrame(saveRafRef.current);
-        saveRafRef.current = null;
+      if (saveTimeoutRef.current !== null) {
+        window.clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
       }
     };
   }, [feedKey, words.length]);
@@ -144,19 +159,20 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
     return () => window.removeEventListener("feed:refresh", handler);
   }, [refetch]);
   useEffect(() => {
+    if (typeof window === "undefined") return;
     const raw = sessionStorage.getItem(feedKey);
     if (!raw) {
       savedSnapshotRef.current = null;
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRestoredState(undefined);
+      if (!isReady) setIsReady(true);
       return;
     }
     try {
-      const parsed = JSON.parse(raw) as { state: RestoreState; count?: number };
+      const parsed = JSON.parse(raw) as { state?: StateSnapshot; count?: number };
       if (
         parsed?.state &&
         typeof parsed.state.scrollTop === "number" &&
-        parsed.state.ranges != null
+        Array.isArray(parsed.state.ranges)
       ) {
         savedSnapshotRef.current = {
           state: parsed.state,
@@ -170,11 +186,12 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
     } catch {
       savedSnapshotRef.current = null;
       setRestoredState(undefined);
+    } finally {
+      if (!isReady) setIsReady(true);
     }
-  }, [feedKey]);
+  }, [feedKey, isReady]);
   useEffect(() => {
     restoreOnceRef.current = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsRestoring(Boolean(restoredState));
   }, [feedKey, restoredState]);
   useEffect(() => {
@@ -183,7 +200,6 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
     if (words.length > 0 && saved.count > 0 && words.length + 3 < saved.count) {
       savedSnapshotRef.current = null;
       sessionStorage.removeItem(feedKey);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRestoredState(undefined);
       if (typeof window !== "undefined") {
         window.scrollTo({ top: 0, behavior: "auto" });
@@ -192,7 +208,6 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
   }, [words.length, feedKey, restoredState]);
   useEffect(() => {
     if (!restoredState) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsRestoring(false);
       return;
     }
@@ -229,7 +244,7 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
 
 
 
-  if (isLoading) {
+  if (!isReady || isLoading) {
     return <FeedSkeleton />;
   }
 
@@ -331,13 +346,10 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
             data={words}
             totalCount={words.length}
             useWindowScroll
-            increaseViewportBy={200}
-            overscan={200}
-            scrollSeekConfiguration={{
-              enter: (velocity) => Math.abs(velocity) > 200,
-              exit: (velocity) => Math.abs(velocity) < 30,
-            }}
-            restoreStateFrom={restoredState as unknown as StateSnapshot | undefined}
+            increaseViewportBy={{ top: 900, bottom: 600 }}
+            overscan={400}
+            restoreStateFrom={restoredState}
+            rangeChanged={handleRangeChanged}
             itemContent={(_, word) => (
               <WordCard key={word._id} word={word} savedOnly={savedOnly} />
             )}
@@ -347,7 +359,6 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
               }
             }}
             components={{
-              ScrollSeekPlaceholder: () => <FeedSkeleton count={1} />,
               Footer: () =>
                 hasNextPage ? (
                   <div className="flex items-center justify-center py-4">
