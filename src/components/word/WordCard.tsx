@@ -184,31 +184,6 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
     setLocalLikedBy(likedBy);
   }, [likedBy]);
 
-  useEffect(() => {
-    const node = imageStripRef.current;
-    if (!node) return;
-    const imgs = Array.from(
-      node.querySelectorAll<HTMLImageElement>("img[data-orientation-key]")
-    );
-    if (imgs.length === 0) return;
-    setImageOrientations((prev) => {
-      let next = prev;
-      let didUpdate = false;
-      imgs.forEach((img) => {
-        const key = img.dataset.orientationKey;
-        if (!key || prev[key]) return;
-        if (!img.complete || !img.naturalWidth || !img.naturalHeight) return;
-        const nextOrientation =
-          img.naturalHeight > img.naturalWidth ? "portrait" : "landscape";
-        if (!didUpdate) {
-          next = { ...prev };
-          didUpdate = true;
-        }
-        next[key] = nextOrientation;
-      });
-      return didUpdate ? next : prev;
-    });
-  }, [word.images]);
 
   const hasSaved = session?.user?.id
     ? savedBy.includes(String(session.user.id))
@@ -241,9 +216,6 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
   const [editText, setEditText] = useState(word.content ?? "");
   const [isRemoving, setIsRemoving] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const [imageOrientations, setImageOrientations] = useState<
-    Record<string, "portrait" | "landscape">
-  >({});
   const stopPropagation = useCallback((event: React.MouseEvent) => {
     event.stopPropagation();
   }, []);
@@ -1211,52 +1183,40 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                       }}
                     >
                       {word.images.map((src, index) => {
-                      const isCloudinary =
-                        typeof src === "string" && src.includes("res.cloudinary.com");
-                      const thumbSrc = isCloudinary
-                        ? cloudinaryTransform(src, { width: 600 })
-                        : src;
-                      const key = `${src}-${index}`;
-                      const storedOrientation = word.imageOrientations?.[index];
-                      const orientation =
-                        storedOrientation ?? imageOrientations[key] ?? "landscape";
-                      const aspectClass =
-                        orientation === "portrait" ? "aspect-[3/4]" : "aspect-[4/3]";
-                      return (
-                        <div
-                          key={key}
-                          className={`relative shrink-0 snap-start w-[60%] sm:w-[44%] max-w-[220px] ${aspectClass} overflow-hidden rounded-md border border-transparent`}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            if (dragMovedRef.current || Math.abs(lastDragDeltaRef.current) > 6) {
-                              return;
-                            }
-                            const fullSrc = isCloudinary
-                              ? cloudinaryTransform(src, { width: 1200 })
-                              : src;
-                            setLightboxSrc(fullSrc);
-                          }}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={thumbSrc}
-                            alt=""
-                            data-orientation-key={key}
-                            className="h-full w-full object-cover"
-                            loading="lazy"
-                            onLoad={(event) => {
-                              const { naturalWidth, naturalHeight } = event.currentTarget;
-                              if (!naturalWidth || !naturalHeight) return;
-                              const next =
-                                naturalHeight > naturalWidth ? "portrait" : "landscape";
-                              setImageOrientations((prev) =>
-                                prev[key] === next ? prev : { ...prev, [key]: next }
-                              );
+                        const isCloudinary =
+                          typeof src === "string" && src.includes("res.cloudinary.com");
+                        const thumbSrc = isCloudinary
+                          ? cloudinaryTransform(src, { width: 600 })
+                          : src;
+                        const key = `${src}-${index}`;
+                        const orientation = word.imageOrientations?.[index] ?? "landscape";
+                        const aspectClass =
+                          orientation === "portrait" ? "aspect-[3/4]" : "aspect-[4/3]";
+                        return (
+                          <div
+                            key={key}
+                            className={`relative shrink-0 snap-start w-[60%] sm:w-[44%] max-w-[220px] ${aspectClass} overflow-hidden rounded-md border border-transparent`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              if (dragMovedRef.current || Math.abs(lastDragDeltaRef.current) > 6) {
+                                return;
+                              }
+                              const fullSrc = isCloudinary
+                                ? cloudinaryTransform(src, { width: 1200 })
+                                : src;
+                              setLightboxSrc(fullSrc);
                             }}
-                          />
-                        </div>
-                      );
-                    })}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={thumbSrc}
+                              alt=""
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
                   </>
                 )}

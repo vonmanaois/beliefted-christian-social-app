@@ -71,6 +71,9 @@ export default function FollowingWall() {
   const restoreTimeoutRef = useRef<number | null>(null);
   const virtuosoRef = useRef<VirtuosoHandle | null>(null);
   const saveTimeoutRef = useRef<number | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const virtualizationThreshold = 30;
+  const useVirtualized = items.length >= virtualizationThreshold;
 
   const prefetchThreshold = 6;
   const handleRangeChanged = useCallback(
@@ -126,6 +129,23 @@ export default function FollowingWall() {
       }
     };
   }, [feedKey, items.length]);
+
+  useEffect(() => {
+    if (useVirtualized) return;
+    if (!hasNextPage) return;
+    const node = loadMoreRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) return;
+        if (isFetchingNextPage || isFetching) return;
+        fetchNextPage();
+      },
+      { rootMargin: "600px" }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [useVirtualized, hasNextPage, isFetchingNextPage, isFetching, fetchNextPage]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -397,50 +417,71 @@ export default function FollowingWall() {
         </div>
       )}
       <div className="relative min-h-[40vh]">
-        {isRestoring && (
+        {useVirtualized && isRestoring && (
           <div className="pointer-events-none absolute inset-0 z-10">
             <FeedSkeleton count={3} />
           </div>
         )}
         <div
           className={`transition-opacity ${
-            isRestoring ? "opacity-0 pointer-events-none" : "opacity-100"
+            useVirtualized && isRestoring ? "opacity-0 pointer-events-none" : "opacity-100"
           }`}
         >
-          <Virtuoso
-            ref={virtuosoRef}
-            data={items}
-            totalCount={items.length}
-            useWindowScroll
-            increaseViewportBy={{ top: 900, bottom: 600 }}
-            overscan={400}
-            restoreStateFrom={restoredState}
-            rangeChanged={handleRangeChanged}
-            itemContent={(_, item) =>
-              item.type === "word" ? (
-                <WordCard key={`word-${item.word._id}`} word={item.word} />
-              ) : (
-                <PrayerCard key={`prayer-${item.prayer._id}`} prayer={item.prayer} />
-              )
-            }
-            endReached={() => {
-              if (hasNextPage && !isFetchingNextPage) {
-                fetchNextPage();
+          {useVirtualized ? (
+            <Virtuoso
+              ref={virtuosoRef}
+              data={items}
+              totalCount={items.length}
+              useWindowScroll
+              increaseViewportBy={{ top: 1600, bottom: 700 }}
+              overscan={600}
+              restoreStateFrom={restoredState}
+              rangeChanged={handleRangeChanged}
+              itemContent={(_, item) =>
+                item.type === "word" ? (
+                  <WordCard key={`word-${item.word._id}`} word={item.word} />
+                ) : (
+                  <PrayerCard key={`prayer-${item.prayer._id}`} prayer={item.prayer} />
+                )
               }
-            }}
-            components={{
-              Footer: () =>
-                hasNextPage ? (
-                  <div className="flex items-center justify-center py-4">
-                    {isFetchingNextPage ? (
-                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--panel-border)] border-t-[color:var(--accent)]" />
-                    ) : (
-                      <div className="h-2 w-2 rounded-full bg-[color:var(--panel-border)]" />
-                    )}
-                  </div>
-                ) : null,
-            }}
-          />
+              endReached={() => {
+                if (hasNextPage && !isFetchingNextPage) {
+                  fetchNextPage();
+                }
+              }}
+              components={{
+                Footer: () =>
+                  hasNextPage ? (
+                    <div className="flex items-center justify-center py-4">
+                      {isFetchingNextPage ? (
+                        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--panel-border)] border-t-[color:var(--accent)]" />
+                      ) : (
+                        <div className="h-2 w-2 rounded-full bg-[color:var(--panel-border)]" />
+                      )}
+                    </div>
+                  ) : null,
+              }}
+            />
+          ) : (
+            <div className="space-y-4">
+              {items.map((item) =>
+                item.type === "word" ? (
+                  <WordCard key={`word-${item.word._id}`} word={item.word} />
+                ) : (
+                  <PrayerCard key={`prayer-${item.prayer._id}`} prayer={item.prayer} />
+                )
+              )}
+              {hasNextPage && (
+                <div ref={loadMoreRef} className="flex items-center justify-center py-4">
+                  {isFetchingNextPage ? (
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--panel-border)] border-t-[color:var(--accent)]" />
+                  ) : (
+                    <div className="h-2 w-2 rounded-full bg-[color:var(--panel-border)]" />
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </section>
