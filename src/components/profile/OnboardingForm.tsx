@@ -57,6 +57,7 @@ export default function OnboardingForm({
         currentBio={bio ?? null}
         currentImage={image ?? null}
         showPhoto
+        lazyPhoto
         showDangerZone={false}
         submitDisabled={!agreed}
         submitDisabledMessage="Agree to the Terms and Privacy Policy to continue."

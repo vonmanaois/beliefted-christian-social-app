@@ -216,6 +216,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
   const [likeBurst, setLikeBurst] = useState(false);
   const [showComments, setShowComments] = useState(defaultShowComments);
   const [commentsActive, setCommentsActive] = useState(defaultShowComments);
+  const [commentsReady, setCommentsReady] = useState(defaultShowComments);
   const [commentText, setCommentText] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentText, setEditingCommentText] = useState("");
@@ -779,18 +780,22 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
   const isDeleting = deleteMutation.isPending;
 
   const scheduleCommentsActivation = useCallback(() => {
-    if (commentsActive) return;
-    if (typeof window === "undefined") {
+    if (commentsActive && commentsReady) return;
+    const activate = () => {
       setCommentsActive(true);
+      setCommentsReady(true);
+    };
+    if (typeof window === "undefined") {
+      activate();
       return;
     }
     if ("requestIdleCallback" in window) {
       (window as Window & { requestIdleCallback?: (cb: () => void) => number })
-        .requestIdleCallback?.(() => setCommentsActive(true));
+        .requestIdleCallback?.(activate);
       return;
     }
-    setTimeout(() => setCommentsActive(true), 0);
-  }, [commentsActive]);
+    setTimeout(activate, 0);
+  }, [commentsActive, commentsReady]);
 
   const toggleComments = useCallback((event?: React.MouseEvent) => {
     event?.stopPropagation();
@@ -810,9 +815,11 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
   }, [commentText, scheduleCommentsActivation]);
 
   useEffect(() => {
-    if (showComments) {
-      scheduleCommentsActivation();
+    if (!showComments) {
+      setCommentsReady(false);
+      return;
     }
+    scheduleCommentsActivation();
   }, [showComments, scheduleCommentsActivation]);
 
   const handleLike = useCallback(async (event?: React.MouseEvent) => {
@@ -895,7 +902,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
     if (!target) return;
     if (target.closest("button, a, input, textarea, select, [data-ignore-view]")) return;
     if (!word.user?.username) return;
-    router.push(`/${word.user.username}/${wordId}`);
+    router.push(`/${word.user.username}/${wordId}`, { scroll: false });
   };
 
   useEffect(() => {
@@ -1285,31 +1292,36 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
           </div>
         )}
 
-        {showComments && (
-          <WordComments
-            sessionUserId={session?.user?.id ? String(session.user.id) : null}
-            commentText={commentText}
-            onCommentTextChange={setCommentText}
-            commentInputRef={commentInputRef}
-            commentFormRef={commentFormRef}
-            onSubmit={handleCommentSubmit}
-            commentError={commentError}
-            isLoading={isLoadingComments}
-            comments={comments}
-            commentMenuId={commentMenuId}
-            onToggleCommentMenu={setCommentMenuId}
-            editingCommentId={editingCommentId}
-            editingCommentText={editingCommentText}
-            onEditingCommentTextChange={setEditingCommentText}
-            onStartEdit={handleStartEditComment}
-            onCancelEdit={handleCancelEditComment}
-            onSaveEdit={handleSaveEditComment}
-            onRequestDelete={handleRequestDeleteComment}
-            commentEditRef={commentEditRef}
-            onRetrySubmit={handleCommentSubmit}
-            formatPostTime={formatPostTime}
-          />
-        )}
+        {showComments &&
+          (commentsReady ? (
+            <WordComments
+              sessionUserId={session?.user?.id ? String(session.user.id) : null}
+              commentText={commentText}
+              onCommentTextChange={setCommentText}
+              commentInputRef={commentInputRef}
+              commentFormRef={commentFormRef}
+              onSubmit={handleCommentSubmit}
+              commentError={commentError}
+              isLoading={isLoadingComments}
+              comments={comments}
+              commentMenuId={commentMenuId}
+              onToggleCommentMenu={setCommentMenuId}
+              editingCommentId={editingCommentId}
+              editingCommentText={editingCommentText}
+              onEditingCommentTextChange={setEditingCommentText}
+              onStartEdit={handleStartEditComment}
+              onCancelEdit={handleCancelEditComment}
+              onSaveEdit={handleSaveEditComment}
+              onRequestDelete={handleRequestDeleteComment}
+              commentEditRef={commentEditRef}
+              onRetrySubmit={handleCommentSubmit}
+              formatPostTime={formatPostTime}
+            />
+          ) : (
+            <div className="mt-3 text-[11px] text-[color:var(--subtle)]">
+              Loading reflections...
+            </div>
+          ))}
       </div>
 
       <Modal

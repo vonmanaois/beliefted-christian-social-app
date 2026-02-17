@@ -25,6 +25,7 @@ export default function PrayerWall() {
   const [formKey, setFormKey] = useState(0);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [isPrayerDirty, setIsPrayerDirty] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const formRef = useRef<HTMLDivElement | null>(null);
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
@@ -53,8 +54,13 @@ export default function PrayerWall() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isPrayerDirty, showDiscardConfirm]);
 
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => setIsMounted(true));
+    return () => window.cancelAnimationFrame(id);
+  }, []);
+
   return (
-    <section className="feed-surface">
+    <section className={`feed-surface ${isMounted ? "feed-surface--enter" : "feed-surface--pre"}`}>
       <div ref={formRef} className="wall-card flex items-start gap-3 rounded-none border-b-0 pb-3">
         <div className="avatar-ring">
           {session?.user?.image ? (

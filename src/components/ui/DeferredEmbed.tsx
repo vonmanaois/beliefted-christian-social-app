@@ -44,8 +44,26 @@ export default function DeferredEmbed({
 
   useEffect(() => {
     if (isVisible) {
-      const id = window.requestAnimationFrame(() => setIsActive(true));
-      return () => cancelAnimationFrame(id);
+      const root = globalThis as typeof globalThis & {
+        requestIdleCallback?: (cb: () => void) => number;
+        cancelIdleCallback?: (id: number) => void;
+        requestAnimationFrame?: (cb: () => void) => number;
+        cancelAnimationFrame?: (id: number) => void;
+      };
+      if (typeof root.requestIdleCallback === "function") {
+        const idleId = root.requestIdleCallback(() => setIsActive(true));
+        return () => {
+          if (idleId !== undefined) {
+            root.cancelIdleCallback?.(idleId);
+          }
+        };
+      }
+      if (typeof root.requestAnimationFrame === "function") {
+        const id = root.requestAnimationFrame(() => setIsActive(true));
+        return () => root.cancelAnimationFrame?.(id);
+      }
+      const timeoutId = window.setTimeout(() => setIsActive(true), 0);
+      return () => window.clearTimeout(timeoutId);
     }
     return;
   }, [isVisible]);

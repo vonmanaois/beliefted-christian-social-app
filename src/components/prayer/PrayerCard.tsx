@@ -162,6 +162,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
   const [isPending, setIsPending] = useState(false);
   const [showComments, setShowComments] = useState(defaultShowComments);
   const [commentsActive, setCommentsActive] = useState(defaultShowComments);
+  const [commentsReady, setCommentsReady] = useState(defaultShowComments);
   const [showCommentConfirm, setShowCommentConfirm] = useState(false);
   const [commentText, setCommentText] = useState("");
   const commentFormRef = useRef<HTMLDivElement | null>(null);
@@ -617,18 +618,22 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
   }, [session?.user?.id, openSignIn, prayMutation]);
 
   const scheduleCommentsActivation = useCallback(() => {
-    if (commentsActive) return;
-    if (typeof window === "undefined") {
+    if (commentsActive && commentsReady) return;
+    const activate = () => {
       setCommentsActive(true);
+      setCommentsReady(true);
+    };
+    if (typeof window === "undefined") {
+      activate();
       return;
     }
     if ("requestIdleCallback" in window) {
       (window as Window & { requestIdleCallback?: (cb: () => void) => number })
-        .requestIdleCallback?.(() => setCommentsActive(true));
+        .requestIdleCallback?.(activate);
       return;
     }
-    setTimeout(() => setCommentsActive(true), 0);
-  }, [commentsActive]);
+    setTimeout(activate, 0);
+  }, [commentsActive, commentsReady]);
 
   const toggleComments = useCallback(() => {
     setShowComments((prev) => {
@@ -647,9 +652,11 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
   }, [commentText, scheduleCommentsActivation]);
 
   useEffect(() => {
-    if (showComments) {
-      scheduleCommentsActivation();
+    if (!showComments) {
+      setCommentsReady(false);
+      return;
     }
+    scheduleCommentsActivation();
   }, [showComments, scheduleCommentsActivation]);
 
   const handleCardClick = (event: React.MouseEvent) => {
@@ -657,11 +664,11 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     if (!target) return;
     if (target.closest("button, a, input, textarea, select, [data-ignore-view]")) return;
     if (prayer.isAnonymous) {
-      router.push(`/anonymous/${prayerId}`);
+      router.push(`/anonymous/${prayerId}`, { scroll: false });
       return;
     }
     if (!prayer.user?.username) return;
-    router.push(`/${prayer.user.username}/${prayerId}`);
+    router.push(`/${prayer.user.username}/${prayerId}`, { scroll: false });
   };
 
   const handleCommentSubmit = async (event?: React.FormEvent) => {
@@ -983,31 +990,36 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
           </div>
         )}
 
-        {showComments && (
-          <PrayerComments
-            sessionUserId={session?.user?.id ? String(session.user.id) : null}
-            commentText={commentText}
-            onCommentTextChange={setCommentText}
-            commentInputRef={commentInputRef}
-            commentFormRef={commentFormRef}
-            onSubmit={handleCommentSubmit}
-            onRetrySubmit={handleCommentSubmit}
-            commentError={commentError}
-            isLoading={isLoadingComments}
-            comments={comments}
-            commentMenuId={commentMenuId}
-            onToggleCommentMenu={setCommentMenuId}
-            editingCommentId={editingCommentId}
-            editingCommentText={editingCommentText}
-            onEditingCommentTextChange={setEditingCommentText}
-            onStartEdit={handleStartEditComment}
-            onCancelEdit={handleCancelEditComment}
-            onSaveEdit={handleSaveEditComment}
-            onRequestDelete={handleRequestDeleteComment}
-            commentEditRef={commentEditRef}
-            formatPostTime={formatPostTime}
-          />
-        )}
+        {showComments &&
+          (commentsReady ? (
+            <PrayerComments
+              sessionUserId={session?.user?.id ? String(session.user.id) : null}
+              commentText={commentText}
+              onCommentTextChange={setCommentText}
+              commentInputRef={commentInputRef}
+              commentFormRef={commentFormRef}
+              onSubmit={handleCommentSubmit}
+              onRetrySubmit={handleCommentSubmit}
+              commentError={commentError}
+              isLoading={isLoadingComments}
+              comments={comments}
+              commentMenuId={commentMenuId}
+              onToggleCommentMenu={setCommentMenuId}
+              editingCommentId={editingCommentId}
+              editingCommentText={editingCommentText}
+              onEditingCommentTextChange={setEditingCommentText}
+              onStartEdit={handleStartEditComment}
+              onCancelEdit={handleCancelEditComment}
+              onSaveEdit={handleSaveEditComment}
+              onRequestDelete={handleRequestDeleteComment}
+              commentEditRef={commentEditRef}
+              formatPostTime={formatPostTime}
+            />
+          ) : (
+            <div className="mt-3 text-[11px] text-[color:var(--subtle)]">
+              Loading encouragements...
+            </div>
+          ))}
       </div>
 
       <Modal

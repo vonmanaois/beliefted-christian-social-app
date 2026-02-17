@@ -2,23 +2,28 @@
 
 import { useSession } from "next-auth/react";
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
-import { useRef, useState } from "react";
-import { Virtuoso } from "react-virtuoso";
+import { useEffect, useRef, useState } from "react";
+import { Virtuoso, type VirtuosoHandle, type StateSnapshot } from "react-virtuoso";
 import { UserCircle, UserPlus } from "@phosphor-icons/react";
 import Image from "next/image";
 import { useUIStore } from "@/lib/uiStore";
-import WordCard, { type Word } from "@/components/word/WordCard";
-import PrayerCard, { type Prayer } from "@/components/prayer/PrayerCard";
+import WordCard from "@/components/word/WordCard";
+import PrayerCard from "@/components/prayer/PrayerCard";
+import type { Word } from "@/components/word/types";
+import type { Prayer } from "@/components/prayer/types";
 import FeedSkeleton from "@/components/ui/FeedSkeleton";
 
 type FollowingItem =
   | { type: "word"; word: Word }
   | { type: "prayer"; prayer: Prayer };
 
+type RestoreState = { ranges: unknown; scrollTop: number };
+
 export default function FollowingWall() {
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
   const { openSignIn } = useUIStore();
+  const [isMounted, setIsMounted] = useState(false);
 
   const {
     data,
@@ -56,6 +61,18 @@ export default function FollowingWall() {
     enabled: isAuthenticated,
   });
 
+  const items = data?.pages.flatMap((page) => page.items) ?? [];
+  const feedKey = "feed:following";
+  const savedSnapshotRef = useRef<{ state: RestoreState; count: number } | null>(null);
+  const [restoredState, setRestoredState] = useState<RestoreState | undefined>(undefined);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const restoreOnceRef = useRef(false);
+  const restoreRafRef = useRef<number | null>(null);
+  const restoreRaf2Ref = useRef<number | null>(null);
+  const restoreTimeoutRef = useRef<number | null>(null);
+  const virtuosoRef = useRef<VirtuosoHandle | null>(null);
+  const saveRafRef = useRef<number | null>(null);
+
   const pullStartRef = useRef<number | null>(null);
   const [pullDistance, setPullDistance] = useState(0);
   const [isPulling, setIsPulling] = useState(false);
@@ -74,9 +91,121 @@ export default function FollowingWall() {
   const pullRafRef = useRef<number | null>(null);
   const lastPullDistanceRef = useRef(0);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      if (saveRafRef.current !== null) return;
+      saveRafRef.current = window.requestAnimationFrame(() => {
+        saveRafRef.current = null;
+        virtuosoRef.current?.getState((state) => {
+          sessionStorage.setItem(
+            feedKey,
+            JSON.stringify({ state, count: items.length })
+          );
+        });
+      });
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (saveRafRef.current !== null) {
+        cancelAnimationFrame(saveRafRef.current);
+        saveRafRef.current = null;
+      }
+    };
+  }, [feedKey, items.length]);
+
+  useEffect(() => {
+    const raw = sessionStorage.getItem(feedKey);
+    if (!raw) {
+      savedSnapshotRef.current = null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRestoredState(undefined);
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw) as { state: RestoreState; count?: number };
+      if (
+        parsed?.state &&
+        typeof parsed.state.scrollTop === "number" &&
+        parsed.state.ranges != null
+      ) {
+        savedSnapshotRef.current = {
+          state: parsed.state,
+          count: parsed.count ?? 0,
+        };
+        setRestoredState(parsed.state);
+      } else {
+        savedSnapshotRef.current = null;
+        setRestoredState(undefined);
+      }
+    } catch {
+      savedSnapshotRef.current = null;
+      setRestoredState(undefined);
+    }
+  }, [feedKey]);
+  useEffect(() => {
+    restoreOnceRef.current = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsRestoring(Boolean(restoredState));
+  }, [feedKey, restoredState]);
+  useEffect(() => {
+    const saved = savedSnapshotRef.current;
+    if (!saved || !restoredState) return;
+    if (items.length > 0 && saved.count > 0 && items.length + 3 < saved.count) {
+      savedSnapshotRef.current = null;
+      sessionStorage.removeItem(feedKey);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRestoredState(undefined);
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "auto" });
+      }
+    }
+  }, [items.length, feedKey, restoredState]);
+  useEffect(() => {
+    if (!restoredState) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsRestoring(false);
+      return;
+    }
+    if (restoreOnceRef.current) return;
+    restoreOnceRef.current = true;
+    setIsRestoring(true);
+    if (typeof window === "undefined") {
+      setIsRestoring(false);
+      return;
+    }
+    restoreRafRef.current = window.requestAnimationFrame(() => {
+      restoreRaf2Ref.current = window.requestAnimationFrame(() => {
+        setIsRestoring(false);
+      });
+    });
+    restoreTimeoutRef.current = window.setTimeout(() => {
+      setIsRestoring(false);
+    }, 240);
+    return () => {
+      if (restoreRafRef.current !== null) {
+        cancelAnimationFrame(restoreRafRef.current);
+        restoreRafRef.current = null;
+      }
+      if (restoreRaf2Ref.current !== null) {
+        cancelAnimationFrame(restoreRaf2Ref.current);
+        restoreRaf2Ref.current = null;
+      }
+      if (restoreTimeoutRef.current !== null) {
+        clearTimeout(restoreTimeoutRef.current);
+        restoreTimeoutRef.current = null;
+      }
+    };
+  }, [restoredState]);
+
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => setIsMounted(true));
+    return () => window.cancelAnimationFrame(id);
+  }, []);
+
   if (!isAuthenticated) {
     return (
-      <section className="feed-surface">
+      <section className={`feed-surface ${isMounted ? "feed-surface--enter" : "feed-surface--pre"}`}>
         <div className="panel p-6 text-sm text-[color:var(--subtle)]">
           <div className="flex items-start gap-3">
             <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--panel-border)] text-[color:var(--subtle)]">
@@ -103,7 +232,7 @@ export default function FollowingWall() {
 
   if (isLoading) {
     return (
-      <section className="feed-surface">
+      <section className={`feed-surface ${isMounted ? "feed-surface--enter" : "feed-surface--pre"}`}>
         <FeedSkeleton />
       </section>
     );
@@ -111,7 +240,7 @@ export default function FollowingWall() {
 
   if (isError) {
     return (
-      <section className="feed-surface">
+      <section className={`feed-surface ${isMounted ? "feed-surface--enter" : "feed-surface--pre"}`}>
         <div className="panel p-6 text-sm text-[color:var(--subtle)]">
           <p className="text-[color:var(--ink)] font-semibold">Something went wrong.</p>
           <p className="mt-1">We couldn&apos;t load your following feed.</p>
@@ -127,11 +256,9 @@ export default function FollowingWall() {
     );
   }
 
-  const items = data?.pages.flatMap((page) => page.items) ?? [];
-
   if (items.length === 0) {
     return (
-      <section className="feed-surface">
+      <section className={`feed-surface ${isMounted ? "feed-surface--enter" : "feed-surface--pre"}`}>
         <button
           type="button"
           onClick={() => {
@@ -178,7 +305,7 @@ export default function FollowingWall() {
 
   return (
     <section
-      className="feed-surface"
+      className={`feed-surface ${isMounted ? "feed-surface--enter" : "feed-surface--pre"}`}
       onTouchStart={(event) => {
         const scrollTop =
           document.scrollingElement?.scrollTop ?? window.scrollY ?? 0;
@@ -248,35 +375,57 @@ export default function FollowingWall() {
           <div className="loading-bar__fill" />
         </div>
       )}
-      <Virtuoso
-        data={items}
-        useWindowScroll
-        increaseViewportBy={300}
-        itemContent={(_, item) =>
-          item.type === "word" ? (
-            <WordCard key={`word-${item.word._id}`} word={item.word} />
-          ) : (
-            <PrayerCard key={`prayer-${item.prayer._id}`} prayer={item.prayer} />
-          )
-        }
-        endReached={() => {
-          if (hasNextPage && !isFetchingNextPage) {
-            fetchNextPage();
-          }
-        }}
-        components={{
-          Footer: () =>
-            hasNextPage ? (
-              <div className="flex items-center justify-center py-4">
-                {isFetchingNextPage ? (
-                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--panel-border)] border-t-[color:var(--accent)]" />
-                ) : (
-                  <div className="h-2 w-2 rounded-full bg-[color:var(--panel-border)]" />
-                )}
-              </div>
-            ) : null,
-        }}
-      />
+      <div className="relative min-h-[40vh]">
+        {isRestoring && (
+          <div className="pointer-events-none absolute inset-0 z-10">
+            <FeedSkeleton count={3} />
+          </div>
+        )}
+        <div
+          className={`transition-opacity ${
+            isRestoring ? "opacity-0 pointer-events-none" : "opacity-100"
+          }`}
+        >
+          <Virtuoso
+            ref={virtuosoRef}
+            data={items}
+            totalCount={items.length}
+            useWindowScroll
+            increaseViewportBy={200}
+            overscan={200}
+            scrollSeekConfiguration={{
+              enter: (velocity) => Math.abs(velocity) > 200,
+              exit: (velocity) => Math.abs(velocity) < 30,
+            }}
+            restoreStateFrom={restoredState as unknown as StateSnapshot | undefined}
+            itemContent={(_, item) =>
+              item.type === "word" ? (
+                <WordCard key={`word-${item.word._id}`} word={item.word} />
+              ) : (
+                <PrayerCard key={`prayer-${item.prayer._id}`} prayer={item.prayer} />
+              )
+            }
+            endReached={() => {
+              if (hasNextPage && !isFetchingNextPage) {
+                fetchNextPage();
+              }
+            }}
+            components={{
+              ScrollSeekPlaceholder: () => <FeedSkeleton count={1} />,
+              Footer: () =>
+                hasNextPage ? (
+                  <div className="flex items-center justify-center py-4">
+                    {isFetchingNextPage ? (
+                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--panel-border)] border-t-[color:var(--accent)]" />
+                    ) : (
+                      <div className="h-2 w-2 rounded-full bg-[color:var(--panel-border)]" />
+                    )}
+                  </div>
+                ) : null,
+            }}
+          />
+        </div>
+      </div>
     </section>
   );
 }

@@ -448,6 +448,7 @@ html.notifications-open body {
   overflow: hidden;
 }
 
+
 .info-drawer-panel {
   transform: translateX(100%);
   transition: transform 220ms ease;
@@ -771,6 +772,17 @@ html[data-theme="banana"] .panel-glass {
   min-height: calc(100vh - 180px);
   display: flex;
   flex-direction: column;
+}
+
+.feed-surface--pre {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.feed-surface--enter {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 180ms ease, transform 180ms ease;
 }
 
 .feed-form {

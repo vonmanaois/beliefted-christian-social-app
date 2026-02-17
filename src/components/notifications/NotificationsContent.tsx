@@ -63,9 +63,13 @@ const formatNotificationTime = (timestamp: string) => {
 
 type NotificationsContentProps = {
   active?: boolean;
+  onNavigate?: () => void;
 };
 
-export default function NotificationsContent({ active = false }: NotificationsContentProps) {
+export default function NotificationsContent({
+  active = false,
+  onNavigate,
+}: NotificationsContentProps) {
   const { status, data: session } = useSession();
   const isAuthenticated = status === "authenticated";
   const queryClient = useQueryClient();
@@ -278,7 +282,12 @@ export default function NotificationsContent({ active = false }: NotificationsCo
                     </>
                   );
                   return href ? (
-                    <Link href={href} prefetch={false} className="flex-1 cursor-pointer">
+                    <Link
+                      href={href}
+                      prefetch={false}
+                      className="flex-1 cursor-pointer"
+                      onClick={onNavigate}
+                    >
                       {content}
                     </Link>
                   ) : (

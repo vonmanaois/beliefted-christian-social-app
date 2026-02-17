@@ -26,6 +26,7 @@ export default function WordWall() {
   const [formKey, setFormKey] = useState(0);
   const [isWordDirty, setIsWordDirty] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const formRef = useRef<HTMLDivElement | null>(null);
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
@@ -54,8 +55,13 @@ export default function WordWall() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isWordDirty, showDiscardConfirm]);
 
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => setIsMounted(true));
+    return () => window.cancelAnimationFrame(id);
+  }, []);
+
   return (
-    <section className="feed-surface">
+    <section className={`feed-surface ${isMounted ? "feed-surface--enter" : "feed-surface--pre"}`}>
       <DailyVerseCard />
       <div ref={formRef} className="wall-card flex items-start gap-3 rounded-none border-b-0 pb-3">
         <div className="avatar-ring">

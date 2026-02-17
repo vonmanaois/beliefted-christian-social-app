@@ -70,6 +70,7 @@ export default function Sidebar() {
   const [infoClosing, setInfoClosing] = useState(false);
   const [showInstallModal, setShowInstallModal] = useState(false);
   const [installPromptSupported, setInstallPromptSupported] = useState(false);
+  const [isIOSClient, setIsIOSClient] = useState(false);
   const deferredInstallPrompt = useRef<BeforeInstallPromptEvent | null>(null);
   const [menuMounted] = useState(true);
   const touchStartX = useRef<number | null>(null);
@@ -96,10 +97,11 @@ export default function Sidebar() {
     }, 220);
   }, [infoPanel]);
 
-  const isIOS = () => {
-    if (typeof navigator === "undefined") return false;
-    return /iphone|ipad|ipod/i.test(navigator.userAgent);
-  };
+  useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsIOSClient(/iphone|ipad|ipod/i.test(navigator.userAgent));
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -113,6 +115,7 @@ export default function Sidebar() {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     };
   }, []);
+
 
   const { data: notificationsCount = 0 } = useQuery({
     queryKey: ["notifications", "count", session?.user?.id ?? "guest"],
@@ -383,6 +386,14 @@ export default function Sidebar() {
     typeof profileSummary?.onboardingComplete === "boolean"
       ? profileSummary.onboardingComplete
       : true;
+  const handleProfileNavigate = useCallback(() => {
+    if (!isAuthenticated) {
+      openSignIn();
+      return;
+    }
+    if (!resolvedUsername) return;
+    router.push(`/profile/${resolvedUsername}`);
+  }, [isAuthenticated, openSignIn, resolvedUsername, router]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -414,6 +425,15 @@ export default function Sidebar() {
       setNotificationsClosing(false);
     }, 220);
   }, [notificationsOpen]);
+
+  const scrollHomeIfActive = useCallback(() => {
+    if (pathname !== "/") return false;
+    if (typeof window !== "undefined") {
+      // Jump instantly to avoid scroll jank in virtualized feeds.
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
+    return true;
+  }, [pathname]);
 
   const toggleThemeMenu = useCallback(() => {
     setThemeMenuOpen((prev) => !prev);
@@ -530,7 +550,11 @@ export default function Sidebar() {
           </div>
           <button
             type="button"
-            onClick={() => router.push("/")}
+            onClick={() => {
+              if (!scrollHomeIfActive()) {
+                router.push("/");
+              }
+            }}
             className="flex items-center gap-2 cursor-pointer min-w-0 justify-self-center"
           >
             <Image
@@ -592,9 +616,10 @@ export default function Sidebar() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (pathname !== "/") {
+                    if (!scrollHomeIfActive()) {
                       router.push("/");
                     }
+                    closeMenu();
                   }}
                   className="mt-3 flex items-center gap-3 text-left"
                   aria-label="Go to home"
@@ -688,8 +713,8 @@ export default function Sidebar() {
                       type="button"
                       onClick={() => {
                         if (!isAuthenticated) return;
-                        const target = resolvedUsername ? `/profile/${resolvedUsername}` : "/profile";
-                        router.push(target);
+                        if (!resolvedUsername) return;
+                        router.push(`/profile/${resolvedUsername}`);
                       }}
                       className="flex items-center gap-3 text-left"
                       aria-label="Go to profile"
@@ -777,7 +802,13 @@ export default function Sidebar() {
                     </button>
                   </div>
                   <div className="mt-4">
-                    <NotificationsContent active={notificationsOpen} />
+                    <NotificationsContent
+                      active={notificationsOpen}
+                      onNavigate={() => {
+                        closeNotifications();
+                        closeMenu();
+                      }}
+                    />
                   </div>
                 </div>
               </div>
@@ -829,7 +860,11 @@ export default function Sidebar() {
       <aside className="hidden lg:flex p-5 flex-col gap-5 h-fit items-center text-center lg:items-start lg:text-left bg-transparent border-none shadow-none">
       <button
         type="button"
-        onClick={() => router.push("/")}
+        onClick={() => {
+          if (!scrollHomeIfActive()) {
+            router.push("/");
+          }
+        }}
         className="flex items-center gap-3 text-left cursor-pointer"
       >
         <Image
@@ -872,7 +907,7 @@ export default function Sidebar() {
           type="button"
           className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
           onClick={() => {
-            if (pathname !== "/") {
+            if (!scrollHomeIfActive()) {
               router.push("/");
             }
             setActiveHomeTab("words");
@@ -905,15 +940,7 @@ export default function Sidebar() {
           type="button"
           className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
           onClick={() => {
-            if (isAuthenticated) {
-              if (resolvedUsername) {
-                router.push(`/profile/${resolvedUsername}`);
-              } else {
-                router.push("/profile");
-              }
-            } else {
-              openSignIn();
-            }
+            handleProfileNavigate();
           }}
         >
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
@@ -997,8 +1024,7 @@ export default function Sidebar() {
             <button
               type="button"
               onClick={() => {
-                const target = resolvedUsername ? `/profile/${resolvedUsername}` : "/profile";
-                router.push(target);
+                handleProfileNavigate();
               }}
               className="flex items-center gap-3 text-left"
               aria-label="Go to profile"
@@ -1065,7 +1091,7 @@ export default function Sidebar() {
         isOpen={showInstallModal}
         onClose={() => setShowInstallModal(false)}
       >
-        {isIOS() ? (
+        {isIOSClient ? (
           <div className="text-sm text-[color:var(--subtle)]">
             <p>Apple doesn’t allow one‑tap installs on iOS.</p>
             <p className="mt-3">To add Beliefted:</p>
@@ -1125,10 +1151,10 @@ export default function Sidebar() {
       >
         <div className="flex items-center justify-around px-5 py-3 text-[color:var(--ink)]">
           <button
-            type="button"
-            className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-            onClick={() => {
-            if (pathname !== "/") {
+          type="button"
+          className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+          onClick={() => {
+            if (!scrollHomeIfActive()) {
               router.push("/");
             }
             setActiveHomeTab("words");
@@ -1150,16 +1176,8 @@ export default function Sidebar() {
             type="button"
             className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
             onClick={() => {
-              if (isAuthenticated) {
-                if (resolvedUsername) {
-                  router.push(`/profile/${resolvedUsername}`);
-                } else {
-                  router.push("/profile");
-                }
-              } else {
-                openSignIn();
-              }
-            }}
+            handleProfileNavigate();
+          }}
           >
             <User size={24} weight="regular" />
           </button>

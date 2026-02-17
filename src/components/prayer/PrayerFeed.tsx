@@ -1,8 +1,12 @@
 "use client";
 
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
-import { Virtuoso } from "react-virtuoso";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Virtuoso,
+  type VirtuosoHandle,
+  type StateSnapshot,
+} from "react-virtuoso";
 import PrayerCard from "@/components/prayer/PrayerCard";
 import type { Prayer } from "@/components/prayer/types";
 import EmptyState from "@/components/ui/EmptyState";
@@ -15,6 +19,8 @@ type PrayerFeedProps = {
   followingOnly?: boolean;
   reprayedOnly?: boolean;
 };
+
+type RestoreState = { ranges: unknown; scrollTop: number };
 
 export default function PrayerFeed({ refreshKey, userId, followingOnly, reprayedOnly }: PrayerFeedProps) {
   const {
@@ -92,8 +98,131 @@ export default function PrayerFeed({ refreshKey, userId, followingOnly, reprayed
     return () => window.removeEventListener("feed:refresh", handler);
   }, [refetch]);
 
-
   const prayers = data?.pages.flatMap((page) => page.items) ?? [];
+  const feedKey = useMemo(
+    () =>
+      `feed:prayers:${userId ?? "all"}:${followingOnly ? "following" : "all"}:${
+        reprayedOnly ? "reprayed" : "all"
+      }`,
+    [userId, followingOnly, reprayedOnly]
+  );
+  const savedSnapshotRef = useRef<{ state: RestoreState; count: number } | null>(null);
+  const [restoredState, setRestoredState] = useState<RestoreState | undefined>(undefined);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const restoreOnceRef = useRef(false);
+  const restoreRafRef = useRef<number | null>(null);
+  const restoreRaf2Ref = useRef<number | null>(null);
+  const restoreTimeoutRef = useRef<number | null>(null);
+  const virtuosoRef = useRef<VirtuosoHandle | null>(null);
+  const saveRafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (saveRafRef.current !== null) return;
+      saveRafRef.current = window.requestAnimationFrame(() => {
+        saveRafRef.current = null;
+        virtuosoRef.current?.getState((state) => {
+          sessionStorage.setItem(
+            feedKey,
+            JSON.stringify({ state, count: prayers.length })
+          );
+        });
+      });
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (saveRafRef.current !== null) {
+        cancelAnimationFrame(saveRafRef.current);
+        saveRafRef.current = null;
+      }
+    };
+  }, [feedKey, prayers.length]);
+
+  useEffect(() => {
+    const raw = sessionStorage.getItem(feedKey);
+    if (!raw) {
+      savedSnapshotRef.current = null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRestoredState(undefined);
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw) as { state: RestoreState; count?: number };
+      if (
+        parsed?.state &&
+        typeof parsed.state.scrollTop === "number" &&
+        parsed.state.ranges != null
+      ) {
+        savedSnapshotRef.current = {
+          state: parsed.state,
+          count: parsed.count ?? 0,
+        };
+        setRestoredState(parsed.state);
+      } else {
+        savedSnapshotRef.current = null;
+        setRestoredState(undefined);
+      }
+    } catch {
+      savedSnapshotRef.current = null;
+      setRestoredState(undefined);
+    }
+  }, [feedKey]);
+  useEffect(() => {
+    restoreOnceRef.current = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsRestoring(Boolean(restoredState));
+  }, [feedKey, restoredState]);
+  useEffect(() => {
+    const saved = savedSnapshotRef.current;
+    if (!saved || !restoredState) return;
+    if (prayers.length > 0 && saved.count > 0 && prayers.length + 3 < saved.count) {
+      savedSnapshotRef.current = null;
+      sessionStorage.removeItem(feedKey);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRestoredState(undefined);
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "auto" });
+      }
+    }
+  }, [prayers.length, feedKey, restoredState]);
+  useEffect(() => {
+    if (!restoredState) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsRestoring(false);
+      return;
+    }
+    if (restoreOnceRef.current) return;
+    restoreOnceRef.current = true;
+    setIsRestoring(true);
+    if (typeof window === "undefined") {
+      setIsRestoring(false);
+      return;
+    }
+    restoreRafRef.current = window.requestAnimationFrame(() => {
+      restoreRaf2Ref.current = window.requestAnimationFrame(() => {
+        setIsRestoring(false);
+      });
+    });
+    restoreTimeoutRef.current = window.setTimeout(() => {
+      setIsRestoring(false);
+    }, 240);
+    return () => {
+      if (restoreRafRef.current !== null) {
+        cancelAnimationFrame(restoreRafRef.current);
+        restoreRafRef.current = null;
+      }
+      if (restoreRaf2Ref.current !== null) {
+        cancelAnimationFrame(restoreRaf2Ref.current);
+        restoreRaf2Ref.current = null;
+      }
+      if (restoreTimeoutRef.current !== null) {
+        clearTimeout(restoreTimeoutRef.current);
+        restoreTimeoutRef.current = null;
+      }
+    };
+  }, [restoredState]);
+
 
   if (isLoading) {
     return <FeedSkeleton />;
@@ -181,31 +310,53 @@ export default function PrayerFeed({ refreshKey, userId, followingOnly, reprayed
           <div className="loading-bar__fill" />
         </div>
       )}
-      <Virtuoso
-        data={prayers}
-        useWindowScroll
-        increaseViewportBy={300}
-        itemContent={(_, prayer) => (
-          <PrayerCard key={prayer._id} prayer={prayer} />
+      <div className="relative min-h-[40vh]">
+        {isRestoring && (
+          <div className="pointer-events-none absolute inset-0 z-10">
+            <FeedSkeleton count={3} />
+          </div>
         )}
-        endReached={() => {
-          if (hasNextPage && !isFetchingNextPage) {
-            fetchNextPage();
-          }
-        }}
-        components={{
-          Footer: () =>
-            hasNextPage ? (
-              <div className="flex items-center justify-center py-4">
-                {isFetchingNextPage ? (
-                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--panel-border)] border-t-[color:var(--accent)]" />
-                ) : (
-                  <div className="h-2 w-2 rounded-full bg-[color:var(--panel-border)]" />
-                )}
-              </div>
-            ) : null,
-        }}
-      />
+        <div
+          className={`transition-opacity ${
+            isRestoring ? "opacity-0 pointer-events-none" : "opacity-100"
+          }`}
+        >
+          <Virtuoso
+            ref={virtuosoRef}
+            data={prayers}
+            totalCount={prayers.length}
+            useWindowScroll
+            increaseViewportBy={200}
+            overscan={200}
+            scrollSeekConfiguration={{
+              enter: (velocity) => Math.abs(velocity) > 200,
+              exit: (velocity) => Math.abs(velocity) < 30,
+            }}
+            restoreStateFrom={restoredState as unknown as StateSnapshot | undefined}
+            itemContent={(_, prayer) => (
+              <PrayerCard key={prayer._id} prayer={prayer} />
+            )}
+            endReached={() => {
+              if (hasNextPage && !isFetchingNextPage) {
+                fetchNextPage();
+              }
+            }}
+            components={{
+              ScrollSeekPlaceholder: () => <FeedSkeleton count={1} />,
+              Footer: () =>
+                hasNextPage ? (
+                  <div className="flex items-center justify-center py-4">
+                    {isFetchingNextPage ? (
+                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--panel-border)] border-t-[color:var(--accent)]" />
+                    ) : (
+                      <div className="h-2 w-2 rounded-full bg-[color:var(--panel-border)]" />
+                    )}
+                  </div>
+                ) : null,
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 }

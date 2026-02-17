@@ -1,8 +1,12 @@
 "use client";
 
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
-import { Virtuoso } from "react-virtuoso";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Virtuoso,
+  type VirtuosoHandle,
+  type StateSnapshot,
+} from "react-virtuoso";
 import WordCard from "@/components/word/WordCard";
 import type { Word } from "@/components/word/types";
 import EmptyState from "@/components/ui/EmptyState";
@@ -15,6 +19,8 @@ type WordFeedProps = {
   followingOnly?: boolean;
   savedOnly?: boolean;
 };
+
+type RestoreState = { ranges: unknown; scrollTop: number };
 
 export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly }: WordFeedProps) {
   const {
@@ -83,6 +89,45 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
   });
 
   const words = data?.pages.flatMap((page) => page.items) ?? [];
+  const feedKey = useMemo(
+    () =>
+      `feed:words:${userId ?? "all"}:${followingOnly ? "following" : "all"}:${
+        savedOnly ? "saved" : "all"
+      }`,
+    [userId, followingOnly, savedOnly]
+  );
+  const savedSnapshotRef = useRef<{ state: RestoreState; count: number } | null>(null);
+  const [restoredState, setRestoredState] = useState<RestoreState | undefined>(undefined);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const restoreOnceRef = useRef(false);
+  const restoreRafRef = useRef<number | null>(null);
+  const restoreRaf2Ref = useRef<number | null>(null);
+  const restoreTimeoutRef = useRef<number | null>(null);
+  const virtuosoRef = useRef<VirtuosoHandle | null>(null);
+  const saveRafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (saveRafRef.current !== null) return;
+      saveRafRef.current = window.requestAnimationFrame(() => {
+        saveRafRef.current = null;
+        virtuosoRef.current?.getState((state) => {
+          sessionStorage.setItem(
+            feedKey,
+            JSON.stringify({ state, count: words.length })
+          );
+        });
+      });
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (saveRafRef.current !== null) {
+        cancelAnimationFrame(saveRafRef.current);
+        saveRafRef.current = null;
+      }
+    };
+  }, [feedKey, words.length]);
 
   const pullStartRef = useRef<number | null>(null);
   const [pullDistance, setPullDistance] = useState(0);
@@ -98,6 +143,90 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
     window.addEventListener("feed:refresh", handler);
     return () => window.removeEventListener("feed:refresh", handler);
   }, [refetch]);
+  useEffect(() => {
+    const raw = sessionStorage.getItem(feedKey);
+    if (!raw) {
+      savedSnapshotRef.current = null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRestoredState(undefined);
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw) as { state: RestoreState; count?: number };
+      if (
+        parsed?.state &&
+        typeof parsed.state.scrollTop === "number" &&
+        parsed.state.ranges != null
+      ) {
+        savedSnapshotRef.current = {
+          state: parsed.state,
+          count: parsed.count ?? 0,
+        };
+        setRestoredState(parsed.state);
+      } else {
+        savedSnapshotRef.current = null;
+        setRestoredState(undefined);
+      }
+    } catch {
+      savedSnapshotRef.current = null;
+      setRestoredState(undefined);
+    }
+  }, [feedKey]);
+  useEffect(() => {
+    restoreOnceRef.current = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsRestoring(Boolean(restoredState));
+  }, [feedKey, restoredState]);
+  useEffect(() => {
+    const saved = savedSnapshotRef.current;
+    if (!saved || !restoredState) return;
+    if (words.length > 0 && saved.count > 0 && words.length + 3 < saved.count) {
+      savedSnapshotRef.current = null;
+      sessionStorage.removeItem(feedKey);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRestoredState(undefined);
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "auto" });
+      }
+    }
+  }, [words.length, feedKey, restoredState]);
+  useEffect(() => {
+    if (!restoredState) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsRestoring(false);
+      return;
+    }
+    if (restoreOnceRef.current) return;
+    restoreOnceRef.current = true;
+    setIsRestoring(true);
+    if (typeof window === "undefined") {
+      setIsRestoring(false);
+      return;
+    }
+    restoreRafRef.current = window.requestAnimationFrame(() => {
+      restoreRaf2Ref.current = window.requestAnimationFrame(() => {
+        setIsRestoring(false);
+      });
+    });
+    restoreTimeoutRef.current = window.setTimeout(() => {
+      setIsRestoring(false);
+    }, 240);
+    return () => {
+      if (restoreRafRef.current !== null) {
+        cancelAnimationFrame(restoreRafRef.current);
+        restoreRafRef.current = null;
+      }
+      if (restoreRaf2Ref.current !== null) {
+        cancelAnimationFrame(restoreRaf2Ref.current);
+        restoreRaf2Ref.current = null;
+      }
+      if (restoreTimeoutRef.current !== null) {
+        clearTimeout(restoreTimeoutRef.current);
+        restoreTimeoutRef.current = null;
+      }
+    };
+  }, [restoredState]);
+
 
 
   if (isLoading) {
@@ -186,31 +315,53 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
           <div className="loading-bar__fill" />
         </div>
       )}
-      <Virtuoso
-        data={words}
-        useWindowScroll
-        increaseViewportBy={300}
-        itemContent={(_, word) => (
-          <WordCard key={word._id} word={word} savedOnly={savedOnly} />
+      <div className="relative min-h-[40vh]">
+        {isRestoring && (
+          <div className="pointer-events-none absolute inset-0 z-10">
+            <FeedSkeleton count={3} />
+          </div>
         )}
-        endReached={() => {
-          if (hasNextPage && !isFetchingNextPage) {
-            fetchNextPage();
-          }
-        }}
-        components={{
-          Footer: () =>
-            hasNextPage ? (
-              <div className="flex items-center justify-center py-4">
-                {isFetchingNextPage ? (
-                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--panel-border)] border-t-[color:var(--accent)]" />
-                ) : (
-                  <div className="h-2 w-2 rounded-full bg-[color:var(--panel-border)]" />
-                )}
-              </div>
-            ) : null,
-        }}
-      />
+        <div
+          className={`transition-opacity ${
+            isRestoring ? "opacity-0 pointer-events-none" : "opacity-100"
+          }`}
+        >
+          <Virtuoso
+            ref={virtuosoRef}
+            data={words}
+            totalCount={words.length}
+            useWindowScroll
+            increaseViewportBy={200}
+            overscan={200}
+            scrollSeekConfiguration={{
+              enter: (velocity) => Math.abs(velocity) > 200,
+              exit: (velocity) => Math.abs(velocity) < 30,
+            }}
+            restoreStateFrom={restoredState as unknown as StateSnapshot | undefined}
+            itemContent={(_, word) => (
+              <WordCard key={word._id} word={word} savedOnly={savedOnly} />
+            )}
+            endReached={() => {
+              if (hasNextPage && !isFetchingNextPage) {
+                fetchNextPage();
+              }
+            }}
+            components={{
+              ScrollSeekPlaceholder: () => <FeedSkeleton count={1} />,
+              Footer: () =>
+                hasNextPage ? (
+                  <div className="flex items-center justify-center py-4">
+                    {isFetchingNextPage ? (
+                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--panel-border)] border-t-[color:var(--accent)]" />
+                    ) : (
+                      <div className="h-2 w-2 rounded-full bg-[color:var(--panel-border)]" />
+                    )}
+                  </div>
+                ) : null,
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
