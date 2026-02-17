@@ -109,6 +109,11 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const virtualizationThreshold = 30;
   const useVirtualized = words.length >= virtualizationThreshold;
+  const useVirtualizedRef = useRef(useVirtualized);
+
+  useEffect(() => {
+    useVirtualizedRef.current = useVirtualized;
+  }, [useVirtualized]);
 
   const prefetchThreshold = 6;
 
@@ -204,7 +209,7 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
   }, [refetch]);
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (!useVirtualized) {
+    if (!useVirtualizedRef.current) {
       const saved = sessionStorage.getItem(`${feedKey}:scrollY`);
       if (saved) {
         window.scrollTo({ top: Number(saved) || 0, behavior: "auto" });
@@ -241,7 +246,7 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
     } finally {
       if (!isReady) setIsReady(true);
     }
-  }, [feedKey, isReady, useVirtualized]);
+  }, [feedKey, isReady]);
   useEffect(() => {
     restoreOnceRef.current = false;
     setIsRestoring(Boolean(restoredState));
@@ -297,7 +302,7 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
 
 
   if (!isReady || isLoading) {
-    return <FeedSkeleton />;
+    return <FeedSkeleton count={2} />;
   }
 
   if (isError) {
@@ -385,7 +390,7 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
       <div className="relative min-h-[40vh]">
         {useVirtualized && isRestoring && (
           <div className="pointer-events-none absolute inset-0 z-10">
-            <FeedSkeleton count={3} />
+            <FeedSkeleton count={2} />
           </div>
         )}
         <div

@@ -75,6 +75,11 @@ export default function FollowingWall() {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const virtualizationThreshold = 30;
   const useVirtualized = items.length >= virtualizationThreshold;
+  const useVirtualizedRef = useRef(useVirtualized);
+
+  useEffect(() => {
+    useVirtualizedRef.current = useVirtualized;
+  }, [useVirtualized]);
 
   const prefetchThreshold = 6;
   const handleRangeChanged = useCallback(
@@ -173,7 +178,7 @@ export default function FollowingWall() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (!useVirtualized) {
+    if (!useVirtualizedRef.current) {
       const saved = sessionStorage.getItem(`${feedKey}:scrollY`);
       if (saved) {
         window.scrollTo({ top: Number(saved) || 0, behavior: "auto" });
@@ -210,7 +215,7 @@ export default function FollowingWall() {
     } finally {
       if (!isReady) setIsReady(true);
     }
-  }, [feedKey, isReady, useVirtualized]);
+  }, [feedKey, isReady]);
   useEffect(() => {
     restoreOnceRef.current = false;
     setIsRestoring(Boolean(restoredState));
@@ -271,7 +276,7 @@ export default function FollowingWall() {
   if (!isReady) {
     return (
       <section className={`feed-surface ${isMounted ? "feed-surface--enter" : "feed-surface--pre"}`}>
-        <FeedSkeleton />
+        <FeedSkeleton count={2} />
       </section>
     );
   }
@@ -306,7 +311,7 @@ export default function FollowingWall() {
   if (isLoading) {
     return (
       <section className={`feed-surface ${isMounted ? "feed-surface--enter" : "feed-surface--pre"}`}>
-        <FeedSkeleton />
+        <FeedSkeleton count={2} />
       </section>
     );
   }
@@ -451,7 +456,7 @@ export default function FollowingWall() {
       <div className="relative min-h-[40vh]">
         {useVirtualized && isRestoring && (
           <div className="pointer-events-none absolute inset-0 z-10">
-            <FeedSkeleton count={3} />
+            <FeedSkeleton count={2} />
           </div>
         )}
         <div

@@ -72,6 +72,7 @@ export default function Sidebar() {
   const [installPromptSupported, setInstallPromptSupported] = useState(false);
   const [isIOSClient, setIsIOSClient] = useState(false);
   const deferredInstallPrompt = useRef<BeforeInstallPromptEvent | null>(null);
+  const installPromptShownRef = useRef(false);
   const [menuMounted] = useState(true);
   const touchStartX = useRef<number | null>(null);
   const isPostDetailRef = useRef(false);
@@ -100,7 +101,6 @@ export default function Sidebar() {
 
   useEffect(() => {
     if (typeof navigator === "undefined") return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsIOSClient(/iphone|ipad|ipod/i.test(navigator.userAgent));
   }, []);
 
@@ -116,6 +116,27 @@ export default function Sidebar() {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     };
   }, []);
+
+  const closeInstallModal = useCallback(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("installPromptShown", "1");
+    }
+    installPromptShownRef.current = true;
+    setShowInstallModal(false);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (installPromptShownRef.current) return;
+    if (window.localStorage.getItem("installPromptShown") === "1") {
+      installPromptShownRef.current = true;
+      return;
+    }
+    if (isIOSClient || installPromptSupported) {
+      installPromptShownRef.current = true;
+      setShowInstallModal(true);
+    }
+  }, [isIOSClient, installPromptSupported]);
 
 
   const { data: notificationsCount = 0 } = useQuery({
@@ -1123,7 +1144,7 @@ export default function Sidebar() {
       <Modal
         title="Add to Home Screen"
         isOpen={showInstallModal}
-        onClose={() => setShowInstallModal(false)}
+        onClose={closeInstallModal}
       >
         {isIOSClient ? (
           <div className="text-sm text-[color:var(--subtle)]">
@@ -1159,7 +1180,7 @@ export default function Sidebar() {
         ) : (
           <div className="text-sm text-[color:var(--subtle)]">
             {installPromptSupported ? (
-              <p>Tap “Add to Home Screen” again to install.</p>
+              <p>Tap “Install” to add Beliefted to your home screen.</p>
             ) : (
               <p>
                 Install is not available right now. Try opening this in Chrome or
@@ -1168,10 +1189,32 @@ export default function Sidebar() {
             )}
           </div>
         )}
-        <div className="mt-5 flex justify-end">
+        <div className="mt-5 flex items-center justify-between">
+          {installPromptSupported && !isIOSClient ? (
+            <button
+              type="button"
+              onClick={async () => {
+                const prompt = deferredInstallPrompt.current;
+                if (!prompt) return;
+                prompt.prompt();
+                try {
+                  await prompt.userChoice;
+                } finally {
+                  deferredInstallPrompt.current = null;
+                  setInstallPromptSupported(false);
+                }
+                closeInstallModal();
+              }}
+              className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--accent)]"
+            >
+              Install
+            </button>
+          ) : (
+            <span />
+          )}
           <button
             type="button"
-            onClick={() => setShowInstallModal(false)}
+            onClick={closeInstallModal}
             className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer hover:text-[color:var(--accent)]"
           >
             Got it
