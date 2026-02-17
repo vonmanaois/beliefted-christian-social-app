@@ -128,6 +128,7 @@ export default function Sidebar() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (installPromptShownRef.current) return;
+    if (pathname !== "/onboarding") return;
     if (window.localStorage.getItem("installPromptShown") === "1") {
       installPromptShownRef.current = true;
       return;
@@ -136,7 +137,7 @@ export default function Sidebar() {
       installPromptShownRef.current = true;
       setShowInstallModal(true);
     }
-  }, [isIOSClient, installPromptSupported]);
+  }, [isIOSClient, installPromptSupported, pathname]);
 
 
   const { data: notificationsCount = 0 } = useQuery({
