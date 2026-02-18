@@ -37,6 +37,9 @@ let latestSnapshot:
   | null = null;
 let lastSnapshotAt = 0;
 const SNAPSHOT_TTL_MS = 5000;
+const isStreamDisabled =
+  process.env.DISABLE_STREAM === "1" ||
+  process.env.NEXT_PUBLIC_DISABLE_STREAM === "1";
 
 const pushEvent = (payload: StreamPayload) => {
   lastEventId += 1;
@@ -139,6 +142,9 @@ const fetchLatestSnapshot = async (excludedUserId: Types.ObjectId | null, userId
 };
 
 export async function GET(request: Request) {
+  if (isStreamDisabled) {
+    return new Response(null, { status: 204 });
+  }
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id ?? null;
   const excludedUserId =

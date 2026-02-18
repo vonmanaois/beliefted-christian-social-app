@@ -35,6 +35,9 @@ let unifiedStreamCloseTimer: ReturnType<typeof setTimeout> | null = null;
 let unifiedStreamUserId: string | null = null;
 
 export default function Sidebar() {
+  const disableNotificationsCount =
+    process.env.NEXT_PUBLIC_DISABLE_NOTIFICATIONS_COUNT === "1";
+  const disableStream = process.env.NEXT_PUBLIC_DISABLE_STREAM === "1";
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
   const {
@@ -151,7 +154,7 @@ export default function Sidebar() {
       const data = (await response.json()) as { count?: number };
       return typeof data.count === "number" ? data.count : 0;
     },
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !disableNotificationsCount,
     staleTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: true,
@@ -187,6 +190,7 @@ export default function Sidebar() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
+    if (disableNotificationsCount) return;
     const poll = () => {
       if (sseConnectedRef.current) return;
       queryClient.invalidateQueries({
@@ -205,7 +209,7 @@ export default function Sidebar() {
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [isAuthenticated, queryClient, session?.user?.id]);
+  }, [isAuthenticated, queryClient, session?.user?.id, disableNotificationsCount]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -224,6 +228,7 @@ export default function Sidebar() {
       return;
     }
 
+    if (disableStream) return;
     unifiedStreamUsers += 1;
     if (unifiedStreamCloseTimer) {
       clearTimeout(unifiedStreamCloseTimer);
@@ -354,6 +359,7 @@ export default function Sidebar() {
     setNewPrayerPosts,
     setNewWordPosts,
     lastSeenNotificationsCount,
+    disableStream,
   ]);
 
   useEffect(() => {
