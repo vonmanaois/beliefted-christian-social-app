@@ -22,6 +22,17 @@ export default function FollowingWall() {
   const isAuthenticated = status === "authenticated";
   const { openSignIn } = useUIStore();
   const [isMounted, setIsMounted] = useState(false);
+  const [pageSize, setPageSize] = useState(6);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateSize = () => {
+      setPageSize(window.innerWidth < 640 ? 4 : 6);
+    };
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, []);
 
   const {
     data,
@@ -33,11 +44,11 @@ export default function FollowingWall() {
     isFetchingNextPage,
     isFetching,
   } = useInfiniteQuery({
-    queryKey: ["following-feed"],
+    queryKey: ["following-feed", pageSize],
     queryFn: async ({ pageParam }: { pageParam?: string | null }) => {
       const params = new URLSearchParams();
       if (pageParam) params.set("cursor", pageParam);
-      params.set("limit", "6");
+      params.set("limit", String(pageSize));
       const response = await fetch(`/api/following-feed?${params.toString()}`, {
         cache: "no-store",
       });

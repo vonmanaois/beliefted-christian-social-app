@@ -1042,7 +1042,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                 {sharedStory?.coverImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={cloudinaryTransform(sharedStory.coverImage, { width: 720 })}
+                    src={cloudinaryTransform(sharedStory.coverImage, { width: 640 })}
                     alt=""
                     className="h-40 w-full object-cover"
                     loading="lazy"
@@ -1186,7 +1186,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                         const isCloudinary =
                           typeof src === "string" && src.includes("res.cloudinary.com");
                         const thumbSrc = isCloudinary
-                          ? cloudinaryTransform(src, { width: 600 })
+                          ? cloudinaryTransform(src, { width: 520 })
                           : src;
                         const key = `${src}-${index}`;
                         const orientation = word.imageOrientations?.[index] ?? "landscape";
@@ -1202,7 +1202,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
                                 return;
                               }
                               const fullSrc = isCloudinary
-                                ? cloudinaryTransform(src, { width: 1200 })
+                                ? cloudinaryTransform(src, { width: 1000 })
                                 : src;
                               setLightboxSrc(fullSrc);
                             }}

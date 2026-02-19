@@ -22,6 +22,16 @@ type WordFeedProps = {
 };
 
 export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly }: WordFeedProps) {
+  const [pageSize, setPageSize] = useState(6);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateSize = () => {
+      setPageSize(window.innerWidth < 640 ? 4 : 6);
+    };
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, []);
   const {
     data,
     isLoading,
@@ -38,12 +48,13 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
       refreshKey,
       followingOnly ? "following" : "all",
       savedOnly ? "saved" : "all",
+      pageSize,
     ],
     queryFn: async ({ pageParam }: { pageParam?: string | null }) => {
       const params = new URLSearchParams();
       if (userId) params.set("userId", userId);
       if (pageParam) params.set("cursor", pageParam);
-      params.set("limit", "6");
+      params.set("limit", String(pageSize));
       if (followingOnly) params.set("following", "true");
       if (savedOnly) params.set("saved", "true");
 

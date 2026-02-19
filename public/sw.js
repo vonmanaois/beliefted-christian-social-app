@@ -67,7 +67,7 @@ self.addEventListener("push", (event) => {
     icon: "/sheep-home-192.png",
     badge: "/sheep-home-192.png",
     data: {
-      url: dataPayload.url || "/notifications",
+      url: dataPayload.url || "/?open=notifications",
     },
   };
 

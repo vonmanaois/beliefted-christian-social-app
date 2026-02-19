@@ -12,7 +12,7 @@ export async function POST() {
   await sendFcmToUser(String(session.user.id), {
     title: "Beliefted",
     body: "This is a test notification.",
-    url: "/notifications",
+    url: "/?open=notifications",
   });
 
   return NextResponse.json({ ok: true });

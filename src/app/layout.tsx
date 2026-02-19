@@ -47,6 +47,7 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const isProduction = process.env.NODE_ENV === "production";
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -58,8 +59,8 @@ export default function RootLayout({
       >
         <PWARegistration />
         <Providers>{children}</Providers>
-        <Analytics />
-        <SpeedInsights />
+        {isProduction && <Analytics />}
+        {isProduction && <SpeedInsights />}
       </body>
     </html>
   );

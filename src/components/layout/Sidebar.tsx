@@ -70,6 +70,7 @@ export default function Sidebar() {
   const [menuMounted] = useState(true);
   const touchStartX = useRef<number | null>(null);
   const isPostDetailRef = useRef(false);
+  const openedFromPushRef = useRef(false);
   const triggerPanelClose = (target: "search") => {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("panel:close", { detail: { target } }));
@@ -259,7 +260,16 @@ export default function Sidebar() {
 
   // Unread-count sync removed (badge now relies on push + local increments).
 
-  const openNotifications = () => {
+  const closeNotifications = useCallback(() => {
+    if (!notificationsOpen) return;
+    setNotificationsClosing(true);
+    setNotificationsOpen(false);
+    window.setTimeout(() => {
+      setNotificationsClosing(false);
+    }, 220);
+  }, [notificationsOpen]);
+
+  const openNotifications = useCallback(() => {
     if (!isAuthenticated) {
       openSignIn();
       return;
@@ -275,7 +285,26 @@ export default function Sidebar() {
     }
     setNotificationsClosing(false);
     setNotificationsOpen(true);
-  };
+  }, [
+    closeNotifications,
+    hasUnreadNotifications,
+    isAuthenticated,
+    notificationsOpen,
+    openSignIn,
+    queryClient,
+    session?.user?.id,
+  ]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (openedFromPushRef.current) return;
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("open") !== "notifications") return;
+    openedFromPushRef.current = true;
+    openNotifications();
+    router.replace(pathname);
+  }, [isAuthenticated, openNotifications, pathname, router]);
 
   const hasHomeBadge = newWordPosts || newPrayerPosts;
 
@@ -333,15 +362,6 @@ export default function Sidebar() {
       setIsMenuClosing(false);
     }, 220);
   }, [showMobileMenu]);
-
-  const closeNotifications = useCallback(() => {
-    if (!notificationsOpen) return;
-    setNotificationsClosing(true);
-    setNotificationsOpen(false);
-    window.setTimeout(() => {
-      setNotificationsClosing(false);
-    }, 220);
-  }, [notificationsOpen]);
 
   const scrollHomeIfActive = useCallback(() => {
     if (pathname !== "/") return false;

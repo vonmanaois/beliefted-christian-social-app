@@ -21,7 +21,7 @@ export const sendFcmToUser = async (userId: string, payload: FcmPayload) => {
           data: {
             title: payload.title,
             body: payload.body,
-            url: payload.url ?? "/notifications",
+            url: payload.url ?? "/",
           },
         });
       } catch (error) {

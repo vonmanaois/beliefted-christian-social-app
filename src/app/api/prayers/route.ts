@@ -86,6 +86,9 @@ export async function GET(req: Request) {
 
     const filter = conditions.length ? { $and: conditions } : {};
     const prayers = await PrayerModel.find(filter)
+      .select(
+        "content userId authorName authorUsername authorImage kind heading prayerPoints scriptureRef isAnonymous privacy prayedBy createdAt expiresAt"
+      )
       .sort({ createdAt: -1, _id: -1 })
       .limit(limit + 1)
       .lean();
@@ -141,6 +144,17 @@ export async function GET(req: Request) {
       ])
     );
 
+    const prayerIds = items.map((prayer) => prayer._id);
+    const commentCounts = prayerIds.length
+      ? await CommentModel.aggregate<{ _id: Types.ObjectId; count: number }>([
+          { $match: { prayerId: { $in: prayerIds } } },
+          { $group: { _id: "$prayerId", count: { $sum: 1 } } },
+        ])
+      : [];
+    const commentCountMap = new Map(
+      commentCounts.map((entry) => [String(entry._id), entry.count])
+    );
+
     const sanitized = await Promise.all(
       items.map(async (prayer) => {
         const rawUserId = (prayer as {
@@ -169,9 +183,7 @@ export async function GET(req: Request) {
           isOwner: Boolean(viewerId && userIdString && viewerId === userIdString),
         };
 
-        const commentCount = await CommentModel.countDocuments({
-          prayerId: prayer._id,
-        });
+        const commentCount = commentCountMap.get(String(prayer._id)) ?? 0;
 
         const privacy = (prayer as { privacy?: string | null }).privacy ?? "public";
         const isOwner = Boolean(viewerId && userIdString && viewerId === userIdString);
@@ -214,7 +226,7 @@ export async function GET(req: Request) {
     const cached = unstable_cache(
       () => loadPrayers(null),
       ["prayers-feed", cursor ?? "start", String(limit)],
-      { revalidate: 10, tags: ["prayers-feed"] }
+      { revalidate: 60, tags: ["prayers-feed"] }
     );
     return NextResponse.json(await cached());
   }

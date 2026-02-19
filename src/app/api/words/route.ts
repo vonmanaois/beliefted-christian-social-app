@@ -87,6 +87,9 @@ export async function GET(req: Request) {
     }
     const filter = conditions.length ? { $and: conditions } : {};
     const words = await WordModel.find(filter)
+      .select(
+        "content userId authorName authorUsername authorImage scriptureRef images imageOrientations sharedFaithStoryId sharedFaithStoryTitle sharedFaithStoryCover sharedFaithStoryAuthorUsername privacy likedBy savedBy createdAt"
+      )
       .sort({ createdAt: -1, _id: -1 })
       .limit(limit + 1)
       .lean();
@@ -141,6 +144,17 @@ export async function GET(req: Request) {
       ])
     );
 
+    const wordIds = items.map((word) => word._id);
+    const commentCounts = wordIds.length
+      ? await WordCommentModel.aggregate<{ _id: Types.ObjectId; count: number }>([
+          { $match: { wordId: { $in: wordIds } } },
+          { $group: { _id: "$wordId", count: { $sum: 1 } } },
+        ])
+      : [];
+    const commentCountMap = new Map(
+      commentCounts.map((entry) => [String(entry._id), entry.count])
+    );
+
     const sanitized = await Promise.all(
       items.map(async (word) => {
         const rawUserId = (word as {
@@ -159,9 +173,7 @@ export async function GET(req: Request) {
           userIdString = asString !== "[object Object]" ? asString : null;
         }
 
-        const commentCount = await WordCommentModel.countDocuments({
-          wordId: word._id,
-        });
+        const commentCount = commentCountMap.get(String(word._id)) ?? 0;
 
         const user =
           userMap.get(userIdString ?? "") ?? {
@@ -238,7 +250,7 @@ export async function GET(req: Request) {
     const cached = unstable_cache(
       () => loadWords(null),
       ["words-feed", cursor ?? "start", String(limit)],
-      { revalidate: 10, tags: ["words-feed"] }
+      { revalidate: 60, tags: ["words-feed"] }
     );
     return NextResponse.json(await cached());
   }

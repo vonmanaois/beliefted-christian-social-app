@@ -70,6 +70,9 @@ export async function GET(req: Request) {
       privacy: { $ne: "private" },
       ...cursorFilter,
     })
+      .select(
+        "content userId authorName authorUsername authorImage scriptureRef images imageOrientations sharedFaithStoryId sharedFaithStoryTitle sharedFaithStoryCover sharedFaithStoryAuthorUsername privacy likedBy savedBy createdAt"
+      )
       .sort({ createdAt: -1, _id: -1 })
       .limit(limit + 1)
       .lean(),
@@ -79,6 +82,9 @@ export async function GET(req: Request) {
       ...cursorFilter,
       isAnonymous: false,
     })
+      .select(
+        "content userId authorName authorUsername authorImage kind heading prayerPoints scriptureRef isAnonymous privacy prayedBy createdAt expiresAt"
+      )
       .sort({ createdAt: -1, _id: -1 })
       .limit(limit + 1)
       .lean(),
@@ -132,6 +138,33 @@ export async function GET(req: Request) {
     users.map((user) => [String(user._id), { name: user.name, image: user.image, username: user.username }])
   );
 
+  const wordIds = pageItems
+    .filter((item) => item.type === "word")
+    .map((item) => item.data._id);
+  const prayerIds = pageItems
+    .filter((item) => item.type === "prayer")
+    .map((item) => item.data._id);
+  const [wordCommentCounts, prayerCommentCounts] = await Promise.all([
+    wordIds.length
+      ? WordCommentModel.aggregate<{ _id: Types.ObjectId; count: number }>([
+          { $match: { wordId: { $in: wordIds } } },
+          { $group: { _id: "$wordId", count: { $sum: 1 } } },
+        ])
+      : [],
+    prayerIds.length
+      ? CommentModel.aggregate<{ _id: Types.ObjectId; count: number }>([
+          { $match: { prayerId: { $in: prayerIds } } },
+          { $group: { _id: "$prayerId", count: { $sum: 1 } } },
+        ])
+      : [],
+  ]);
+  const wordCommentMap = new Map(
+    wordCommentCounts.map((entry) => [String(entry._id), entry.count])
+  );
+  const prayerCommentMap = new Map(
+    prayerCommentCounts.map((entry) => [String(entry._id), entry.count])
+  );
+
   const items: FollowingItem[] = await Promise.all(
     pageItems.map(async (item) => {
       if (item.type === "word") {
@@ -141,7 +174,7 @@ export async function GET(req: Request) {
           image: word.authorImage,
           username: word.authorUsername,
         };
-        const commentCount = await WordCommentModel.countDocuments({ wordId: word._id });
+        const commentCount = wordCommentMap.get(String(word._id)) ?? 0;
         const sharedStoryId = word.sharedFaithStoryId
           ? String(word.sharedFaithStoryId)
           : null;
@@ -184,7 +217,7 @@ export async function GET(req: Request) {
         image: prayer.authorImage,
         username: prayer.authorUsername,
       };
-      const commentCount = await CommentModel.countDocuments({ prayerId: prayer._id });
+      const commentCount = prayerCommentMap.get(String(prayer._id)) ?? 0;
       const prayedBy = Array.isArray(prayer.prayedBy)
         ? prayer.prayedBy.map((id: unknown) => String(id))
         : [];
