@@ -139,6 +139,7 @@ export default function ProfileSettings({
       setMessage("Profile updated successfully.");
       if (required && typeof window !== "undefined") {
         window.localStorage.setItem("installPromptPending", "1");
+        window.localStorage.setItem("pushPromptPending", "1");
       }
       window.dispatchEvent(new Event("profile:updated"));
       onUpdated?.();

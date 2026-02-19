@@ -2,8 +2,8 @@ const CACHE_NAME = "beliefted-shell-v1";
 const PRECACHE_URLS = [
   "/",
   "/manifest.webmanifest",
-  "/icon-192.png",
-  "/icon-512.png"
+  "/sheep-home-192.png",
+  "/sheep-home-512.png"
 ];
 
 self.addEventListener("install", (event) => {
@@ -49,5 +49,51 @@ self.addEventListener("fetch", (event) => {
 
   event.respondWith(
     caches.match(request).then((cached) => cached || fetch(request))
+  );
+});
+
+self.addEventListener("push", (event) => {
+  const payload = (() => {
+    try {
+      return event.data ? event.data.json() : {};
+    } catch {
+      return {};
+    }
+  })();
+  const dataPayload = payload.data || payload;
+  const title = dataPayload.title || "Beliefted";
+  const options = {
+    body: dataPayload.body || "You have a new notification.",
+    icon: "/sheep-home-192.png",
+    badge: "/sheep-home-192.png",
+    data: {
+      url: dataPayload.url || "/notifications",
+    },
+  };
+
+  event.waitUntil(
+    Promise.all([
+      self.registration.showNotification(title, options),
+      self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+        clients.forEach((client) =>
+          client.postMessage({ type: "push-notification" })
+        );
+      }),
+    ])
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = event.notification?.data?.url || "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      const existing = clients.find((client) => client.url.includes(targetUrl));
+      if (existing) {
+        existing.focus();
+        return;
+      }
+      self.clients.openWindow(targetUrl);
+    })
   );
 });

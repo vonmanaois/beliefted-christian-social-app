@@ -26,18 +26,10 @@ import WhyBelieftedContent from "@/components/info/WhyBelieftedContent";
 import CommunityGuidelinesContent from "@/components/info/CommunityGuidelinesContent";
 import UserSearch from "@/components/layout/UserSearch";
 import { useUIStore } from "@/lib/uiStore";
-
-let unifiedStream: EventSource | null = null;
-let unifiedStreamUsers = 0;
-let unifiedStreamRetryDelay = 1000;
-let unifiedStreamRetryTimer: ReturnType<typeof setTimeout> | null = null;
-let unifiedStreamCloseTimer: ReturnType<typeof setTimeout> | null = null;
-let unifiedStreamUserId: string | null = null;
+import { getToken, onMessage } from "firebase/messaging";
+import { getFirebaseMessaging } from "@/lib/firebaseClient";
 
 export default function Sidebar() {
-  const disableNotificationsCount =
-    process.env.NEXT_PUBLIC_DISABLE_NOTIFICATIONS_COUNT === "1";
-  const disableStream = process.env.NEXT_PUBLIC_DISABLE_STREAM === "1";
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
   const {
@@ -48,19 +40,16 @@ export default function Sidebar() {
     newPrayerPosts,
     activeHomeTab,
     setActiveHomeTab,
-    lastSeenNotificationsCount,
-    setLastSeenNotificationsCount,
+    notificationsBadgeCount,
+    incrementNotificationsBadge,
+    clearNotificationsBadge,
     setNewWordPosts,
     setNewPrayerPosts,
   } = useUIStore();
   const mobileMenuRef = useRef<HTMLDivElement | null>(null);
   const notificationsRef = useRef<HTMLDivElement | null>(null);
-  const lastUserIdRef = useRef<string | null>(null);
   const notificationsOpenRef = useRef(false);
-  const sseConnectedRef = useRef(false);
   const currentUserIdRef = useRef<string | null>(null);
-  const lastCountRefreshRef = useRef(0);
-  const lastSseMessageAtRef = useRef(0);
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
@@ -74,6 +63,8 @@ export default function Sidebar() {
   const [showInstallModal, setShowInstallModal] = useState(false);
   const [installPromptSupported, setInstallPromptSupported] = useState(false);
   const [isIOSClient, setIsIOSClient] = useState(false);
+  const [showPushPrompt, setShowPushPrompt] = useState(false);
+  const [pushPromptBusy, setPushPromptBusy] = useState(false);
   const deferredInstallPrompt = useRef<BeforeInstallPromptEvent | null>(null);
   const installPromptShownRef = useRef(false);
   const [menuMounted] = useState(true);
@@ -144,232 +135,129 @@ export default function Sidebar() {
   }, [isIOSClient, installPromptSupported, pathname]);
 
 
-  const { data: notificationsCount = 0 } = useQuery({
-    queryKey: ["notifications", "count", session?.user?.id ?? "guest"],
-    queryFn: async () => {
-      const response = await fetch("/api/notifications/count", { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error("Failed to load notifications");
-      }
-      const data = (await response.json()) as { count?: number };
-      return typeof data.count === "number" ? data.count : 0;
-    },
-    enabled: isAuthenticated && !disableNotificationsCount,
-    staleTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: true,
-  });
-
-  const hasUnreadNotifications =
-    isAuthenticated && notificationsCount > lastSeenNotificationsCount;
-
-  useEffect(() => {
-    if (notificationsCount < lastSeenNotificationsCount) {
-      setLastSeenNotificationsCount(notificationsCount);
-    }
-  }, [notificationsCount, lastSeenNotificationsCount, setLastSeenNotificationsCount]);
+  const hasUnreadNotifications = isAuthenticated && notificationsBadgeCount > 0;
 
   useEffect(() => {
     const nextUserId = session?.user?.id ?? null;
     currentUserIdRef.current = nextUserId;
-    if (lastUserIdRef.current === nextUserId) return;
-    lastUserIdRef.current = nextUserId;
-    setLastSeenNotificationsCount(0);
-    setNewWordPosts(false);
-    setNewPrayerPosts(false);
-    queryClient.setQueryData(
-      ["notifications", "count", nextUserId ?? "guest"],
-      0
-    );
-  }, [session?.user?.id, queryClient, setLastSeenNotificationsCount, setNewWordPosts, setNewPrayerPosts]);
-
-  useEffect(() => {
-    // keep ref for potential future manual refresh hooks
-    lastCountRefreshRef.current = Date.now();
-  }, []);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    if (disableNotificationsCount) return;
-    const poll = () => {
-      if (sseConnectedRef.current) return;
-      queryClient.invalidateQueries({
-        queryKey: ["notifications", "count", session?.user?.id ?? "guest"],
-      });
-    };
-    poll();
-    const interval = window.setInterval(poll, 60000);
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        poll();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => {
-      window.clearInterval(interval);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [isAuthenticated, queryClient, session?.user?.id, disableNotificationsCount]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
     if (!isAuthenticated) {
-      if (unifiedStreamCloseTimer) {
-        clearTimeout(unifiedStreamCloseTimer);
-        unifiedStreamCloseTimer = null;
-      }
-      if (unifiedStreamRetryTimer) {
-        clearTimeout(unifiedStreamRetryTimer);
-        unifiedStreamRetryTimer = null;
-      }
-      unifiedStream?.close();
-      unifiedStream = null;
-      unifiedStreamUsers = 0;
-      return;
+      clearNotificationsBadge();
+      setNewWordPosts(false);
+      setNewPrayerPosts(false);
+      setShowPushPrompt(false);
     }
-
-    if (disableStream) return;
-    unifiedStreamUsers += 1;
-    if (unifiedStreamCloseTimer) {
-      clearTimeout(unifiedStreamCloseTimer);
-      unifiedStreamCloseTimer = null;
-    }
-
-    const connect = () => {
-      if (document.visibilityState === "hidden") return;
-      if (unifiedStream) return;
-      unifiedStream = new EventSource("/api/stream");
-      unifiedStreamUserId = currentUserIdRef.current ?? null;
-
-      unifiedStream.onopen = () => {
-        unifiedStreamRetryDelay = 1000;
-        sseConnectedRef.current = true;
-        lastSseMessageAtRef.current = Date.now();
-        queryClient.invalidateQueries({
-          queryKey: ["notifications", "count", session?.user?.id ?? "guest"],
-        });
-      };
-
-      unifiedStream.onmessage = (event) => {
-        try {
-          lastSseMessageAtRef.current = Date.now();
-          const viewerId = currentUserIdRef.current;
-          if (!viewerId) return;
-          const payload = JSON.parse(event.data) as {
-            wordsChanged?: boolean;
-            prayersChanged?: boolean;
-            wordAuthorId?: string | null;
-            prayerAuthorId?: string | null;
-            wordAuthorIds?: string[];
-            prayerAuthorIds?: string[];
-            notificationsCount?: number;
-            viewerId?: string | null;
-          };
-          if (payload.viewerId && payload.viewerId !== viewerId) return;
-          const wordHasOtherAuthor =
-            !payload.wordAuthorId || payload.wordAuthorId !== viewerId;
-          const prayerHasOtherAuthor =
-            !payload.prayerAuthorId || payload.prayerAuthorId !== viewerId;
-          if (payload.wordsChanged && wordHasOtherAuthor) {
-            setNewWordPosts(true);
-          }
-          if (payload.prayersChanged && prayerHasOtherAuthor) {
-            setNewPrayerPosts(true);
-          }
-          if (typeof payload.notificationsCount === "number") {
-            queryClient.setQueryData(
-              ["notifications", "count", viewerId ?? "guest"],
-              payload.notificationsCount
-            );
-            if (payload.notificationsCount > lastSeenNotificationsCount) {
-              queryClient.invalidateQueries({
-                queryKey: ["notifications", viewerId ?? "guest"],
-              });
-            }
-            if (notificationsOpenRef.current) {
-              queryClient.invalidateQueries({
-                queryKey: ["notifications", viewerId ?? "guest"],
-              });
-            }
-          }
-        } catch {
-          // ignore parse errors
-        }
-      };
-      unifiedStream.addEventListener("ping", () => {
-        lastSseMessageAtRef.current = Date.now();
-      });
-
-      unifiedStream.onerror = () => {
-        unifiedStream?.close();
-        unifiedStream = null;
-        sseConnectedRef.current = false;
-        if (unifiedStreamRetryTimer) {
-          clearTimeout(unifiedStreamRetryTimer);
-        }
-        unifiedStreamRetryTimer = setTimeout(connect, unifiedStreamRetryDelay);
-        unifiedStreamRetryDelay = Math.min(unifiedStreamRetryDelay * 2, 30000);
-      };
-    };
-
-    const handleVisibility = () => {
-      if (document.visibilityState === "hidden") {
-        unifiedStream?.close();
-        unifiedStream = null;
-        sseConnectedRef.current = false;
-        return;
-      }
-      connect();
-    };
-
-    connect();
-    document.addEventListener("visibilitychange", handleVisibility);
-    const staleCheck = window.setInterval(() => {
-      if (!sseConnectedRef.current) return;
-      const last = lastSseMessageAtRef.current;
-      if (!last) return;
-      if (Date.now() - last > 45000) {
-        unifiedStream?.close();
-        unifiedStream = null;
-        sseConnectedRef.current = false;
-        connect();
-      }
-    }, 15000);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
-      window.clearInterval(staleCheck);
-      unifiedStreamUsers = Math.max(0, unifiedStreamUsers - 1);
-      if (unifiedStreamUsers === 0) {
-        unifiedStreamCloseTimer = setTimeout(() => {
-          if (unifiedStreamRetryTimer) {
-            clearTimeout(unifiedStreamRetryTimer);
-            unifiedStreamRetryTimer = null;
-          }
-          unifiedStream?.close();
-          unifiedStream = null;
-          sseConnectedRef.current = false;
-        }, 5000);
-      }
-    };
   }, [
     isAuthenticated,
-    queryClient,
     session?.user?.id,
+    clearNotificationsBadge,
     setNewPrayerPosts,
     setNewWordPosts,
-    lastSeenNotificationsCount,
-    disableStream,
   ]);
 
   useEffect(() => {
-    const nextUserId = session?.user?.id ?? null;
-    if (unifiedStreamUserId && unifiedStreamUserId !== nextUserId) {
-      unifiedStream?.close();
-      unifiedStream = null;
-      sseConnectedRef.current = false;
+    if (!isAuthenticated) return;
+    if (!("serviceWorker" in navigator)) return;
+    const handleMessage = (event: MessageEvent) => {
+      if (!event.data || event.data.type !== "push-notification") return;
+      incrementNotificationsBadge(1);
+      if (notificationsOpenRef.current) {
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", session?.user?.id ?? "guest"],
+        });
+      }
+    };
+    navigator.serviceWorker.addEventListener("message", handleMessage);
+    return () => navigator.serviceWorker.removeEventListener("message", handleMessage);
+  }, [isAuthenticated, incrementNotificationsBadge, queryClient, session?.user?.id]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (typeof window === "undefined") return;
+    let unsubscribe: (() => void) | null = null;
+    try {
+      const messaging = getFirebaseMessaging();
+      unsubscribe = onMessage(messaging, () => {
+        incrementNotificationsBadge(1);
+        if (notificationsOpenRef.current) {
+          queryClient.invalidateQueries({
+            queryKey: ["notifications", session?.user?.id ?? "guest"],
+          });
+        }
+      });
+    } catch {
+      // ignore client messaging errors
     }
-  }, [session?.user?.id]);
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [isAuthenticated, incrementNotificationsBadge, queryClient, session?.user?.id]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !session?.user?.id) return;
+    if (typeof window === "undefined") return;
+    if (!("Notification" in window)) return;
+    const key = `pushPromptStatus:${session.user.id}`;
+    const status = window.localStorage.getItem(key);
+    if (status === "accepted" || status === "dismissed") return;
+    if (window.localStorage.getItem("pushPromptPending") !== "1") return;
+    if (Notification.permission === "granted") return;
+    setShowPushPrompt(true);
+  }, [isAuthenticated, session?.user?.id]);
+
+  const enablePushPrompt = async () => {
+    if (!("serviceWorker" in navigator)) return;
+    if (!process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY) return;
+    setPushPromptBusy(true);
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+      if (session?.user?.id && typeof window !== "undefined") {
+        window.localStorage.setItem(
+          `pushPromptStatus:${session.user.id}`,
+          "dismissed"
+        );
+        window.localStorage.removeItem("pushPromptPending");
+      }
+      setShowPushPrompt(false);
+      return;
+    }
+      const messaging = getFirebaseMessaging();
+      const token = await getToken(messaging, {
+        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+        serviceWorkerRegistration: await navigator.serviceWorker.ready,
+      });
+      if (token) {
+        await fetch("/api/fcm/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+      }
+      if (session?.user?.id && typeof window !== "undefined") {
+        window.localStorage.setItem(
+          `pushPromptStatus:${session.user.id}`,
+          "accepted"
+        );
+        window.localStorage.removeItem("pushPromptPending");
+      }
+      setShowPushPrompt(false);
+    } finally {
+      setPushPromptBusy(false);
+    }
+  };
+
+  const dismissPushPrompt = () => {
+    if (session?.user?.id && typeof window !== "undefined") {
+      window.localStorage.setItem(
+        `pushPromptStatus:${session.user.id}`,
+        "dismissed"
+      );
+      window.localStorage.removeItem("pushPromptPending");
+    }
+    setShowPushPrompt(false);
+  };
+
+  // Unread-count sync removed (badge now relies on push + local increments).
 
   const openNotifications = () => {
     if (!isAuthenticated) {
@@ -381,7 +269,6 @@ export default function Sidebar() {
         queryKey: ["notifications", session?.user?.id ?? "guest"],
       });
     }
-    setLastSeenNotificationsCount(notificationsCount);
     if (notificationsOpen) {
       closeNotifications();
       return;
@@ -1226,6 +1113,34 @@ export default function Sidebar() {
             className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer hover:text-[color:var(--accent)]"
           >
             Got it
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        title="Enable Notifications"
+        isOpen={showPushPrompt}
+        onClose={dismissPushPrompt}
+      >
+        <p className="text-sm text-[color:var(--subtle)]">
+          Get notified when someone interacts with your prayers or words.
+        </p>
+        <div className="mt-5 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={enablePushPrompt}
+            disabled={pushPromptBusy}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--accent)] disabled:opacity-60"
+          >
+            Enable
+          </button>
+          <button
+            type="button"
+            onClick={dismissPushPrompt}
+            disabled={pushPromptBusy}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer hover:text-[color:var(--accent)] disabled:opacity-60"
+          >
+            Not now
           </button>
         </div>
       </Modal>

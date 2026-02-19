@@ -1,4 +1,5 @@
 import { Schema, model, models, type Model, type InferSchemaType } from "mongoose";
+import { sendFcmToUser } from "@/lib/fcm";
 
 const NotificationSchema = new Schema(
   {
@@ -34,6 +35,26 @@ const NotificationSchema = new Schema(
 
 NotificationSchema.index({ userId: 1, createdAt: -1 });
 NotificationSchema.index({ userId: 1, readAt: 1 });
+
+const pushNotification = async (doc: Notification) => {
+  if (!doc?.userId) return;
+  await sendFcmToUser(String(doc.userId), {
+    title: "New notification",
+    body: "Open Beliefted to see the latest activity.",
+    url: "/notifications",
+  });
+};
+
+NotificationSchema.post("save", (doc) => {
+  void pushNotification(doc);
+});
+
+NotificationSchema.post("insertMany", (docs) => {
+  if (!Array.isArray(docs)) return;
+  docs.forEach((doc) => {
+    void pushNotification(doc);
+  });
+});
 
 export type Notification = InferSchemaType<typeof NotificationSchema>;
 

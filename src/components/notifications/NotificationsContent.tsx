@@ -1,10 +1,14 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
 import EmptyState from "@/components/ui/EmptyState";
 import { BellSimple, X } from "@phosphor-icons/react";
+import { getToken } from "firebase/messaging";
+import { getFirebaseMessaging } from "@/lib/firebaseClient";
+import { useUIStore } from "@/lib/uiStore";
 
 type NotificationActor = {
   _id?: string | null;
@@ -34,6 +38,7 @@ type NotificationItem = {
   moderationReason?: string | null;
   moderationTarget?: "word" | "prayer" | "faith_story" | null;
   isFollowing?: boolean;
+  readAt?: string | null;
 };
 
 const formatNotificationTime = (timestamp: string) => {
@@ -73,6 +78,88 @@ export default function NotificationsContent({
   const { status, data: session } = useSession();
   const isAuthenticated = status === "authenticated";
   const queryClient = useQueryClient();
+  const { setNotificationsBadgeCount, clearNotificationsBadge } = useUIStore();
+  const markedReadRef = useRef(false);
+  const lastUnreadCountRef = useRef<number | null>(null);
+  const [pushSupported, setPushSupported] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushWorking, setPushWorking] = useState(false);
+  const vapidPublicKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY ?? "";
+  const hasFirebaseConfig = Boolean(
+    process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
+      process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN &&
+      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID &&
+      process.env.NEXT_PUBLIC_FIREBASE_SENDER_ID &&
+      process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const supported =
+      "serviceWorker" in navigator &&
+      "PushManager" in window &&
+      hasFirebaseConfig &&
+      Boolean(vapidPublicKey);
+    setPushSupported(supported);
+    if (!supported) return;
+    navigator.serviceWorker.ready
+      .then((registration) => registration.pushManager.getSubscription())
+      .then((sub) => setPushEnabled(Boolean(sub)))
+      .catch(() => setPushEnabled(false));
+  }, [hasFirebaseConfig, vapidPublicKey]);
+
+  const handleEnablePush = async () => {
+    if (!pushSupported || !vapidPublicKey) return;
+    setPushWorking(true);
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") return;
+      const messaging = getFirebaseMessaging();
+      const token = await getToken(messaging, {
+        vapidKey: vapidPublicKey,
+        serviceWorkerRegistration: await navigator.serviceWorker.ready,
+      });
+      if (!token) return;
+      await fetch("/api/fcm/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      setPushEnabled(true);
+    } finally {
+      setPushWorking(false);
+    }
+  };
+
+  const handleDisablePush = async () => {
+    if (!pushSupported) return;
+    setPushWorking(true);
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        setPushEnabled(false);
+        return;
+      }
+      const messaging = getFirebaseMessaging();
+      const token = await getToken(messaging, {
+        vapidKey: vapidPublicKey,
+        serviceWorkerRegistration: registration,
+      });
+      if (token) {
+        await fetch("/api/fcm/unregister", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+      }
+      await subscription.unsubscribe();
+      setPushEnabled(false);
+    } finally {
+      setPushWorking(false);
+    }
+  };
+
 
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ["notifications", session?.user?.id ?? "guest"],
@@ -90,6 +177,39 @@ export default function NotificationsContent({
   });
 
   // Fetch only when drawer is opened and something is stale or missing.
+
+  useEffect(() => {
+    if (!active || !isAuthenticated) {
+      markedReadRef.current = false;
+      lastUnreadCountRef.current = null;
+      return;
+    }
+    const unreadCount = notifications.filter((note) => !note.readAt).length;
+    if (lastUnreadCountRef.current !== unreadCount) {
+      lastUnreadCountRef.current = unreadCount;
+      queueMicrotask(() => setNotificationsBadgeCount(unreadCount));
+    }
+    if (unreadCount === 0 || markedReadRef.current) return;
+    markedReadRef.current = true;
+    fetch("/api/notifications/mark-read", { method: "POST" }).catch(() => {
+      // ignore mark-read errors
+    });
+    clearNotificationsBadge();
+    queryClient.setQueryData(
+      ["notifications", session?.user?.id ?? "guest"],
+      notifications.map((note) =>
+        note.readAt ? note : { ...note, readAt: new Date().toISOString() }
+      )
+    );
+  }, [
+    active,
+    isAuthenticated,
+    notifications,
+    clearNotificationsBadge,
+    queryClient,
+    session?.user?.id,
+    setNotificationsBadgeCount,
+  ]);
 
   const clearMutation = useMutation({
     mutationFn: async () => {
@@ -190,15 +310,29 @@ export default function NotificationsContent({
             Stay updated when someone interacts with your prayers or words.
           </p>
         </div>
-        {isAuthenticated && notifications.length > 0 && (
-          <button
-            type="button"
-            onClick={() => clearMutation.mutate()}
-            className="post-button bg-transparent border border-[color:var(--panel-border)] text-[color:var(--ink)]"
-          >
-            Clear all
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {isAuthenticated && pushSupported && vapidPublicKey && (
+            <>
+              <button
+                type="button"
+                onClick={pushEnabled ? handleDisablePush : handleEnablePush}
+                className="post-button bg-transparent border border-[color:var(--panel-border)] text-[color:var(--ink)]"
+                disabled={pushWorking}
+              >
+                {pushEnabled ? "Disable push" : "Enable push"}
+              </button>
+            </>
+          )}
+          {isAuthenticated && notifications.length > 0 && (
+            <button
+              type="button"
+              onClick={() => clearMutation.mutate()}
+              className="post-button bg-transparent border border-[color:var(--panel-border)] text-[color:var(--ink)]"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
       </div>
 
       {!isAuthenticated ? (

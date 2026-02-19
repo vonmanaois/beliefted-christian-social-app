@@ -7,6 +7,7 @@ type UIState = {
   newPrayerPosts: boolean;
   activeHomeTab: "words" | "prayers" | "following";
   lastSeenNotificationsCount: number;
+  notificationsBadgeCount: number;
   openSignIn: () => void;
   closeSignIn: () => void;
   toggleSignIn: () => void;
@@ -17,6 +18,9 @@ type UIState = {
   setNewPrayerPosts: (value: boolean) => void;
   setActiveHomeTab: (value: "words" | "prayers" | "following") => void;
   setLastSeenNotificationsCount: (value: number) => void;
+  incrementNotificationsBadge: (amount?: number) => void;
+  setNotificationsBadgeCount: (value: number) => void;
+  clearNotificationsBadge: () => void;
 };
 
 export const useUIStore = create<UIState>((set) => ({
@@ -26,6 +30,7 @@ export const useUIStore = create<UIState>((set) => ({
   newPrayerPosts: false,
   activeHomeTab: "words",
   lastSeenNotificationsCount: 0,
+  notificationsBadgeCount: 0,
   openSignIn: () => set({ signInOpen: true }),
   closeSignIn: () => set({ signInOpen: false }),
   toggleSignIn: () => set((state) => ({ signInOpen: !state.signInOpen })),
@@ -37,4 +42,11 @@ export const useUIStore = create<UIState>((set) => ({
   setNewPrayerPosts: (value) => set({ newPrayerPosts: value }),
   setActiveHomeTab: (value) => set({ activeHomeTab: value }),
   setLastSeenNotificationsCount: (value) => set({ lastSeenNotificationsCount: value }),
+  incrementNotificationsBadge: (amount = 1) =>
+    set((state) => ({
+      notificationsBadgeCount: state.notificationsBadgeCount + amount,
+    })),
+  setNotificationsBadgeCount: (value) =>
+    set({ notificationsBadgeCount: Math.max(0, value) }),
+  clearNotificationsBadge: () => set({ notificationsBadgeCount: 0 }),
 }));
