@@ -332,14 +332,35 @@ export default function Sidebar() {
     typeof profileSummary?.onboardingComplete === "boolean"
       ? profileSummary.onboardingComplete
       : true;
-  const handleProfileNavigate = useCallback(() => {
+  const profileHref = resolvedUsername ? `/profile/${resolvedUsername}` : null;
+  const handleProfileNavigate = useCallback(async () => {
     if (!isAuthenticated) {
       openSignIn();
       return;
     }
-    if (!resolvedUsername) return;
-    router.push(`/profile/${resolvedUsername}`);
-  }, [isAuthenticated, openSignIn, resolvedUsername, router]);
+    if (profileHref) {
+      router.push(profileHref);
+      return;
+    }
+    try {
+      const response = await fetch("/api/user/profile", { cache: "no-store" });
+      if (!response.ok) {
+        router.push("/");
+        return;
+      }
+      const data = (await response.json()) as {
+        username?: string | null;
+        onboardingComplete?: boolean;
+      };
+      if (data?.onboardingComplete && data?.username) {
+        router.push(`/profile/${data.username}`);
+      } else {
+        router.push("/onboarding");
+      }
+    } catch {
+      router.push("/");
+    }
+  }, [isAuthenticated, openSignIn, profileHref, router]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -682,9 +703,8 @@ export default function Sidebar() {
                     <button
                       type="button"
                       onClick={() => {
-                        if (!isAuthenticated) return;
-                        if (!resolvedUsername) return;
-                        router.push(`/profile/${resolvedUsername}`);
+                        closeMenu();
+                        handleProfileNavigate();
                       }}
                       className="flex items-center gap-3 text-left"
                       aria-label="Go to profile"
@@ -910,6 +930,7 @@ export default function Sidebar() {
           type="button"
           className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
           onClick={() => {
+            closeMenu();
             handleProfileNavigate();
           }}
         >

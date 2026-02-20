@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import Modal from "@/components/layout/Modal";
 import Avatar from "@/components/ui/Avatar";
 
@@ -179,9 +180,10 @@ export default function ProfileStats({
             {connections.map((user) => {
               const href = user.username ? `/profile/${user.username}` : "/profile";
               return (
-                <a
+                <Link
                   key={user.id}
                   href={href}
+                  prefetch={false}
                   className="flex items-center gap-3 cursor-pointer hover:text-[color:var(--accent)]"
                 >
                   <Avatar
@@ -201,7 +203,7 @@ export default function ProfileStats({
                       </p>
                     )}
                   </div>
-                </a>
+                </Link>
               );
             })}
           </div>

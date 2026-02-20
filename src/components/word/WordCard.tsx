@@ -14,6 +14,7 @@ import {
   LockSimple,
   UsersThree,
 } from "@phosphor-icons/react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Avatar from "@/components/ui/Avatar";
 import { useUIStore } from "@/lib/uiStore";
@@ -873,8 +874,7 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
     const target = event.target as HTMLElement | null;
     if (!target) return;
     if (target.closest("button, a, input, textarea, select, [data-ignore-view]")) return;
-    if (!word.user?.username) return;
-    router.push(`/${word.user.username}/${wordId}`, { scroll: false });
+    router.push(`/post/${wordId}`, { scroll: false });
   };
 
   useEffect(() => {
@@ -1614,12 +1614,13 @@ const WordHeader = memo(function WordHeader({
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <a
+            <Link
               href={user?.username ? `/profile/${user.username}` : "/profile"}
+              prefetch={false}
               className="text-xs sm:text-sm font-semibold text-[color:var(--ink)] hover:underline"
             >
               {user?.name ?? "User"}
-            </a>
+            </Link>
             <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
               {user?.username ? `@${user.username}` : ""}
             </p>

@@ -1,78 +1,58 @@
-import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import dbConnect from "@/lib/db";
-import UserModel from "@/models/User";
-import ProfileSettings from "@/components/profile/ProfileSettings";
-import ProfileTabs from "@/components/profile/ProfileTabs";
-import ProfileHeader from "@/components/profile/ProfileHeader";
-import ProfileUpdateModal from "@/components/profile/ProfileUpdateModal";
-import ProfileStats from "@/components/profile/ProfileStats";
-import ProfilePhotoUploader from "@/components/profile/ProfilePhotoUploader";
+"use client";
+
+import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import PanelMotion from "@/components/layout/PanelMotion";
 
-export const dynamic = "force-dynamic";
+export default function ProfilePage() {
+  const router = useRouter();
+  const { status } = useSession();
+  const hasRedirected = useRef(false);
 
-export default async function ProfilePage() {
-  const session = await getServerSession(authOptions);
+  useEffect(() => {
+    if (hasRedirected.current) return;
+    if (status === "unauthenticated") {
+      hasRedirected.current = true;
+      router.replace("/");
+      return;
+    }
+    if (status !== "authenticated") return;
 
-  if (!session?.user?.id) {
-    redirect("/");
-  }
+    const run = async () => {
+      try {
+        const response = await fetch("/api/user/profile", { cache: "no-store" });
+        if (!response.ok) {
+          hasRedirected.current = true;
+          router.replace("/");
+          return;
+        }
+        const data = (await response.json()) as {
+          username?: string | null;
+          onboardingComplete?: boolean;
+        };
+        hasRedirected.current = true;
+        if (data?.onboardingComplete && data?.username) {
+          router.replace(`/profile/${data.username}`);
+        } else {
+          router.replace("/onboarding");
+        }
+      } catch {
+        hasRedirected.current = true;
+        router.replace("/");
+      }
+    };
 
-  await dbConnect();
+    void run();
+  }, [router, status]);
 
-  const user = await UserModel.findById(session.user.id).lean();
-
-  if (user?.onboardingComplete) {
-    redirect(`/profile/${user.username}`);
-  } else {
-    redirect("/onboarding");
-  }
-  const prayedCount = user?.prayersLiftedCount ?? 0;
   return (
-    <PanelMotion className="panel rounded-none p-0 sm:p-8" motion="none">
-          <div className="px-4 pt-6 sm:px-0 sm:pt-0">
-            {!user?.username && (
-              <div className="mb-6">
-                <ProfileSettings required currentName={user?.name ?? null} />
-              </div>
-            )}
-            <div className="flex items-center justify-between gap-4">
-              <ProfileHeader
-                initialName={user?.name ?? session?.user?.name ?? "Your Name"}
-                initialUsername={user?.username ?? "username"}
-                initialBio={user?.bio ?? null}
-              />
-              <ProfilePhotoUploader
-                currentImage={user?.image ?? session?.user?.image ?? null}
-                currentName={user?.name ?? session?.user?.name ?? ""}
-                currentUsername={user?.username ?? ""}
-                currentBio={user?.bio ?? ""}
-                size={80}
-              />
-            </div>
-
-            <div className="mt-4">
-              <ProfileUpdateModal
-                currentUsername={user?.username ?? null}
-                currentName={user?.name ?? null}
-                currentBio={user?.bio ?? null}
-                currentImage={user?.image ?? null}
-                onUpdated={() => {}}
-              />
-            </div>
-
-            <ProfileStats
-              initialPrayedCount={prayedCount}
-              initialFollowersCount={user?.followers?.length ?? 0}
-              initialFollowingCount={user?.following?.length ?? 0}
-            />
-
-            <div className="my-6 border-t border-[color:var(--panel-border)]" />
-          </div>
-
-          <ProfileTabs userId={session?.user?.id ?? ""} />
-        </PanelMotion>
+    <PanelMotion className="panel rounded-none p-4 sm:p-8" motion="none">
+      <div className="animate-pulse space-y-4">
+        <div className="h-6 w-40 rounded-lg bg-[color:var(--surface-strong)]" />
+        <div className="h-4 w-28 rounded-lg bg-[color:var(--surface-strong)]" />
+        <div className="h-20 w-full rounded-xl bg-[color:var(--surface-strong)]" />
+      </div>
+    </PanelMotion>
   );
 }

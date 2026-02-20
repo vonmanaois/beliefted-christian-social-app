@@ -138,9 +138,32 @@ export async function GET(req: Request) {
     }
     const prayersLiftedCount =
       typeof user.prayersLiftedCount === "number" ? user.prayersLiftedCount : 0;
+    const session = await getServerSession(authOptions);
+    const sessionUserId = session?.user?.id ?? null;
+    const sessionUserEmail = session?.user?.email ?? null;
+    const isSelf = sessionUserId ? String(user._id) === String(sessionUserId) : false;
+    let isFollowing = false;
+
+    if (sessionUserId && !isSelf) {
+      const currentUserId = ObjectId.isValid(sessionUserId)
+        ? new ObjectId(sessionUserId)
+        : null;
+      const currentUserFilter = sessionUserEmail && sessionUserEmail.length > 0
+        ? { email: sessionUserEmail }
+        : currentUserId
+          ? { _id: currentUserId }
+          : null;
+
+      if (currentUserFilter) {
+        const currentUser = await db.collection("users").findOne(currentUserFilter);
+        const following = Array.isArray(currentUser?.following) ? currentUser.following : [];
+        isFollowing = following.some((value) => String(value) === String(user._id));
+      }
+    }
 
     return NextResponse.json(
       {
+        userId: String(user._id),
         name: user.name ?? null,
         username: user.username ?? null,
         bio: user.bio ?? null,
@@ -148,6 +171,8 @@ export async function GET(req: Request) {
         followersCount: Array.isArray(user.followers) ? user.followers.length : 0,
         followingCount: Array.isArray(user.following) ? user.following.length : 0,
         prayersLiftedCount: typeof prayersLiftedCount === "number" ? prayersLiftedCount : 0,
+        isSelf,
+        isFollowing,
       },
       {
         headers: {

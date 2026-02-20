@@ -761,6 +761,21 @@ html[data-theme="banana"] .panel-glass {
   transform: translateY(8px);
 }
 
+@keyframes cacheFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cache-fade-in {
+  animation: cacheFadeIn 160ms ease;
+}
+
 
 .feed-surface {
   background: var(--panel);

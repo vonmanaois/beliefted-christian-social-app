@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import Link from "next/link";
 import { DotsThreeOutline } from "@phosphor-icons/react";
 import Avatar from "@/components/ui/Avatar";
 import MentionText from "@/components/ui/MentionText";
@@ -140,16 +141,17 @@ const PrayerComments = memo(function PrayerComments({
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <a
+                      <Link
                         href={
                           comment.userId?.username
                             ? `/profile/${comment.userId.username}`
                             : "/profile"
                         }
+                        prefetch={false}
                         className="text-[11px] sm:text-xs font-semibold text-[color:var(--ink)] cursor-pointer hover:underline"
                       >
                         {comment.userId?.name ?? "User"}
-                      </a>
+                      </Link>
                       {comment.userId?.username && (
                         <span className="text-[11px] sm:text-xs text-[color:var(--subtle)]">
                           @{comment.userId.username}

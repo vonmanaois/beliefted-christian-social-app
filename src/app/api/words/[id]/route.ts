@@ -10,6 +10,7 @@ import FaithStoryModel from "@/models/FaithStory";
 import { isAdminEmail } from "@/lib/admin";
 import { revalidateTag } from "next/cache";
 import crypto from "crypto";
+import UserModel from "@/models/User";
 
 const extractCloudinaryPublicId = (url: string) => {
   try {
@@ -149,6 +150,105 @@ export async function DELETE(
 
   revalidateTag("words-feed", "max");
   return NextResponse.json({ ok: true });
+}
+
+export async function GET(
+  req: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+  const session = await getServerSession(authOptions);
+  const viewerId = session?.user?.id ?? null;
+
+  await dbConnect();
+
+  const word = await WordModel.findById(id).lean();
+  if (!word) {
+    return NextResponse.json({ error: "Post not found" }, { status: 404 });
+  }
+
+  const privacy = word.privacy ?? "public";
+  if (privacy !== "public") {
+    if (!viewerId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (String(word.userId) !== String(viewerId)) {
+      if (privacy === "followers") {
+        const viewer = await UserModel.findById(viewerId).select("following").lean();
+        const following = Array.isArray(viewer?.following) ? viewer.following : [];
+        const allowed = following.some((value) => String(value) === String(word.userId));
+        if (!allowed) {
+          return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+      } else {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    }
+  }
+
+  const commentCount = await WordCommentModel.countDocuments({ wordId: word._id });
+  const user = await UserModel.findById(word.userId)
+    .select("name image username")
+    .lean();
+  const isOwner = Boolean(viewerId && String(word.userId) === String(viewerId));
+
+  const sharedStoryId = word.sharedFaithStoryId
+    ? String(word.sharedFaithStoryId)
+    : null;
+  let sharedStoryFallback: {
+    title?: string | null;
+    coverImage?: string | null;
+    authorUsername?: string | null;
+  } | null = null;
+  if (
+    sharedStoryId &&
+    (!word.sharedFaithStoryTitle ||
+      !word.sharedFaithStoryCover ||
+      !word.sharedFaithStoryAuthorUsername)
+  ) {
+    sharedStoryFallback = await FaithStoryModel.findById(sharedStoryId)
+      .select("title coverImage authorUsername")
+      .lean();
+  }
+  const sharedFaithStory =
+    sharedStoryId &&
+    (word.sharedFaithStoryTitle || sharedStoryFallback)
+      ? {
+          id: sharedStoryId,
+          title: word.sharedFaithStoryTitle ?? sharedStoryFallback?.title ?? "",
+          coverImage:
+            word.sharedFaithStoryCover ?? sharedStoryFallback?.coverImage ?? null,
+          authorUsername:
+            word.sharedFaithStoryAuthorUsername ??
+            sharedStoryFallback?.authorUsername ??
+            null,
+        }
+      : null;
+
+  return NextResponse.json({
+    ...word,
+    _id: String(word._id),
+    userId: word.userId ? String(word.userId) : undefined,
+    createdAt:
+      word.createdAt instanceof Date
+        ? word.createdAt.toISOString()
+        : (word.createdAt as unknown as string),
+    likedBy: Array.isArray(word.likedBy) ? word.likedBy.map((v) => String(v)) : [],
+    savedBy: Array.isArray(word.savedBy) ? word.savedBy.map((v) => String(v)) : [],
+    commentCount,
+    isOwner,
+    privacy: (privacy === "followers" || privacy === "private"
+      ? privacy
+      : "public") as "public" | "followers" | "private",
+    user: user
+      ? {
+          name: user.name ?? null,
+          image: user.image ?? null,
+          username: user.username ?? null,
+        }
+      : null,
+    sharedFaithStory,
+  });
 }
 
 export async function PUT(

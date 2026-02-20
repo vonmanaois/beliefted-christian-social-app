@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import PrayerModel from "@/models/Prayer";
 import CommentModel from "@/models/Comment";
+import UserModel from "@/models/User";
 import NotificationModel from "@/models/Notification";
 import ModerationLogModel from "@/models/ModerationLog";
 import { isAdminEmail } from "@/lib/admin";
@@ -77,6 +78,72 @@ export async function DELETE(
 
   revalidateTag("prayers-feed", "max");
   return NextResponse.json({ ok: true });
+}
+
+export async function GET(
+  req: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+  const session = await getServerSession(authOptions);
+  const viewerId = session?.user?.id ?? null;
+
+  await dbConnect();
+
+  const prayer = await PrayerModel.findById(id).lean();
+  if (!prayer) {
+    return NextResponse.json({ error: "Post not found" }, { status: 404 });
+  }
+
+  const privacy = prayer.privacy ?? "public";
+  if (privacy !== "public") {
+    if (!viewerId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (String(prayer.userId) !== String(viewerId)) {
+      if (privacy === "followers") {
+        const viewer = await UserModel.findById(viewerId).select("following").lean();
+        const following = Array.isArray(viewer?.following) ? viewer.following : [];
+        const allowed = following.some((value) => String(value) === String(prayer.userId));
+        if (!allowed) {
+          return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+      } else {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    }
+  }
+
+  const commentCount = await CommentModel.countDocuments({ prayerId: prayer._id });
+  const user = prayer.isAnonymous
+    ? null
+    : await UserModel.findById(prayer.userId).select("name image username").lean();
+  const isOwner = Boolean(viewerId && String(prayer.userId) === String(viewerId));
+
+  return NextResponse.json({
+    ...prayer,
+    _id: String(prayer._id),
+    userId: prayer.userId ? String(prayer.userId) : undefined,
+    createdAt:
+      prayer.createdAt instanceof Date
+        ? prayer.createdAt.toISOString()
+        : (prayer.createdAt as unknown as string),
+    prayedBy: Array.isArray(prayer.prayedBy)
+      ? prayer.prayedBy.map((v) => String(v))
+      : [],
+    commentCount,
+    isOwner,
+    privacy: (privacy === "followers" || privacy === "private"
+      ? privacy
+      : "public") as "public" | "followers" | "private",
+    user: prayer.isAnonymous
+      ? null
+      : {
+          name: user?.name ?? null,
+          image: user?.image ?? null,
+          username: user?.username ?? null,
+        },
+  });
 }
 
 export async function PUT(

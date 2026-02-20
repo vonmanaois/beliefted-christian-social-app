@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import Avatar from "@/components/ui/Avatar";
@@ -663,12 +664,7 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
     const target = event.target as HTMLElement | null;
     if (!target) return;
     if (target.closest("button, a, input, textarea, select, [data-ignore-view]")) return;
-    if (prayer.isAnonymous) {
-      router.push(`/anonymous/${prayerId}`, { scroll: false });
-      return;
-    }
-    if (!prayer.user?.username) return;
-    router.push(`/${prayer.user.username}/${prayerId}`, { scroll: false });
+    router.push(`/post/${prayerId}`, { scroll: false });
   };
 
   const handleCommentSubmit = async (event?: React.FormEvent) => {
@@ -1327,16 +1323,17 @@ const PrayerHeader = memo(function PrayerHeader({
                 </p>
               ) : (
                 <div className="flex flex-wrap items-center gap-2">
-                  <a
+                  <Link
                     href={
                       prayer.user?.username
                         ? `/profile/${prayer.user.username}`
                         : "/profile"
                     }
+                    prefetch={false}
                     className="text-xs sm:text-sm font-semibold text-[color:var(--ink)] hover:underline"
                   >
                     {prayer.user?.name ?? "User"}
-                  </a>
+                  </Link>
                   {prayer.user?.username && (
                     <span className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
                       @{prayer.user.username}
