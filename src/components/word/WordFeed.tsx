@@ -1,7 +1,8 @@
 "use client";
 
-import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 import {
   Virtuoso,
   type ListRange,
@@ -13,6 +14,7 @@ import type { Word } from "@/components/word/types";
 import EmptyState from "@/components/ui/EmptyState";
 import { BookOpenText } from "@phosphor-icons/react";
 import FeedSkeleton from "@/components/ui/FeedSkeleton";
+import { readFeedCache, writeFeedCache } from "@/lib/feedCache";
 
 type WordFeedProps = {
   refreshKey: number;
@@ -22,6 +24,8 @@ type WordFeedProps = {
 };
 
 export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly }: WordFeedProps) {
+  const { data: session } = useSession();
+  const queryClient = useQueryClient();
   const [pageSize, setPageSize] = useState(6);
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -32,6 +36,19 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
     window.addEventListener("resize", updateSize);
     return () => window.removeEventListener("resize", updateSize);
   }, []);
+  const viewerId = session?.user?.id ?? null;
+  const cacheKey = useMemo(
+    () =>
+      [
+        "words",
+        viewerId ?? "guest",
+        userId ?? "all",
+        followingOnly ? "following" : "all",
+        savedOnly ? "saved" : "all",
+      ].join(":"),
+    [viewerId, userId, followingOnly, savedOnly]
+  );
+
   const {
     data,
     isLoading,
@@ -98,7 +115,60 @@ export default function WordFeed({ refreshKey, userId, followingOnly, savedOnly 
     refetchOnMount: false,
   });
 
-  const words = data?.pages.flatMap((page) => page.items) ?? [];
+  const words = useMemo(() => data?.pages.flatMap((page) => page.items) ?? [], [data?.pages]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let cancelled = false;
+    readFeedCache<Word>(cacheKey).then((cached) => {
+      if (cancelled || !cached || cached.items.length === 0) return;
+      const existing = queryClient.getQueryData([
+        "words",
+        userId,
+        refreshKey,
+        followingOnly ? "following" : "all",
+        savedOnly ? "saved" : "all",
+        pageSize,
+      ]);
+      if (existing) return;
+      queryClient.setQueryData(
+        [
+          "words",
+          userId,
+          refreshKey,
+          followingOnly ? "following" : "all",
+          savedOnly ? "saved" : "all",
+          pageSize,
+        ],
+        {
+          pages: [{ items: cached.items, nextCursor: cached.nextCursor }],
+          pageParams: [null],
+        }
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    cacheKey,
+    followingOnly,
+    pageSize,
+    queryClient,
+    refreshKey,
+    savedOnly,
+    userId,
+  ]);
+
+  useEffect(() => {
+    if (!words.length) return;
+    const slice = words.slice(0, 20);
+    const firstPage = data?.pages[0];
+    writeFeedCache<Word>(cacheKey, {
+      items: slice,
+      nextCursor: firstPage?.nextCursor ?? null,
+      savedAt: Date.now(),
+    });
+  }, [cacheKey, data?.pages, words]);
   const feedKey = useMemo(
     () =>
       `feed:words:${userId ?? "all"}:${followingOnly ? "following" : "all"}:${

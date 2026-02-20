@@ -1,8 +1,8 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { keepPreviousData, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Virtuoso, type ListRange, type VirtuosoHandle, type StateSnapshot } from "react-virtuoso";
 import { UserCircle, UserPlus } from "@phosphor-icons/react";
 import Image from "next/image";
@@ -12,6 +12,7 @@ import PrayerCard from "@/components/prayer/PrayerCard";
 import type { Word } from "@/components/word/types";
 import type { Prayer } from "@/components/prayer/types";
 import FeedSkeleton from "@/components/ui/FeedSkeleton";
+import { readFeedCache, writeFeedCache } from "@/lib/feedCache";
 
 type FollowingItem =
   | { type: "word"; word: Word }
@@ -22,6 +23,7 @@ export default function FollowingWall() {
   const isAuthenticated = status === "authenticated";
   const { openSignIn } = useUIStore();
   const [isMounted, setIsMounted] = useState(false);
+  const queryClient = useQueryClient();
   const [pageSize, setPageSize] = useState(6);
 
   useEffect(() => {
@@ -44,7 +46,7 @@ export default function FollowingWall() {
     isFetchingNextPage,
     isFetching,
   } = useInfiniteQuery({
-    queryKey: ["following-feed", pageSize],
+    queryKey: ["following-feed", pageSize, session?.user?.id ?? "guest"],
     queryFn: async ({ pageParam }: { pageParam?: string | null }) => {
       const params = new URLSearchParams();
       if (pageParam) params.set("cursor", pageParam);
@@ -70,7 +72,47 @@ export default function FollowingWall() {
     enabled: isAuthenticated,
   });
 
-  const items = data?.pages.flatMap((page) => page.items) ?? [];
+  const items = useMemo(() => data?.pages.flatMap((page) => page.items) ?? [], [data?.pages]);
+  const cacheKey = useMemo(
+    () => `following:${session?.user?.id ?? "guest"}:${pageSize}`,
+    [pageSize, session?.user?.id]
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!isAuthenticated) return;
+    let cancelled = false;
+    readFeedCache<FollowingItem>(cacheKey).then((cached) => {
+      if (cancelled || !cached || cached.items.length === 0) return;
+      const existing = queryClient.getQueryData([
+        "following-feed",
+        pageSize,
+        session?.user?.id ?? "guest",
+      ]);
+      if (existing) return;
+      queryClient.setQueryData(
+        ["following-feed", pageSize, session?.user?.id ?? "guest"],
+        {
+          pages: [{ items: cached.items, nextCursor: cached.nextCursor }],
+          pageParams: [null],
+        }
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [cacheKey, isAuthenticated, pageSize, queryClient, session?.user?.id]);
+
+  useEffect(() => {
+    if (!items.length || !isAuthenticated) return;
+    const slice = items.slice(0, 20);
+    const firstPage = data?.pages[0];
+    writeFeedCache<FollowingItem>(cacheKey, {
+      items: slice,
+      nextCursor: firstPage?.nextCursor ?? null,
+      savedAt: Date.now(),
+    });
+  }, [cacheKey, data?.pages, isAuthenticated, items]);
   const feedKey = "feed:following";
   const savedSnapshotRef = useRef<{ state: StateSnapshot; count: number } | null>(null);
   const [restoredState, setRestoredState] = useState<StateSnapshot | undefined>(undefined);
