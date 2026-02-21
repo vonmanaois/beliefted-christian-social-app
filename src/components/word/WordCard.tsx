@@ -125,6 +125,7 @@ type WordCardProps = {
   word: Word;
   defaultShowComments?: boolean;
   savedOnly?: boolean;
+  alignContent?: boolean;
 };
 
 const formatPostTime = (timestamp: string) => {
@@ -153,7 +154,12 @@ const formatPostTime = (timestamp: string) => {
   return new Intl.DateTimeFormat("en-US", options).format(createdAt);
 };
 
-const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: WordCardProps) => {
+const WordCard = ({
+  word,
+  defaultShowComments = false,
+  savedOnly = false,
+  alignContent = true,
+}: WordCardProps) => {
   const { data: session } = useSession();
   const { data: adminData } = useAdmin();
   const isAdmin = Boolean(adminData?.isAdmin);
@@ -1004,224 +1010,232 @@ const WordCard = ({ word, defaultShowComments = false, savedOnly = false }: Word
           </div>
         ) : (
           <>
-            {word.scriptureRef && (
-              <div className="mt-2">
-                <span className="verse-chip">
-                  <BookOpenText size={14} weight="regular" />
-                  {word.scriptureRef}
-                </span>
-              </div>
-            )}
-            {cleaned && (
-              <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
-                <MentionText text={displayContent} />
-              </p>
-            )}
-            {cleaned.length > 320 && (
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setShowFullContent((prev) => !prev);
-                  }}
-                  className="mt-2 text-xs font-semibold text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
-                >
-                  {showFullContent ? "Done" : "Continue"}
-                </button>
-              )}
-            {(sharedStory || sharedStoryMissing) && (
-              <div
-                className="mt-3 w-full max-w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] cursor-pointer"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  if (sharedStoryHref) {
-                    router.push(sharedStoryHref, { scroll: false });
-                  }
-                }}
-              >
-                {sharedStory?.coverImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={cloudinaryTransform(sharedStory.coverImage, { width: 640 })}
-                    alt=""
-                    className="h-40 w-full object-cover"
-                    loading="lazy"
-                  />
-                ) : null}
-                <div className="p-3">
-                  <p className="text-sm font-semibold text-[color:var(--ink)]">
-                    {sharedStory ? sharedStory.title : "Story unavailable"}
+            {(word.scriptureRef || cleaned) && (
+              <div className={alignContent ? "pl-8 sm:pl-12" : ""}>
+                {word.scriptureRef && (
+                  <div className="mt-2">
+                    <span className="verse-chip">
+                      <BookOpenText size={14} weight="regular" />
+                      {word.scriptureRef}
+                    </span>
+                  </div>
+                )}
+                {cleaned && (
+                  <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
+                    <MentionText text={displayContent} />
                   </p>
-                  <p className="mt-1 text-xs text-[color:var(--accent)]">
-                    {sharedStory ? "Read full story" : "This story is no longer available."}
-                  </p>
-                </div>
-              </div>
-            )}
-            {(youtubeId || spotifyEmbed) && (
-              <WordEmbeds
-                youtubeId={youtubeId}
-                spotifyEmbed={spotifyEmbed}
-                onStopPropagation={stopPropagation}
-              />
-            )}
-            {Array.isArray(word.images) && word.images.length > 0 && (
-              <div
-                ref={imageSectionRef}
-                className="mt-3 relative w-full max-w-full overflow-hidden"
-              >
-                {!imagesActive ? (
+                )}
+                {cleaned.length > 320 && (
                   <button
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
-                      setImagesActive(true);
+                      setShowFullContent((prev) => !prev);
                     }}
-                    className="flex w-full items-center justify-center rounded-md border border-dashed border-[color:var(--border)] bg-white/70 px-4 py-6 text-sm font-medium text-[color:var(--ink)]"
+                    className="mt-2 text-xs font-semibold text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
                   >
-                    Tap to load photos ({word.images.length})
+                    {showFullContent ? "Done" : "Continue"}
                   </button>
-                ) : (
-                  <>
-                    {word.images.length > 1 && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            const node = imageStripRef.current;
-                            if (!node) return;
-                            node.scrollBy({ left: -node.clientWidth, behavior: "smooth" });
-                          }}
-                          className="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 h-9 w-9 items-center justify-center rounded-full bg-white/80 text-[color:var(--ink)] shadow-md"
-                          aria-label="Scroll images left"
-                        >
-                          ‹
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            const node = imageStripRef.current;
-                            if (!node) return;
-                            node.scrollBy({ left: node.clientWidth, behavior: "smooth" });
-                          }}
-                          className="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 h-9 w-9 items-center justify-center rounded-full bg-white/80 text-[color:var(--ink)] shadow-md"
-                          aria-label="Scroll images right"
-                        >
-                          ›
-                        </button>
-                      </>
-                    )}
-                    <div
-                      ref={imageStripRef}
-                      className="flex min-w-0 w-full max-w-full gap-3 overflow-x-auto pb-1 snap-x snap-mandatory overscroll-x-contain sm:cursor-grab sm:active:cursor-grabbing"
-                      style={{ touchAction: "pan-x" }}
-                      onPointerDown={(event) => {
-                        if (event.pointerType !== "mouse") return;
-                        const node = imageStripRef.current;
-                        if (!node) return;
-                        node.setPointerCapture?.(event.pointerId);
-                        isDraggingImagesRef.current = true;
-                        dragMovedRef.current = false;
-                        lastDragDeltaRef.current = 0;
-                        dragPendingDeltaRef.current = 0;
-                        dragStartXRef.current = event.clientX;
-                        dragStartScrollRef.current = node.scrollLeft;
-                      }}
-                      onPointerMove={(event) => {
-                        if (!isDraggingImagesRef.current) return;
-                        const node = imageStripRef.current;
-                        if (!node) return;
-                        const delta = event.clientX - dragStartXRef.current;
-                        lastDragDeltaRef.current = delta;
-                        if (Math.abs(delta) > 4) {
-                          dragMovedRef.current = true;
-                        }
-                        dragPendingDeltaRef.current = delta;
-                        if (dragRafRef.current == null) {
-                          dragRafRef.current = window.requestAnimationFrame(() => {
-                            if (imageStripRef.current) {
-                              imageStripRef.current.scrollLeft =
-                                dragStartScrollRef.current - dragPendingDeltaRef.current;
-                            }
-                            dragRafRef.current = null;
-                          });
-                        }
-                      }}
-                      onPointerUp={() => {
-                        if (!isDraggingImagesRef.current) return;
-                        isDraggingImagesRef.current = false;
-                        if (dragRafRef.current != null) {
-                          window.cancelAnimationFrame(dragRafRef.current);
-                          dragRafRef.current = null;
-                        }
-                        const shouldBlock = Math.abs(lastDragDeltaRef.current) > 6;
-                        dragMovedRef.current = shouldBlock;
-                        window.setTimeout(() => {
-                          dragMovedRef.current = false;
-                          lastDragDeltaRef.current = 0;
-                        }, 0);
-                      }}
-                      onPointerCancel={() => {
-                        isDraggingImagesRef.current = false;
-                        dragMovedRef.current = false;
-                        lastDragDeltaRef.current = 0;
-                        if (dragRafRef.current != null) {
-                          window.cancelAnimationFrame(dragRafRef.current);
-                          dragRafRef.current = null;
-                        }
-                      }}
-                      onPointerLeave={() => {
-                        isDraggingImagesRef.current = false;
-                        dragMovedRef.current = false;
-                        lastDragDeltaRef.current = 0;
-                        if (dragRafRef.current != null) {
-                          window.cancelAnimationFrame(dragRafRef.current);
-                          dragRafRef.current = null;
-                        }
-                      }}
-                    >
-                      {word.images.map((src, index) => {
-                        const isCloudinary =
-                          typeof src === "string" && src.includes("res.cloudinary.com");
-                        const thumbSrc = isCloudinary
-                          ? cloudinaryTransform(src, { width: 520 })
-                          : src;
-                        const key = `${src}-${index}`;
-                        const orientation = word.imageOrientations?.[index] ?? "landscape";
-                        const aspectClass =
-                          orientation === "portrait" ? "aspect-[3/4]" : "aspect-[4/3]";
-                        return (
-                          <div
-                            key={key}
-                            className={`relative shrink-0 snap-start w-[60%] sm:w-[44%] max-w-[220px] ${aspectClass} overflow-hidden rounded-md border border-transparent`}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              if (dragMovedRef.current || Math.abs(lastDragDeltaRef.current) > 6) {
-                                return;
-                              }
-                              const fullSrc = isCloudinary
-                                ? cloudinaryTransform(src, { width: 1000 })
-                                : src;
-                              setLightboxSrc(fullSrc);
-                            }}
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={thumbSrc}
-                              alt=""
-                              className="h-full w-full object-cover"
-                              loading="lazy"
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </>
                 )}
               </div>
             )}
+            <div className={alignContent ? "pl-8 sm:pl-12" : ""}>
+              {(sharedStory || sharedStoryMissing) && (
+                <div
+                  className="mt-3 w-full max-w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] cursor-pointer"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    if (sharedStoryHref) {
+                      router.push(sharedStoryHref, { scroll: false });
+                    }
+                  }}
+                >
+                  {sharedStory?.coverImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={cloudinaryTransform(sharedStory.coverImage, { width: 640 })}
+                      alt=""
+                      className="h-40 w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : null}
+                  <div className="p-3">
+                    <p className="text-sm font-semibold text-[color:var(--ink)]">
+                      {sharedStory ? sharedStory.title : "Story unavailable"}
+                    </p>
+                    <p className="mt-1 text-xs text-[color:var(--accent)]">
+                      {sharedStory ? "Read full story" : "This story is no longer available."}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {(youtubeId || spotifyEmbed) && (
+                <WordEmbeds
+                  youtubeId={youtubeId}
+                  spotifyEmbed={spotifyEmbed}
+                  onStopPropagation={stopPropagation}
+                />
+              )}
+              {Array.isArray(word.images) && word.images.length > 0 && (
+                <div
+                  ref={imageSectionRef}
+                  className="mt-3 relative w-full max-w-full overflow-hidden"
+                >
+                  {!imagesActive ? (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setImagesActive(true);
+                      }}
+                      className="flex w-full items-center justify-center rounded-md border border-dashed border-[color:var(--border)] bg-white/70 px-4 py-6 text-sm font-medium text-[color:var(--ink)]"
+                    >
+                      Tap to load photos ({word.images.length})
+                    </button>
+                  ) : (
+                    <>
+                      {word.images.length > 1 && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              const node = imageStripRef.current;
+                              if (!node) return;
+                              node.scrollBy({ left: -node.clientWidth, behavior: "smooth" });
+                            }}
+                            className="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 h-9 w-9 items-center justify-center rounded-full bg-white/80 text-[color:var(--ink)] shadow-md"
+                            aria-label="Scroll images left"
+                          >
+                            ‹
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              const node = imageStripRef.current;
+                              if (!node) return;
+                              node.scrollBy({ left: node.clientWidth, behavior: "smooth" });
+                            }}
+                            className="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 h-9 w-9 items-center justify-center rounded-full bg-white/80 text-[color:var(--ink)] shadow-md"
+                            aria-label="Scroll images right"
+                          >
+                            ›
+                          </button>
+                        </>
+                      )}
+                      <div
+                        ref={imageStripRef}
+                        className="flex min-w-0 w-full max-w-full gap-3 overflow-x-auto pb-1 snap-x snap-mandatory overscroll-x-contain sm:cursor-grab sm:active:cursor-grabbing"
+                        onPointerDown={(event) => {
+                          if (event.pointerType !== "mouse") return;
+                          const node = imageStripRef.current;
+                          if (!node) return;
+                          node.setPointerCapture?.(event.pointerId);
+                          isDraggingImagesRef.current = true;
+                          dragMovedRef.current = false;
+                          lastDragDeltaRef.current = 0;
+                          dragPendingDeltaRef.current = 0;
+                          dragStartXRef.current = event.clientX;
+                          dragStartScrollRef.current = node.scrollLeft;
+                        }}
+                        onPointerMove={(event) => {
+                          if (!isDraggingImagesRef.current) return;
+                          const node = imageStripRef.current;
+                          if (!node) return;
+                          const delta = event.clientX - dragStartXRef.current;
+                          lastDragDeltaRef.current = delta;
+                          if (Math.abs(delta) > 4) {
+                            dragMovedRef.current = true;
+                          }
+                          dragPendingDeltaRef.current = delta;
+                          if (dragRafRef.current == null) {
+                            dragRafRef.current = window.requestAnimationFrame(() => {
+                              if (imageStripRef.current) {
+                                imageStripRef.current.scrollLeft =
+                                  dragStartScrollRef.current - dragPendingDeltaRef.current;
+                              }
+                              dragRafRef.current = null;
+                            });
+                          }
+                        }}
+                        onPointerUp={() => {
+                          if (!isDraggingImagesRef.current) return;
+                          isDraggingImagesRef.current = false;
+                          if (dragRafRef.current != null) {
+                            window.cancelAnimationFrame(dragRafRef.current);
+                            dragRafRef.current = null;
+                          }
+                          const shouldBlock = Math.abs(lastDragDeltaRef.current) > 6;
+                          dragMovedRef.current = shouldBlock;
+                          window.setTimeout(() => {
+                            dragMovedRef.current = false;
+                            lastDragDeltaRef.current = 0;
+                          }, 0);
+                        }}
+                        onPointerCancel={() => {
+                          isDraggingImagesRef.current = false;
+                          dragMovedRef.current = false;
+                          lastDragDeltaRef.current = 0;
+                          if (dragRafRef.current != null) {
+                            window.cancelAnimationFrame(dragRafRef.current);
+                            dragRafRef.current = null;
+                          }
+                        }}
+                        onPointerLeave={() => {
+                          isDraggingImagesRef.current = false;
+                          dragMovedRef.current = false;
+                          lastDragDeltaRef.current = 0;
+                          if (dragRafRef.current != null) {
+                            window.cancelAnimationFrame(dragRafRef.current);
+                            dragRafRef.current = null;
+                          }
+                        }}
+                      >
+                        {word.images.map((src, index) => {
+                          const isCloudinary =
+                            typeof src === "string" && src.includes("res.cloudinary.com");
+                          const thumbSrc = isCloudinary
+                            ? cloudinaryTransform(src, { width: 520 })
+                            : src;
+                          const key = `${src}-${index}`;
+                          const orientation = word.imageOrientations?.[index] ?? "landscape";
+                          const aspectClass =
+                            orientation === "portrait" ? "aspect-[3/4]" : "aspect-[4/3]";
+                          return (
+                            <div
+                              key={key}
+                              className={`relative shrink-0 snap-start w-[60%] sm:w-[44%] max-w-[220px] ${aspectClass} overflow-hidden rounded-md border border-transparent`}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                if (
+                                  dragMovedRef.current ||
+                                  Math.abs(lastDragDeltaRef.current) > 6
+                                ) {
+                                  return;
+                                }
+                                const fullSrc = isCloudinary
+                                  ? cloudinaryTransform(src, { width: 1000 })
+                                  : src;
+                                setLightboxSrc(fullSrc);
+                              }}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={thumbSrc}
+                                alt=""
+                                className="h-full w-full object-cover"
+                                loading="lazy"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </>
         )}
         <WordActions
@@ -1608,7 +1622,7 @@ const WordHeader = memo(function WordHeader({
           sizes="(min-width: 640px) 48px, 32px"
           href={user?.username ? `/profile/${user.username}` : "/profile"}
           fallback={(user?.name?.[0] ?? "W").toUpperCase()}
-          className="avatar-core cursor-pointer h-8 w-8 sm:h-12 sm:w-12"
+          className="avatar-core cursor-pointer h-4 w-4 sm:h-8 sm:w-8"
         />
       </div>
       <div className="flex-1 min-w-0">

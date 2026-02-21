@@ -108,7 +108,7 @@ export default function PostDetailCached({ postId }: PostDetailCachedProps) {
       <div className={fromCache ? "cache-fade-in" : undefined}>
         <PostBackHeader label="Word" />
         <div className="feed-surface sm:rounded-none sm:overflow-visible">
-          <WordCard word={resolved.word} defaultShowComments />
+          <WordCard word={resolved.word} defaultShowComments alignContent={false} />
         </div>
       </div>
     );
@@ -118,7 +118,7 @@ export default function PostDetailCached({ postId }: PostDetailCachedProps) {
     <div className={fromCache ? "cache-fade-in" : undefined}>
       <PostBackHeader label="Prayer" />
       <div className="feed-surface sm:rounded-none sm:overflow-visible">
-        <PrayerCard prayer={resolved.prayer} defaultShowComments />
+        <PrayerCard prayer={resolved.prayer} defaultShowComments alignContent={false} />
       </div>
     </div>
   );

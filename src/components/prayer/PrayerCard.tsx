@@ -93,6 +93,7 @@ export type { Prayer } from "@/components/prayer/types";
 type PrayerCardProps = {
   prayer: Prayer;
   defaultShowComments?: boolean;
+  alignContent?: boolean;
 };
 
 
@@ -142,7 +143,11 @@ const formatPostTime = (timestamp: string) => {
   return new Intl.DateTimeFormat("en-US", options).format(createdAt);
 };
 
-const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) => {
+const PrayerCard = ({
+  prayer,
+  defaultShowComments = false,
+  alignContent = true,
+}: PrayerCardProps) => {
   const { data: session } = useSession();
   const { data: adminData } = useAdmin();
   const isAdmin = Boolean(adminData?.isAdmin);
@@ -899,67 +904,71 @@ const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) =>
           </div>
         ) : prayer.kind === "request" && requestPoints.length ? (
           <>
-            <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-3 py-1 text-sm font-semibold text-[color:var(--accent)]">
-              <NotePencil size={16} weight="regular" />
-              Prayer Request
-            </div>
-            {prayer.scriptureRef && (
-              <div className="mt-2">
-                <span className="verse-chip">
-                  <BookOpenText size={14} weight="regular" />
-                  {prayer.scriptureRef}
-                </span>
+            <div className={alignContent ? "pl-8 sm:pl-12" : ""}>
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-3 py-1 text-sm font-semibold text-[color:var(--accent)]">
+                <NotePencil size={16} weight="regular" />
+                Prayer Request
               </div>
-            )}
-            <div className="mt-3 space-y-3">
-              {requestPoints.map((point, index) => (
-                <div key={`${point.title}-${index}`}>
-                  <p className="text-[13px] sm:text-sm font-semibold text-[color:var(--ink)]">
-                    <MentionText text={point.title} />
-                  </p>
-                  <p className="mt-2 text-[13px] sm:text-sm leading-relaxed text-[color:var(--subtle)] whitespace-pre-line">
-                    <MentionText text={point.description} />
-                  </p>
+              {prayer.scriptureRef && (
+                <div className="mt-2">
+                  <span className="verse-chip">
+                    <BookOpenText size={14} weight="regular" />
+                    {prayer.scriptureRef}
+                  </span>
                 </div>
-              ))}
+              )}
+              <div className="mt-3 space-y-3">
+                {requestPoints.map((point, index) => (
+                  <div key={`${point.title}-${index}`}>
+                    <p className="text-[13px] sm:text-sm font-semibold text-[color:var(--ink)]">
+                      <MentionText text={point.title} />
+                    </p>
+                    <p className="mt-2 text-[13px] sm:text-sm leading-relaxed text-[color:var(--subtle)] whitespace-pre-line">
+                      <MentionText text={point.description} />
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           </>
         ) : (
           <>
-            <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--surface-strong)] px-3 py-1 text-sm font-semibold text-[color:var(--subtle)]">
-              <BookOpenText size={16} weight="regular" className="text-[color:var(--accent)]" />
-              Prayer
-            </div>
-            {prayer.scriptureRef && (
-              <p className="mt-2 text-xs font-semibold text-[color:var(--accent)]">
-                {prayer.scriptureRef}
-              </p>
-            )}
-            <>
-              {cleaned && (
-                <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
-                  <MentionText text={displayContent} />
+            <div className={alignContent ? "pl-8 sm:pl-12" : ""}>
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--surface-strong)] px-3 py-1 text-sm font-semibold text-[color:var(--subtle)]">
+                <BookOpenText size={16} weight="regular" className="text-[color:var(--accent)]" />
+                Prayer
+              </div>
+              {prayer.scriptureRef && (
+                <p className="mt-2 text-xs font-semibold text-[color:var(--accent)]">
+                  {prayer.scriptureRef}
                 </p>
               )}
-              {cleaned.length > 320 && (
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setShowFullContent((prev) => !prev);
-                  }}
-                  className="mt-2 text-xs font-semibold text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
-                >
-                  {showFullContent ? "Done" : "Continue"}
-                </button>
-              )}
-              {videoId && (
-                <PrayerEmbeds
-                  videoId={videoId}
-                  onStopPropagation={stopPropagation}
-                />
-              )}
-            </>
+              <>
+                {cleaned && (
+                  <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
+                    <MentionText text={displayContent} />
+                  </p>
+                )}
+                {cleaned.length > 320 && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setShowFullContent((prev) => !prev);
+                    }}
+                    className="mt-2 text-xs font-semibold text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
+                  >
+                    {showFullContent ? "Done" : "Continue"}
+                  </button>
+                )}
+                {videoId && (
+                  <PrayerEmbeds
+                    videoId={videoId}
+                    onStopPropagation={stopPropagation}
+                  />
+                )}
+              </>
+            </div>
           </>
         )}
         <PrayerActions
@@ -1309,7 +1318,7 @@ const PrayerHeader = memo(function PrayerHeader({
                 : "/profile"
             }
             fallback={(prayer.user?.name?.[0] ?? "U").toUpperCase()}
-            className="avatar-core cursor-pointer h-8 w-8 sm:h-12 sm:w-12"
+            className="avatar-core cursor-pointer h-4 w-4 sm:h-8 sm:w-8"
           />
         )}
       </div>

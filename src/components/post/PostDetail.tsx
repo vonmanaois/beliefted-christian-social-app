@@ -138,6 +138,7 @@ export default async function PostDetail({
                   },
             }}
             defaultShowComments
+            alignContent={false}
           />
         </div>
       </div>
@@ -244,6 +245,7 @@ export default async function PostDetail({
               },
             }}
             defaultShowComments
+            alignContent={false}
           />
         </div>
       </div>

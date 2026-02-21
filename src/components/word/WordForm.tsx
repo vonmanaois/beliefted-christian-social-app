@@ -703,7 +703,13 @@ export default function WordForm({
       {spotifyError && (
         <p className="text-xs text-[color:var(--danger)]">{spotifyError}</p>
       )}
-      <div className="flex justify-end">
+      <div
+        className={`flex justify-end${
+          variant === "inline"
+            ? " sticky bottom-0 z-10 -mx-2 mt-2 border-t border-[color:var(--panel-border)] bg-[color:var(--panel)]/95 px-2 py-2 backdrop-blur"
+            : ""
+        }`}
+      >
         <button
           type="submit"
           disabled={
