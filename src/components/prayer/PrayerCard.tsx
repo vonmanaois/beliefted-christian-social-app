@@ -802,7 +802,7 @@ const PrayerCard = ({
 
   return (
     <article
-      className={`wall-card flex flex-col gap-3 rounded-none cursor-pointer transition-card ${
+      className={`wall-card flex flex-col gap-2 rounded-none cursor-pointer transition-card ${
         isRemoving ? "fade-out-card" : ""
       }`}
       onClick={handleCardClick}
@@ -811,6 +811,7 @@ const PrayerCard = ({
       <PrayerHeader
         prayer={prayer}
         createdAtIso={createdAtValue.toISOString()}
+        privacy={prayer.privacy ?? "public"}
         isOwner={isOwner}
         isAdmin={isAdmin}
         showMenu={showMenu}
@@ -904,7 +905,7 @@ const PrayerCard = ({
           </div>
         ) : prayer.kind === "request" && requestPoints.length ? (
           <>
-            <div className={alignContent ? "pl-8 sm:pl-12" : ""}>
+            <div className={alignContent ? "pl-[48px] sm:pl-[52px]" : ""}>
               <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-3 py-1 text-sm font-semibold text-[color:var(--accent)]">
                 <NotePencil size={16} weight="regular" />
                 Prayer Request
@@ -933,7 +934,7 @@ const PrayerCard = ({
           </>
         ) : (
           <>
-            <div className={alignContent ? "pl-8 sm:pl-12" : ""}>
+            <div className={alignContent ? "pl-[48px] sm:pl-[52px]" : ""}>
               <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--surface-strong)] px-3 py-1 text-sm font-semibold text-[color:var(--subtle)]">
                 <BookOpenText size={16} weight="regular" className="text-[color:var(--accent)]" />
                 Prayer
@@ -945,7 +946,7 @@ const PrayerCard = ({
               )}
               <>
                 {cleaned && (
-                  <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
+                  <p className="mt-1 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
                     <MentionText text={displayContent} />
                   </p>
                 )}
@@ -971,17 +972,18 @@ const PrayerCard = ({
             </div>
           </>
         )}
-        <PrayerActions
-          isOwner={isOwner}
-          hasPrayed={hasPrayed}
-          isPending={isPending}
-          onPray={handlePray}
-          onToggleComments={toggleComments}
-          commentCount={displayedCommentCount}
-          prayedCount={prayedBy.length}
-          privacy={prayer.privacy ?? "public"}
-          commentButtonRef={commentButtonRef}
-        />
+        <div className={alignContent ? "pl-[48px] sm:pl-[52px]" : ""}>
+          <PrayerActions
+            isOwner={isOwner}
+            hasPrayed={hasPrayed}
+            isPending={isPending}
+            onPray={handlePray}
+            onToggleComments={toggleComments}
+            commentCount={displayedCommentCount}
+            prayedCount={prayedBy.length}
+            commentButtonRef={commentButtonRef}
+          />
+        </div>
         {prayError && !isOwner && (
           <div className="mt-2 text-[11px] text-[color:var(--subtle)] flex items-center gap-2">
             <span>{prayError}</span>
@@ -1277,6 +1279,7 @@ const PrayerEmbeds = memo(function PrayerEmbeds({
 type PrayerHeaderProps = {
   prayer: Prayer;
   createdAtIso: string;
+  privacy: Prayer["privacy"];
   isOwner: boolean;
   isAdmin: boolean;
   showMenu: boolean;
@@ -1290,6 +1293,7 @@ type PrayerHeaderProps = {
 const PrayerHeader = memo(function PrayerHeader({
   prayer,
   createdAtIso,
+  privacy,
   isOwner,
   isAdmin,
   showMenu,
@@ -1300,11 +1304,11 @@ const PrayerHeader = memo(function PrayerHeader({
   onAdminDelete,
 }: PrayerHeaderProps) {
   return (
-    <div className="flex items-start gap-3">
-      <div className="avatar-ring">
+    <div className="flex items-start gap-2">
+      <div className="avatar-ring avatar-ring-sm">
         {prayer.isAnonymous ? (
           <div className="avatar-core">
-            <UserCircle size={28} weight="regular" />
+            <UserCircle size={22} weight="regular" />
           </div>
         ) : (
           <Avatar
@@ -1318,20 +1322,20 @@ const PrayerHeader = memo(function PrayerHeader({
                 : "/profile"
             }
             fallback={(prayer.user?.name?.[0] ?? "U").toUpperCase()}
-            className="avatar-core cursor-pointer h-4 w-4 sm:h-8 sm:w-8"
+            className="avatar-core cursor-pointer h-full w-full"
           />
         )}
       </div>
       <div className="flex-1">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col items-start gap-0 leading-tight">
               {prayer.isAnonymous ? (
-                <p className="text-xs sm:text-sm font-semibold text-[color:var(--ink)]">
+                <p className="text-[16px] font-semibold text-[color:var(--ink)]">
                   Anonymous
                 </p>
               ) : (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-col items-start gap-0">
                   <Link
                     href={
                       prayer.user?.username
@@ -1339,12 +1343,12 @@ const PrayerHeader = memo(function PrayerHeader({
                         : "/profile"
                     }
                     prefetch={false}
-                    className="text-xs sm:text-sm font-semibold text-[color:var(--ink)] hover:underline"
+                    className="text-[16px] font-semibold text-[color:var(--ink)] hover:underline"
                   >
                     {prayer.user?.name ?? "User"}
                   </Link>
                   {prayer.user?.username && (
-                    <span className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
+                    <span className="text-[12px] text-[color:var(--subtle)]">
                       @{prayer.user.username}
                     </span>
                   )}
@@ -1353,6 +1357,15 @@ const PrayerHeader = memo(function PrayerHeader({
             </div>
           </div>
           <div className="flex items-center gap-2 pr-1">
+            <span className="text-[color:var(--subtle)]">
+              {privacy === "private" ? (
+                <LockSimple size={14} weight="regular" />
+              ) : privacy === "followers" ? (
+                <UsersThree size={14} weight="regular" />
+              ) : (
+                <Globe size={14} weight="regular" />
+              )}
+            </span>
             <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
               {formatPostTime(createdAtIso)}
             </p>
@@ -1414,7 +1427,6 @@ type PrayerActionsProps = {
   onToggleComments: () => void;
   commentCount: number;
   prayedCount: number;
-  privacy: Prayer["privacy"];
   commentButtonRef: React.RefObject<HTMLButtonElement | null>;
 };
 
@@ -1426,13 +1438,12 @@ const PrayerActions = memo(function PrayerActions({
   onToggleComments,
   commentCount,
   prayedCount,
-  privacy,
   commentButtonRef,
 }: PrayerActionsProps) {
   return (
-    <div className="mt-2 sm:mt-3 flex items-center gap-1.5 sm:gap-3 text-[11px] sm:text-xs">
+    <div className="mt-2 sm:mt-3 grid grid-cols-4 items-center gap-3 text-[11px] sm:text-xs">
       {isOwner ? (
-        <span className="text-xs font-semibold text-[color:var(--subtle)]">
+        <span className="col-span-1 text-[10px] sm:text-xs font-semibold text-[color:var(--subtle)] truncate">
           Your prayer
         </span>
       ) : (
@@ -1452,49 +1463,38 @@ const PrayerActions = memo(function PrayerActions({
             weight={hasPrayed ? "fill" : "regular"}
             className={hasPrayed ? "text-[color:var(--accent-strong)]" : undefined}
           />
-          <span className="text-xs font-semibold">
-            {hasPrayed ? "Prayed" : "Pray"}
-          </span>
+          {prayedCount > 0 && (
+            <span className="text-[10px] sm:text-xs font-semibold text-[color:var(--ink)]">
+              {prayedCount}
+            </span>
+          )}
         </button>
       )}
       <button
         type="button"
         onClick={onToggleComments}
         aria-label="Encourage prayer"
-        className="inline-flex items-center justify-center gap-2 rounded-lg px-2 py-1.5 cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
+        className="pill-button inline-flex items-center justify-center gap-2 rounded-lg cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
         ref={commentButtonRef}
       >
-        <span className="inline-flex items-center gap-2">
-          <ChatCircle size={22} weight="regular" />
-          <span className="text-xs font-semibold text-[color:var(--subtle)]">
-            Encourage
-          </span>
-          {commentCount > 0 && (
-            <span className="text-xs font-semibold text-[color:var(--ink)]">
-              {commentCount}
-            </span>
-          )}
-        </span>
-      </button>
-      <div className="ml-auto flex items-center gap-2 text-[10px] sm:text-xs text-[color:var(--subtle)]">
-        {prayedCount > 0 && (
-          <span>
-            <span className="font-semibold text-[color:var(--ink)]">
-              {prayedCount}
-            </span>{" "}
-            people prayed
+        <ChatCircle size={22} weight="regular" />
+        {commentCount > 0 && (
+          <span className="text-xs font-semibold text-[color:var(--ink)]">
+            {commentCount}
           </span>
         )}
-        <span className="text-[color:var(--subtle)]">
-          {privacy === "private" ? (
-            <LockSimple size={16} weight="regular" />
-          ) : privacy === "followers" ? (
-            <UsersThree size={16} weight="regular" />
-          ) : (
-            <Globe size={16} weight="regular" />
-          )}
-        </span>
+      </button>
+      <div className="col-span-1 flex items-center justify-center text-[10px] sm:text-xs text-[color:var(--subtle)]">
+        {isOwner && prayedCount > 0 && (
+          <span className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
+            {prayedCount} prayed
+          </span>
+        )}
+        {!isOwner && prayedCount > 0 && (
+          <span className="text-[10px] sm:text-xs text-[color:var(--subtle)]">prayed</span>
+        )}
       </div>
+      <div className="col-span-1" />
     </div>
   );
 });

@@ -1,9 +1,17 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useSession } from "next-auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
+import { createPortal } from "react-dom";
 import {
   BookOpenText,
   BookmarkSimple,
@@ -12,6 +20,10 @@ import {
   Globe,
   Heart,
   LockSimple,
+  CheckCircle,
+  PaperPlaneTilt,
+  CopySimple,
+  ChatCircleDots,
   UsersThree,
 } from "@phosphor-icons/react";
 import Link from "next/link";
@@ -23,9 +35,15 @@ import MentionTextarea from "@/components/ui/MentionTextarea";
 import { useAdmin } from "@/hooks/useAdmin";
 import { cloudinaryTransform } from "@/lib/cloudinary";
 import DeferredEmbed from "@/components/ui/DeferredEmbed";
-import type { Word, WordCommentData, CommentUser } from "@/components/word/types";
+import type {
+  Word,
+  WordCommentData,
+  CommentUser,
+} from "@/components/word/types";
 
-const Modal = dynamic(() => import("@/components/layout/Modal"), { ssr: false });
+const Modal = dynamic(() => import("@/components/layout/Modal"), {
+  ssr: false,
+});
 const WordComments = dynamic(() => import("@/components/word/WordComments"), {
   ssr: false,
   loading: () => (
@@ -75,7 +93,12 @@ const extractYouTube = (value: string) => {
   return { videoId, cleaned };
 };
 
-const ADMIN_REASONS = ["Off-topic", "Inappropriate", "Spam", "Asking money"] as const;
+const ADMIN_REASONS = [
+  "Off-topic",
+  "Inappropriate",
+  "Spam",
+  "Asking money",
+] as const;
 
 const extractSpotify = (value: string) => {
   let embedUrl: string | null = null;
@@ -171,7 +194,8 @@ const WordCard = ({
     }
     const asObj = raw as { $oid?: string; toString?: () => string };
     if (asObj?.$oid) return asObj.$oid;
-    if (asObj?.toString) return asObj.toString().replace(/^ObjectId\\(\"(.+)\"\\)$/, "$1");
+    if (asObj?.toString)
+      return asObj.toString().replace(/^ObjectId\\(\"(.+)\"\\)$/, "$1");
     return String(raw);
   };
   const wordId = normalizeId(word._id);
@@ -179,7 +203,7 @@ const WordCard = ({
     word.createdAt instanceof Date ? word.createdAt : new Date(word.createdAt);
   const likedBy = useMemo(
     () => (Array.isArray(word.likedBy) ? word.likedBy : []),
-    [word.likedBy]
+    [word.likedBy],
   );
   const savedBy = Array.isArray(word.savedBy) ? word.savedBy : [];
   const [localLikedBy, setLocalLikedBy] = useState<string[]>(likedBy);
@@ -190,7 +214,6 @@ const WordCard = ({
   useEffect(() => {
     setLocalLikedBy(likedBy);
   }, [likedBy]);
-
 
   const hasSaved = session?.user?.id
     ? savedBy.includes(String(session.user.id))
@@ -205,8 +228,11 @@ const WordCard = ({
   const [editingCommentOriginal, setEditingCommentOriginal] = useState("");
   const [showCommentEditConfirm, setShowCommentEditConfirm] = useState(false);
   const [commentMenuId, setCommentMenuId] = useState<string | null>(null);
-  const [showCommentDeleteConfirm, setShowCommentDeleteConfirm] = useState(false);
-  const [pendingDeleteCommentId, setPendingDeleteCommentId] = useState<string | null>(null);
+  const [showCommentDeleteConfirm, setShowCommentDeleteConfirm] =
+    useState(false);
+  const [pendingDeleteCommentId, setPendingDeleteCommentId] = useState<
+    string | null
+  >(null);
   const commentEditRef = useRef<HTMLDivElement | null>(null);
   const commentFormRef = useRef<HTMLDivElement | null>(null);
   const commentInputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -223,6 +249,9 @@ const WordCard = ({
   const [editText, setEditText] = useState(word.content ?? "");
   const [isRemoving, setIsRemoving] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+  const shareMenuRef = useRef<HTMLDivElement | null>(null);
   const stopPropagation = useCallback((event: React.MouseEvent) => {
     event.stopPropagation();
   }, []);
@@ -249,15 +278,18 @@ const WordCard = ({
         const entry = entries[0];
         if (entry?.isIntersecting) {
           if ("requestIdleCallback" in window) {
-            (window as Window & { requestIdleCallback?: (cb: () => void) => number })
-              .requestIdleCallback?.(() => setImagesActive(true));
+            (
+              window as Window & {
+                requestIdleCallback?: (cb: () => void) => number;
+              }
+            ).requestIdleCallback?.(() => setImagesActive(true));
           } else {
             setImagesActive(true);
           }
           observer.disconnect();
         }
       },
-      { rootMargin: "200px" }
+      { rootMargin: "200px" },
     );
     observer.observe(node);
     return () => observer.disconnect();
@@ -267,29 +299,32 @@ const WordCard = ({
     word.isOwner ??
     Boolean(
       session?.user?.id &&
-        word.userId &&
-        String(word.userId) === String(session.user.id)
+      word.userId &&
+      String(word.userId) === String(session.user.id),
     );
   const updateWordCache = (updater: (item: Word) => Word) => {
-    queryClient.setQueriesData<{ pages: { items: Word[] }[]; pageParams: unknown[] }>(
-      { queryKey: ["words"] },
-      (data) => {
-        if (!data) return data;
-        return {
-          ...data,
-          pages: data.pages.map((page) => ({
-            ...page,
-            items: page.items.map((item) =>
-              normalizeId(item._id) === wordId ? updater(item) : item
-            ),
-          })),
-        };
-      }
-    );
+    queryClient.setQueriesData<{
+      pages: { items: Word[] }[];
+      pageParams: unknown[];
+    }>({ queryKey: ["words"] }, (data) => {
+      if (!data) return data;
+      return {
+        ...data,
+        pages: data.pages.map((page) => ({
+          ...page,
+          items: page.items.map((item) =>
+            normalizeId(item._id) === wordId ? updater(item) : item,
+          ),
+        })),
+      };
+    });
   };
 
   const updateWordCacheNonSaved = (updater: (item: Word) => Word) => {
-    queryClient.setQueriesData<{ pages: { items: Word[] }[]; pageParams: unknown[] }>(
+    queryClient.setQueriesData<{
+      pages: { items: Word[] }[];
+      pageParams: unknown[];
+    }>(
       {
         queryKey: ["words"],
         predicate: (query) =>
@@ -302,35 +337,38 @@ const WordCard = ({
           pages: data.pages.map((page) => ({
             ...page,
             items: page.items.map((item) =>
-              normalizeId(item._id) === wordId ? updater(item) : item
+              normalizeId(item._id) === wordId ? updater(item) : item,
             ),
           })),
         };
-      }
+      },
     );
   };
   const updateFollowingCache = (updater: (item: Word) => Word) => {
-    queryClient.setQueriesData<{ pages: { items: Array<{ type: string; word?: Word }> }[]; pageParams: unknown[] }>(
-      { queryKey: ["following-feed"] },
-      (data) => {
-        if (!data) return data;
-        return {
-          ...data,
-          pages: data.pages.map((page) => ({
-            ...page,
-            items: page.items.map((item) => {
-              if (item?.type !== "word" || !item.word) return item;
-              return normalizeId(item.word._id) === wordId
-                ? { ...item, word: updater(item.word) }
-                : item;
-            }),
-          })),
-        };
-      }
-    );
+    queryClient.setQueriesData<{
+      pages: { items: Array<{ type: string; word?: Word }> }[];
+      pageParams: unknown[];
+    }>({ queryKey: ["following-feed"] }, (data) => {
+      if (!data) return data;
+      return {
+        ...data,
+        pages: data.pages.map((page) => ({
+          ...page,
+          items: page.items.map((item) => {
+            if (item?.type !== "word" || !item.word) return item;
+            return normalizeId(item.word._id) === wordId
+              ? { ...item, word: updater(item.word) }
+              : item;
+          }),
+        })),
+      };
+    });
   };
   const removeFromSavedCache = () => {
-    queryClient.setQueriesData<{ pages: { items: Word[] }[]; pageParams: unknown[] }>(
+    queryClient.setQueriesData<{
+      pages: { items: Word[] }[];
+      pageParams: unknown[];
+    }>(
       {
         queryKey: ["words"],
         predicate: (query) =>
@@ -342,10 +380,12 @@ const WordCard = ({
           ...data,
           pages: data.pages.map((page) => ({
             ...page,
-            items: page.items.filter((item) => normalizeId(item._id) !== wordId),
+            items: page.items.filter(
+              (item) => normalizeId(item._id) !== wordId,
+            ),
           })),
         };
-      }
+      },
     );
   };
 
@@ -364,7 +404,7 @@ const WordCard = ({
   });
   const displayedCommentCount = commentsActive
     ? comments.length
-    : word.commentCount ?? 0;
+    : (word.commentCount ?? 0);
 
   useEffect(() => {
     if (!isEditing) {
@@ -383,7 +423,17 @@ const WordCard = ({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showMenu]);
-
+  useEffect(() => {
+    if (!showShareMenu) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!shareMenuRef.current) return;
+      if (!shareMenuRef.current.contains(event.target as Node)) {
+        setShowShareMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showShareMenu]);
 
   useEffect(() => {
     if (!commentMenuId) return;
@@ -500,7 +550,8 @@ const WordCard = ({
     },
     onMutate: async () => {
       const viewerId = session?.user?.id ? String(session.user.id) : null;
-      if (!viewerId) return { previousWords: null, previousFollowing: null, viewerId: null };
+      if (!viewerId)
+        return { previousWords: null, previousFollowing: null, viewerId: null };
       const previousWords = queryClient.getQueriesData({
         queryKey: ["words"],
       });
@@ -590,7 +641,12 @@ const WordCard = ({
         }
         throw new Error("Failed to post comment");
       }
-      return (await response.json()) as { _id: string; content: string; createdAt: string; userId?: CommentUser | null };
+      return (await response.json()) as {
+        _id: string;
+        content: string;
+        createdAt: string;
+        userId?: CommentUser | null;
+      };
     },
     onSuccess: async (newComment) => {
       setCommentError(null);
@@ -613,13 +669,14 @@ const WordCard = ({
               name: session.user.name ?? "User",
               image: session.user.image ?? null,
               username:
-                (session.user as { username?: string | null })?.username ?? null,
+                (session.user as { username?: string | null })?.username ??
+                null,
             },
           }
         : newComment;
       queryClient.setQueryData<WordCommentData[]>(
         ["word-comments", wordId],
-        (current = []) => [hydratedComment as WordCommentData, ...current]
+        (current = []) => [hydratedComment as WordCommentData, ...current],
       );
     },
     onError: () => {
@@ -648,8 +705,8 @@ const WordCard = ({
             current.map((comment) =>
               comment._id === editingCommentId
                 ? { ...comment, content: data.content }
-                : comment
-            )
+                : comment,
+            ),
         );
       }
       setEditingCommentId(null);
@@ -677,7 +734,8 @@ const WordCard = ({
       setCommentError(null);
       queryClient.setQueryData<WordCommentData[]>(
         ["word-comments", wordId],
-        (current = []) => current.filter((comment) => comment._id !== deletedId)
+        (current = []) =>
+          current.filter((comment) => comment._id !== deletedId),
       );
       updateWordCache((item) => ({
         ...item,
@@ -769,29 +827,33 @@ const WordCard = ({
       return;
     }
     if ("requestIdleCallback" in window) {
-      (window as Window & { requestIdleCallback?: (cb: () => void) => number })
-        .requestIdleCallback?.(activate);
+      (
+        window as Window & { requestIdleCallback?: (cb: () => void) => number }
+      ).requestIdleCallback?.(activate);
       return;
     }
     setTimeout(activate, 0);
   }, [commentsActive, commentsReady]);
 
-  const toggleComments = useCallback((event?: React.MouseEvent) => {
-    event?.stopPropagation();
-    setShowComments((prev) => {
-      if (prev) {
-        if (commentText.trim().length > 0) {
-          setShowCommentConfirm(true);
-          return prev;
+  const toggleComments = useCallback(
+    (event?: React.MouseEvent) => {
+      event?.stopPropagation();
+      setShowComments((prev) => {
+        if (prev) {
+          if (commentText.trim().length > 0) {
+            setShowCommentConfirm(true);
+            return prev;
+          }
+          setCommentText("");
+          return false;
         }
-        setCommentText("");
-        return false;
-      }
-      scheduleCommentsActivation();
-      setTimeout(() => commentInputRef.current?.focus(), 0);
-      return true;
-    });
-  }, [commentText, scheduleCommentsActivation]);
+        scheduleCommentsActivation();
+        setTimeout(() => commentInputRef.current?.focus(), 0);
+        return true;
+      });
+    },
+    [commentText, scheduleCommentsActivation],
+  );
 
   useEffect(() => {
     if (!showComments) {
@@ -801,39 +863,45 @@ const WordCard = ({
     scheduleCommentsActivation();
   }, [showComments, scheduleCommentsActivation]);
 
-  const handleLike = useCallback(async (event?: React.MouseEvent) => {
-    event?.stopPropagation();
-    if (!session?.user?.id) {
-      openSignIn();
-      return;
-    }
+  const handleLike = useCallback(
+    async (event?: React.MouseEvent) => {
+      event?.stopPropagation();
+      if (!session?.user?.id) {
+        openSignIn();
+        return;
+      }
 
-    setLikeError(null);
-    setIsLiking(true);
-    try {
-      await likeMutation.mutateAsync();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLiking(false);
-    }
-  }, [session?.user?.id, openSignIn, likeMutation]);
+      setLikeError(null);
+      setIsLiking(true);
+      try {
+        await likeMutation.mutateAsync();
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsLiking(false);
+      }
+    },
+    [session?.user?.id, openSignIn, likeMutation],
+  );
 
-  const handleSave = useCallback(async (event?: React.MouseEvent) => {
-    event?.stopPropagation();
-    if (!session?.user?.id) {
-      openSignIn();
-      return;
-    }
-    setIsSaving(true);
-    try {
-      await saveMutation.mutateAsync();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsSaving(false);
-    }
-  }, [session?.user?.id, openSignIn, saveMutation]);
+  const handleSave = useCallback(
+    async (event?: React.MouseEvent) => {
+      event?.stopPropagation();
+      if (!session?.user?.id) {
+        openSignIn();
+        return;
+      }
+      setIsSaving(true);
+      try {
+        await saveMutation.mutateAsync();
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [session?.user?.id, openSignIn, saveMutation],
+  );
 
   const handleCommentSubmit = async (event?: React.FormEvent) => {
     if (event) {
@@ -867,7 +935,7 @@ const WordCard = ({
     (id: string, content: string) => {
       commentEditMutation.mutate({ id, content: content.trim() });
     },
-    [commentEditMutation]
+    [commentEditMutation],
   );
 
   const handleRequestDeleteComment = useCallback((id: string) => {
@@ -879,7 +947,10 @@ const WordCard = ({
   const handleCardClick = (event: React.MouseEvent) => {
     const target = event.target as HTMLElement | null;
     if (!target) return;
-    if (target.closest("button, a, input, textarea, select, [data-ignore-view]")) return;
+    if (
+      target.closest("button, a, input, textarea, select, [data-ignore-view]")
+    )
+      return;
     router.push(`/post/${wordId}`, { scroll: false });
   };
 
@@ -939,8 +1010,11 @@ const WordCard = ({
     }
   };
 
-  const { videoId: youtubeId, cleaned: youtubeCleaned } = extractYouTube(word.content ?? "");
-  const { embedUrl: spotifyEmbed, cleaned: cleaned } = extractSpotify(youtubeCleaned);
+  const { videoId: youtubeId, cleaned: youtubeCleaned } = extractYouTube(
+    word.content ?? "",
+  );
+  const { embedUrl: spotifyEmbed, cleaned: cleaned } =
+    extractSpotify(youtubeCleaned);
   const displayContent =
     showFullContent || cleaned.length <= 320
       ? cleaned
@@ -951,6 +1025,16 @@ const WordCard = ({
     sharedStory?.authorUsername && sharedStory?.id
       ? `/faith-story/${sharedStory.authorUsername}/${sharedStory.id}`
       : null;
+  const shareUrl = useMemo(() => {
+    const username = word.user?.username ?? null;
+    const base =
+      typeof window !== "undefined"
+        ? window.location.origin
+        : "https://beliefted.com";
+    return username
+      ? `${base}/${username}/${wordId}`
+      : `${base}/post/${wordId}`;
+  }, [word.user?.username, wordId]);
 
   const toggleMenu = useCallback(() => {
     setShowMenu((prev) => !prev);
@@ -964,16 +1048,60 @@ const WordCard = ({
     setAdminReason("");
     setShowAdminDeleteConfirm(true);
   }, []);
+  const toggleShareMenu = useCallback((event?: React.MouseEvent) => {
+    event?.stopPropagation();
+    setShowShareMenu((prev) => !prev);
+  }, []);
+  const closeShareMenu = useCallback(() => {
+    setShowShareMenu(false);
+  }, []);
+  const handleShareTo = useCallback(async () => {
+    if (!shareUrl) return;
+    closeShareMenu();
+    if (navigator.share) {
+      try {
+        await navigator.share({ url: shareUrl });
+        return;
+      } catch {
+        // ignore share cancellation
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareCopied(true);
+      window.setTimeout(() => setShareCopied(false), 1500);
+    } catch {
+      // ignore clipboard errors
+    }
+  }, [shareUrl, closeShareMenu]);
+  const handleShareMessage = useCallback(() => {
+    if (!shareUrl) return;
+    closeShareMenu();
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const body = encodeURIComponent(shareUrl);
+    window.location.href = isIOS ? `sms:&body=${body}` : `sms:?body=${body}`;
+  }, [shareUrl, closeShareMenu]);
+  const handleCopyLink = useCallback(async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareCopied(true);
+      window.setTimeout(() => setShareCopied(false), 1500);
+    } catch {
+      // ignore clipboard errors
+    }
+  }, [shareUrl]);
 
   return (
     <article
-      className={`wall-card flex flex-col gap-3 rounded-none cursor-pointer transition-card overflow-hidden max-w-full min-w-0 ${isRemoving ? "fade-out-card" : ""}`}
+      className={`wall-card flex flex-col gap-2 rounded-none cursor-pointer transition-card overflow-visible max-w-full min-w-0 ${isRemoving ? "fade-out-card" : ""}`}
       onClick={handleCardClick}
       style={{ contentVisibility: "auto", containIntrinsicSize: "1px 900px" }}
     >
       <WordHeader
         user={word.user}
         createdAtIso={createdAtValue.toISOString()}
+        privacy={word.privacy ?? "public"}
         isOwner={isOwner}
         isAdmin={isAdmin}
         showMenu={showMenu}
@@ -1011,9 +1139,9 @@ const WordCard = ({
         ) : (
           <>
             {(word.scriptureRef || cleaned) && (
-              <div className={alignContent ? "pl-8 sm:pl-12" : ""}>
+              <div className={alignContent ? "pl-[48px] sm:pl-[52px]" : ""}>
                 {word.scriptureRef && (
-                  <div className="mt-2">
+                  <div className="mt-1">
                     <span className="verse-chip">
                       <BookOpenText size={14} weight="regular" />
                       {word.scriptureRef}
@@ -1021,7 +1149,7 @@ const WordCard = ({
                   </div>
                 )}
                 {cleaned && (
-                  <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
+                  <p className="mt-1 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
                     <MentionText text={displayContent} />
                   </p>
                 )}
@@ -1039,7 +1167,7 @@ const WordCard = ({
                 )}
               </div>
             )}
-            <div className={alignContent ? "pl-8 sm:pl-12" : ""}>
+            <div className={alignContent ? "pl-[48px] sm:pl-[52px]" : ""}>
               {(sharedStory || sharedStoryMissing) && (
                 <div
                   className="mt-3 w-full max-w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] cursor-pointer"
@@ -1053,7 +1181,9 @@ const WordCard = ({
                   {sharedStory?.coverImage ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={cloudinaryTransform(sharedStory.coverImage, { width: 640 })}
+                      src={cloudinaryTransform(sharedStory.coverImage, {
+                        width: 640,
+                      })}
                       alt=""
                       className="h-40 w-full object-cover"
                       loading="lazy"
@@ -1064,7 +1194,9 @@ const WordCard = ({
                       {sharedStory ? sharedStory.title : "Story unavailable"}
                     </p>
                     <p className="mt-1 text-xs text-[color:var(--accent)]">
-                      {sharedStory ? "Read full story" : "This story is no longer available."}
+                      {sharedStory
+                        ? "Read full story"
+                        : "This story is no longer available."}
                     </p>
                   </div>
                 </div>
@@ -1102,7 +1234,10 @@ const WordCard = ({
                               event.stopPropagation();
                               const node = imageStripRef.current;
                               if (!node) return;
-                              node.scrollBy({ left: -node.clientWidth, behavior: "smooth" });
+                              node.scrollBy({
+                                left: -node.clientWidth,
+                                behavior: "smooth",
+                              });
                             }}
                             className="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 h-9 w-9 items-center justify-center rounded-full bg-white/80 text-[color:var(--ink)] shadow-md"
                             aria-label="Scroll images left"
@@ -1115,7 +1250,10 @@ const WordCard = ({
                               event.stopPropagation();
                               const node = imageStripRef.current;
                               if (!node) return;
-                              node.scrollBy({ left: node.clientWidth, behavior: "smooth" });
+                              node.scrollBy({
+                                left: node.clientWidth,
+                                behavior: "smooth",
+                              });
                             }}
                             className="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 h-9 w-9 items-center justify-center rounded-full bg-white/80 text-[color:var(--ink)] shadow-md"
                             aria-label="Scroll images right"
@@ -1150,13 +1288,16 @@ const WordCard = ({
                           }
                           dragPendingDeltaRef.current = delta;
                           if (dragRafRef.current == null) {
-                            dragRafRef.current = window.requestAnimationFrame(() => {
-                              if (imageStripRef.current) {
-                                imageStripRef.current.scrollLeft =
-                                  dragStartScrollRef.current - dragPendingDeltaRef.current;
-                              }
-                              dragRafRef.current = null;
-                            });
+                            dragRafRef.current = window.requestAnimationFrame(
+                              () => {
+                                if (imageStripRef.current) {
+                                  imageStripRef.current.scrollLeft =
+                                    dragStartScrollRef.current -
+                                    dragPendingDeltaRef.current;
+                                }
+                                dragRafRef.current = null;
+                              },
+                            );
                           }
                         }}
                         onPointerUp={() => {
@@ -1166,7 +1307,8 @@ const WordCard = ({
                             window.cancelAnimationFrame(dragRafRef.current);
                             dragRafRef.current = null;
                           }
-                          const shouldBlock = Math.abs(lastDragDeltaRef.current) > 6;
+                          const shouldBlock =
+                            Math.abs(lastDragDeltaRef.current) > 6;
                           dragMovedRef.current = shouldBlock;
                           window.setTimeout(() => {
                             dragMovedRef.current = false;
@@ -1194,14 +1336,18 @@ const WordCard = ({
                       >
                         {word.images.map((src, index) => {
                           const isCloudinary =
-                            typeof src === "string" && src.includes("res.cloudinary.com");
+                            typeof src === "string" &&
+                            src.includes("res.cloudinary.com");
                           const thumbSrc = isCloudinary
                             ? cloudinaryTransform(src, { width: 520 })
                             : src;
                           const key = `${src}-${index}`;
-                          const orientation = word.imageOrientations?.[index] ?? "landscape";
+                          const orientation =
+                            word.imageOrientations?.[index] ?? "landscape";
                           const aspectClass =
-                            orientation === "portrait" ? "aspect-[3/4]" : "aspect-[4/3]";
+                            orientation === "portrait"
+                              ? "aspect-[3/4]"
+                              : "aspect-[4/3]";
                           return (
                             <div
                               key={key}
@@ -1238,21 +1384,31 @@ const WordCard = ({
             </div>
           </>
         )}
-        <WordActions
-          hasLiked={hasLiked}
-          likeCount={localLikedBy.length}
-          likeBurst={likeBurst}
-          isLiking={isLiking}
-          onLike={handleLike}
-          onToggleComments={toggleComments}
-          commentCount={displayedCommentCount}
-          hasSaved={hasSaved}
-          savedCount={savedCount}
-          isSaving={isSaving}
-          onSave={handleSave}
-          privacy={word.privacy ?? "public"}
-          commentButtonRef={commentButtonRef}
-        />
+        <div className={alignContent ? "pl-[48px] sm:pl-[52px]" : ""}>
+          <WordActions
+            hasLiked={hasLiked}
+            likeCount={localLikedBy.length}
+            likeBurst={likeBurst}
+            isLiking={isLiking}
+            onLike={handleLike}
+            onToggleComments={toggleComments}
+            commentCount={displayedCommentCount}
+            hasSaved={hasSaved}
+            savedCount={savedCount}
+            isSaving={isSaving}
+            onSave={handleSave}
+            commentButtonRef={commentButtonRef}
+            onToggleShare={toggleShareMenu}
+            onCloseShare={closeShareMenu}
+            showShareMenu={showShareMenu}
+            onShareTo={handleShareTo}
+            onShareMessage={handleShareMessage}
+            onCopyLink={handleCopyLink}
+            shareDisabled={!shareUrl}
+            shareCopied={shareCopied}
+            shareMenuRef={shareMenuRef}
+          />
+        </div>
         {likeError && (
           <div className="mt-2 text-[11px] text-[color:var(--subtle)] flex items-center gap-2">
             <span>{likeError}</span>
@@ -1447,7 +1603,6 @@ const WordCard = ({
         </div>
       </Modal>
 
-
       <Modal
         title="Delete comment?"
         isOpen={showCommentDeleteConfirm}
@@ -1590,6 +1745,7 @@ const WordEmbeds = memo(function WordEmbeds({
 type WordHeaderProps = {
   user: Word["user"] | undefined;
   createdAtIso: string;
+  privacy: Word["privacy"];
   isOwner: boolean;
   isAdmin: boolean;
   showMenu: boolean;
@@ -1603,6 +1759,7 @@ type WordHeaderProps = {
 const WordHeader = memo(function WordHeader({
   user,
   createdAtIso,
+  privacy,
   isOwner,
   isAdmin,
   showMenu,
@@ -1613,8 +1770,8 @@ const WordHeader = memo(function WordHeader({
   onAdminDelete,
 }: WordHeaderProps) {
   return (
-    <div className="flex items-start gap-3">
-      <div className="avatar-ring">
+    <div className="flex items-start gap-2">
+      <div className="avatar-ring avatar-ring-sm">
         <Avatar
           src={user?.image ?? null}
           alt={user?.name ?? "User"}
@@ -1622,24 +1779,35 @@ const WordHeader = memo(function WordHeader({
           sizes="(min-width: 640px) 48px, 32px"
           href={user?.username ? `/profile/${user.username}` : "/profile"}
           fallback={(user?.name?.[0] ?? "W").toUpperCase()}
-          className="avatar-core cursor-pointer h-4 w-4 sm:h-8 sm:w-8"
+          className="avatar-core cursor-pointer h-full w-full"
         />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
+          <div className="flex flex-col items-start gap-0 leading-tight">
             <Link
               href={user?.username ? `/profile/${user.username}` : "/profile"}
               prefetch={false}
-              className="text-xs sm:text-sm font-semibold text-[color:var(--ink)] hover:underline"
+              className="text-[16px] font-semibold text-[color:var(--ink)] hover:underline"
             >
               {user?.name ?? "User"}
             </Link>
-            <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
-              {user?.username ? `@${user.username}` : ""}
-            </p>
+            {user?.username && (
+              <span className="text-[13px] text-[color:var(--subtle)]">
+                @{user.username}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2 pr-1">
+            <span className="text-[color:var(--subtle)]">
+              {privacy === "private" ? (
+                <LockSimple size={14} weight="regular" />
+              ) : privacy === "followers" ? (
+                <UsersThree size={14} weight="regular" />
+              ) : (
+                <Globe size={14} weight="regular" />
+              )}
+            </span>
             <p className="text-[10px] sm:text-xs text-[color:var(--subtle)]">
               {formatPostTime(createdAtIso)}
             </p>
@@ -1705,8 +1873,16 @@ type WordActionsProps = {
   savedCount: number;
   isSaving: boolean;
   onSave: (event?: React.MouseEvent) => void;
-  privacy: Word["privacy"];
   commentButtonRef: React.RefObject<HTMLButtonElement | null>;
+  onToggleShare: (event?: React.MouseEvent) => void;
+  onCloseShare: () => void;
+  showShareMenu: boolean;
+  onShareTo: () => void;
+  onShareMessage: () => void;
+  onCopyLink: () => void;
+  shareDisabled: boolean;
+  shareCopied: boolean;
+  shareMenuRef: React.RefObject<HTMLDivElement | null>;
 };
 
 const WordActions = memo(function WordActions({
@@ -1721,17 +1897,39 @@ const WordActions = memo(function WordActions({
   savedCount,
   isSaving,
   onSave,
-  privacy,
   commentButtonRef,
+  onToggleShare,
+  onCloseShare,
+  showShareMenu,
+  onShareTo,
+  onShareMessage,
+  onCopyLink,
+  shareDisabled,
+  shareCopied,
+  shareMenuRef,
 }: WordActionsProps) {
+  const shareButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [isShareClosing, setIsShareClosing] = useState(false);
+  const touchStartYRef = useRef<number | null>(null);
+  const isShareVisible = showShareMenu || isShareClosing;
+
+  const requestCloseShare = useCallback(() => {
+    if (!showShareMenu) return;
+    setIsShareClosing(true);
+    window.setTimeout(() => {
+      setIsShareClosing(false);
+      onCloseShare();
+    }, 180);
+  }, [showShareMenu, onCloseShare]);
+
   return (
-    <div className="mt-2 sm:mt-3 flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs">
+    <div className="mt-2 sm:mt-3 grid grid-cols-4 items-center gap-3 text-[11px] sm:text-xs overflow-visible relative">
       <button
         type="button"
         onClick={onLike}
         disabled={isLiking}
         aria-label={hasLiked ? "Unlike word" : "Like word"}
-        className={`pill-button cursor-pointer transition-colors ${
+        className={`pill-button cursor-pointer transition-colors justify-center ${
           hasLiked
             ? "text-[color:var(--accent-strong)]"
             : "text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
@@ -1741,7 +1939,11 @@ const WordActions = memo(function WordActions({
           <Heart
             size={22}
             weight={hasLiked ? "fill" : "regular"}
-            className={likeBurst ? "scale-110 transition-transform duration-150" : "transition-transform duration-150"}
+            className={
+              likeBurst
+                ? "scale-110 transition-transform duration-150"
+                : "transition-transform duration-150"
+            }
           />
           {likeCount > 0 && (
             <span className="text-xs font-semibold text-[color:var(--ink)] transition-all duration-200">
@@ -1754,14 +1956,11 @@ const WordActions = memo(function WordActions({
         type="button"
         onClick={onToggleComments}
         aria-label="Reflect on word"
-        className="pill-button cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
+        className="pill-button cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)] justify-center"
         ref={commentButtonRef}
       >
         <span className="inline-flex items-center gap-2">
           <ChatCircle size={22} weight="regular" />
-          <span className="text-xs font-semibold text-[color:var(--subtle)]">
-            Reflect
-          </span>
           {commentCount > 0 && (
             <span className="text-xs font-semibold text-[color:var(--ink)] transition-all duration-200">
               {commentCount}
@@ -1774,7 +1973,7 @@ const WordActions = memo(function WordActions({
         onClick={onSave}
         disabled={isSaving}
         aria-label={hasSaved ? "Unsave word" : "Save word"}
-        className={`pill-button cursor-pointer transition-colors ${
+        className={`pill-button cursor-pointer transition-colors justify-center ${
           hasSaved
             ? "text-[color:var(--accent-strong)]"
             : "text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
@@ -1789,15 +1988,92 @@ const WordActions = memo(function WordActions({
           )}
         </span>
       </button>
-      <span className="ml-auto text-[color:var(--subtle)]">
-        {privacy === "private" ? (
-          <LockSimple size={16} weight="regular" />
-        ) : privacy === "followers" ? (
-          <UsersThree size={16} weight="regular" />
-        ) : (
-          <Globe size={16} weight="regular" />
+      <div className="relative">
+        <button
+          type="button"
+          onClick={onToggleShare}
+          disabled={shareDisabled}
+          suppressHydrationWarning
+          aria-label="Share word"
+          className="pill-button cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)] disabled:opacity-50 justify-center"
+          ref={shareButtonRef}
+        >
+          <span className="inline-flex items-center gap-2">
+            <PaperPlaneTilt size={22} weight="regular" />
+          </span>
+        </button>
+      </div>
+      {isShareVisible &&
+        createPortal(
+          <div className="fixed inset-0 z-[200]">
+            <button
+              type="button"
+              aria-label="Close share"
+              className={`absolute inset-0 bg-black/50 transition-opacity duration-200 ${
+                showShareMenu && !isShareClosing ? "opacity-100" : "opacity-0"
+              }`}
+              onClick={requestCloseShare}
+            />
+            <div
+              ref={shareMenuRef}
+              className={`absolute left-0 right-0 bottom-0 mx-auto w-full max-w-md rounded-t-3xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-4 shadow-xl ${
+                isShareClosing ? "sheet-exit" : "sheet-enter"
+              }`}
+              onTouchStart={(event) => {
+                touchStartYRef.current = event.touches[0]?.clientY ?? null;
+              }}
+              onTouchMove={(event) => {
+                const startY = touchStartYRef.current;
+                const currentY = event.touches[0]?.clientY ?? null;
+                if (startY == null || currentY == null) return;
+                if (currentY - startY > 60) {
+                  touchStartYRef.current = null;
+                  requestCloseShare();
+                }
+              }}
+              onTouchEnd={() => {
+                touchStartYRef.current = null;
+              }}
+            >
+              <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-[color:var(--panel-border)]" />
+              <div className="grid gap-2">
+                <button
+                  type="button"
+                  onClick={onShareTo}
+                  className="flex items-center gap-3 rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--surface)] px-4 py-3 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface-strong)]"
+                >
+                  <PaperPlaneTilt size={20} weight="regular" />
+                  Share to…
+                </button>
+                <button
+                  type="button"
+                  onClick={onShareMessage}
+                  className="flex items-center gap-3 rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--surface)] px-4 py-3 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface-strong)]"
+                >
+                  <ChatCircleDots size={20} weight="regular" />
+                  Messages
+                </button>
+                <button
+                  type="button"
+                  onClick={onCopyLink}
+                  className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition-colors ${
+                    shareCopied
+                      ? "border-green-500/40 bg-green-500/10 text-green-500"
+                      : "border-[color:var(--panel-border)] bg-[color:var(--surface)] text-[color:var(--ink)] hover:bg-[color:var(--surface-strong)]"
+                  }`}
+                >
+                  {shareCopied ? (
+                    <CheckCircle size={20} weight="fill" />
+                  ) : (
+                    <CopySimple size={20} weight="regular" />
+                  )}
+                  {shareCopied ? "Copied" : "Copy Link"}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
         )}
-      </span>
     </div>
   );
 });

@@ -513,7 +513,7 @@ export default function WordForm({
         onPaste={handlePasteImages}
       />
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3 relative">
+        <div className="flex items-center gap-3 relative overflow-visible">
           <button
             type="button"
             onClick={() => setShowScriptureRef((prev) => !prev)}
@@ -579,7 +579,7 @@ export default function WordForm({
             )}
           </button>
           {showPrivacyMenu && (
-            <div className="absolute left-0 top-7 z-10 min-w-[180px] rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-2 shadow-lg">
+            <div className="absolute left-0 top-7 z-50 min-w-[180px] rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-2 shadow-lg">
               <button
                 type="button"
                 onClick={() => {

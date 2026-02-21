@@ -776,6 +776,36 @@ html[data-theme="banana"] .panel-glass {
   animation: cacheFadeIn 160ms ease;
 }
 
+@keyframes sheetEnter {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sheetExit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+}
+
+.sheet-enter {
+  animation: sheetEnter 220ms ease-out;
+}
+
+.sheet-exit {
+  animation: sheetExit 180ms ease-in;
+}
+
 
 .feed-surface {
   background: var(--panel);
@@ -1099,6 +1129,18 @@ html[data-theme="midnight"] .switch-thumb {
   border-radius: 999px;
   background: transparent;
   padding: 0;
+}
+
+.avatar-ring-sm {
+  height: 40px;
+  width: 40px;
+}
+
+@media (min-width: 640px) {
+  .avatar-ring-sm {
+    height: 44px;
+    width: 44px;
+  }
 }
 
 .avatar-core {

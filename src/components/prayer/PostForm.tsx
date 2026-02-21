@@ -276,7 +276,7 @@ export default function PostForm({
       )}
 
       {(showExtras || kind === "request") && (
-        <div className="mt-2 flex flex-wrap items-center gap-3 w-full text-xs text-[color:var(--subtle)] relative">
+        <div className="mt-2 flex flex-wrap items-center gap-3 w-full text-xs text-[color:var(--subtle)] relative overflow-visible">
           {kind === "prayer" && (
             <button
               type="button"
@@ -347,7 +347,7 @@ export default function PostForm({
             )}
           </button>
           {showPrivacyMenu && (
-            <div className="absolute left-0 top-9 z-10 min-w-[180px] rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-2 shadow-lg">
+            <div className="absolute left-0 top-9 z-50 min-w-[180px] rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-2 shadow-lg">
               <button
                 type="button"
                 onClick={() => {
