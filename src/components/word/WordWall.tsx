@@ -27,6 +27,12 @@ export default function WordWall() {
   const [isWordDirty, setIsWordDirty] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [feedMode, setFeedMode] = useState<"latest" | "forYou">(() => {
+    if (typeof window === "undefined") return "latest";
+    const saved = window.localStorage.getItem("wordFeedMode");
+    return saved === "forYou" ? "forYou" : "latest";
+  });
+  const [forYouCycle, setForYouCycle] = useState(0);
   const formRef = useRef<HTMLDivElement | null>(null);
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
@@ -59,6 +65,11 @@ export default function WordWall() {
     const id = window.requestAnimationFrame(() => setIsMounted(true));
     return () => window.cancelAnimationFrame(id);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("wordFeedMode", feedMode);
+  }, [feedMode]);
 
   return (
     <section className={`feed-surface ${isMounted ? "feed-surface--enter" : "feed-surface--pre"}`}>
@@ -97,7 +108,38 @@ export default function WordWall() {
           />
         </div>
       </div>
-      <WordFeed refreshKey={refreshKey} />
+      <div className="px-3 sm:px-4 pt-2 pb-2 flex justify-end">
+        <div className="inline-flex items-center gap-1 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--surface)] p-1 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setFeedMode("latest")}
+            className={`min-w-[84px] rounded-full px-4 py-1.5 text-center text-[12px] font-semibold transition ${
+              feedMode === "latest"
+                ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)] shadow"
+                : "text-[color:var(--subtle)] hover:text-[color:var(--ink)] hover:bg-[color:var(--surface-strong)]"
+            }`}
+          >
+            Latest
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFeedMode("forYou");
+              setForYouCycle((prev) => prev + 1);
+            }}
+            className={`min-w-[84px] rounded-full px-4 py-1.5 text-center text-[12px] font-semibold transition ${
+              feedMode === "forYou"
+                ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)] shadow"
+                : "text-[color:var(--subtle)] hover:text-[color:var(--ink)] hover:bg-[color:var(--surface-strong)]"
+            }`}
+          >
+            For You
+          </button>
+        </div>
+      </div>
+      <div key={feedMode} className="transition-opacity duration-150">
+        <WordFeed refreshKey={refreshKey} mode={feedMode} forYouSeed={forYouCycle} />
+      </div>
 
       <Modal
         title="Discard post?"
