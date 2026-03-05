@@ -51,3 +51,11 @@ export function getDailyVerse(date = new Date()): DailyVerse {
   const index = ((daysSinceStart % DAILY_VERSES.length) + DAILY_VERSES.length) % DAILY_VERSES.length;
   return DAILY_VERSES[index] ?? DAILY_VERSES[0];
 }
+
+export function getDailyVerseByReference(reference: string): DailyVerse | null {
+  const normalized = reference.trim().toLowerCase();
+  if (!normalized) return null;
+  return (
+    DAILY_VERSES.find((verse) => verse.reference.trim().toLowerCase() === normalized) ?? null
+  );
+}

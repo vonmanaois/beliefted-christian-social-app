@@ -23,6 +23,8 @@ type WordFormProps = {
   variant?: "modal" | "inline";
   showHeader?: boolean;
   placeholder?: string;
+  initialContent?: string;
+  prefillVerse?: { reference: string; text: string };
 };
 
 export default function WordForm({
@@ -33,11 +35,13 @@ export default function WordForm({
   variant = "modal",
   showHeader: _showHeader = true,
   placeholder = "What did God put on your heart today?",
+  initialContent,
+  prefillVerse,
 }: WordFormProps) {
   const { data: session } = useSession();
   const isAuthenticated = Boolean(session?.user?.id);
   const { setNewWordPosts } = useUIStore();
-  const [content, setContent] = useState("");
+  const [content, setContent] = useState(() => initialContent ?? "");
   const [scriptureRef, setScriptureRef] = useState("");
   const [showScriptureRef, setShowScriptureRef] = useState(false);
   const [showYoutubeInput, setShowYoutubeInput] = useState(false);
@@ -55,6 +59,7 @@ export default function WordForm({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const initialContentAppliedRef = useRef(false);
   const isFormDisabled = !isAuthenticated || isSubmitting;
 
   const openSignIn = () => {
@@ -81,6 +86,45 @@ export default function WordForm({
     }, 0);
     return () => clearTimeout(id);
   }, [variant]);
+
+  useEffect(() => {
+    if (!initialContent) return;
+    if (initialContentAppliedRef.current) return;
+    setContent(initialContent);
+    initialContentAppliedRef.current = true;
+    if (typeof window === "undefined") return;
+    const id = window.requestAnimationFrame(() => {
+      const textarea = textAreaRef.current;
+      if (!textarea) return;
+      const end = textarea.value.length;
+      textarea.setSelectionRange(end, end);
+      textarea.focus();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [initialContent]);
+
+  useEffect(() => {
+    if (!prefillVerse) return;
+    if (typeof window === "undefined") return;
+    const id = window.requestAnimationFrame(() => {
+      textAreaRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [prefillVerse]);
+
+  useEffect(() => {
+    if (!prefillVerse) return;
+    if (scriptureRef.trim().length > 0) return;
+    setScriptureRef(prefillVerse.reference);
+  }, [prefillVerse, scriptureRef]);
+
+  useEffect(() => {
+    if (variant === "modal") return;
+    if (!initialContent) return;
+    if (typeof window === "undefined") return;
+    const id = window.requestAnimationFrame(() => textAreaRef.current?.focus());
+    return () => window.cancelAnimationFrame(id);
+  }, [initialContent, variant]);
 
   useEffect(() => {
     onDirtyChange?.(isDirty);
@@ -498,6 +542,19 @@ export default function WordForm({
         compact ? "p-3" : "p-4"
       } pb-0`}
     >
+      {prefillVerse ? (
+        <div className="rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--surface)] px-3 py-2 text-xs text-[color:var(--subtle)]">
+          <p className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--subtle)]">
+            Verse of the Day
+          </p>
+          <p className="mt-2 text-sm font-semibold text-[color:var(--ink)]">
+            {prefillVerse.reference}
+          </p>
+          <p className="mt-2 text-[13px] leading-relaxed text-[color:var(--subtle)] whitespace-pre-line">
+            {prefillVerse.text}
+          </p>
+        </div>
+      ) : null}
       <MentionTextarea
         value={content}
         onChangeValue={setContent}

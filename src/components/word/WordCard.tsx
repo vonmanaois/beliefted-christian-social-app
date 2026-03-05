@@ -34,6 +34,7 @@ import MentionText from "@/components/ui/MentionText";
 import MentionTextarea from "@/components/ui/MentionTextarea";
 import { useAdmin } from "@/hooks/useAdmin";
 import { cloudinaryTransform } from "@/lib/cloudinary";
+import { getDailyVerseByReference } from "@/lib/dailyVerse";
 import DeferredEmbed from "@/components/ui/DeferredEmbed";
 import type {
   Word,
@@ -1140,14 +1141,35 @@ const WordCard = ({
           <>
             {(word.scriptureRef || cleaned) && (
               <div className={alignContent ? "pl-[48px] sm:pl-[52px]" : ""}>
-                {word.scriptureRef && (
-                  <div className="mt-1">
-                    <span className="verse-chip">
-                      <BookOpenText size={14} weight="regular" />
-                      {word.scriptureRef}
-                    </span>
-                  </div>
-                )}
+                {(() => {
+                  const dailyVerse = word.scriptureRef
+                    ? getDailyVerseByReference(word.scriptureRef)
+                    : null;
+                  if (dailyVerse) {
+                    return (
+                      <div className="mt-1 rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--surface)] px-3 py-2 text-xs text-[color:var(--subtle)]">
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--subtle)]">
+                          Daily Verse
+                        </p>
+                        <p className="mt-2 text-sm font-semibold text-[color:var(--ink)]">
+                          {dailyVerse.reference}
+                        </p>
+                        <p className="mt-2 text-[13px] leading-relaxed text-[color:var(--subtle)] whitespace-pre-line">
+                          {dailyVerse.text}
+                        </p>
+                      </div>
+                    );
+                  }
+                  if (!word.scriptureRef) return null;
+                  return (
+                    <div className="mt-1">
+                      <span className="verse-chip">
+                        <BookOpenText size={14} weight="regular" />
+                        {word.scriptureRef}
+                      </span>
+                    </div>
+                  );
+                })()}
                 {cleaned && (
                   <p className="mt-1 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
                     <MentionText text={displayContent} />

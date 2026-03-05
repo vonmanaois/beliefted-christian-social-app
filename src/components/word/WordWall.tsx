@@ -26,6 +26,12 @@ export default function WordWall() {
   const [formKey, setFormKey] = useState(0);
   const [isWordDirty, setIsWordDirty] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [pendingPrefill, setPendingPrefill] = useState<{ reference: string; text: string } | null>(
+    null
+  );
+  const [activePrefill, setActivePrefill] = useState<{ reference: string; text: string } | null>(
+    null
+  );
   const [isMounted, setIsMounted] = useState(false);
   const [feedMode, setFeedMode] = useState<"latest" | "forYou">(() => {
     if (typeof window === "undefined") return "latest";
@@ -48,6 +54,31 @@ export default function WordWall() {
     window.addEventListener("open-word-composer", handleOpenWord);
     return () => window.removeEventListener("open-word-composer", handleOpenWord);
   }, [isAuthenticated, openSignIn]);
+
+  useEffect(() => {
+    const handleOpenWordWithText = (event: Event) => {
+      if (!isAuthenticated) {
+        openSignIn();
+        return;
+      }
+      const detail = (event as CustomEvent<{ verse?: { reference?: string; text?: string } }>).detail;
+      const verse = detail?.verse;
+      if (!verse?.reference || !verse?.text) return;
+      if (isWordDirty) {
+        setPendingPrefill({ reference: verse.reference, text: verse.text });
+        setShowDiscardConfirm(true);
+        return;
+      }
+      setActivePrefill({ reference: verse.reference, text: verse.text });
+      setFormKey((prev) => prev + 1);
+    };
+    window.addEventListener("open-word-composer-with-text", handleOpenWordWithText as EventListener);
+    return () =>
+      window.removeEventListener(
+        "open-word-composer-with-text",
+        handleOpenWordWithText as EventListener
+      );
+  }, [isAuthenticated, isWordDirty, openSignIn]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -99,17 +130,23 @@ export default function WordWall() {
             compact
             showHeader={false}
             placeholder="What does God want you to share today?"
+            prefillVerse={activePrefill ?? undefined}
             onPosted={() => {
               setRefreshKey((prev) => prev + 1);
               setFormKey((prev) => prev + 1);
               setIsWordDirty(false);
+              setPendingPrefill(null);
+              setActivePrefill(null);
             }}
             onDirtyChange={setIsWordDirty}
           />
         </div>
       </div>
       <div className="px-3 sm:px-4 pt-2 pb-2 flex justify-end">
-        <div className="inline-flex items-center gap-1 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--surface)] p-1 shadow-sm">
+        <div
+          className="inline-flex items-center gap-1 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--surface)] p-1 shadow-sm"
+          suppressHydrationWarning
+        >
           <button
             type="button"
             onClick={() => setFeedMode("latest")}
@@ -152,7 +189,10 @@ export default function WordWall() {
         <div className="mt-4 flex justify-end gap-2">
           <button
             type="button"
-            onClick={() => setShowDiscardConfirm(false)}
+            onClick={() => {
+              setShowDiscardConfirm(false);
+              setPendingPrefill(null);
+            }}
             className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer hover:text-[color:var(--accent)]"
           >
             Keep editing
@@ -160,9 +200,14 @@ export default function WordWall() {
           <button
             type="button"
             onClick={() => {
+              const nextPrefill = pendingPrefill;
               setShowDiscardConfirm(false);
               setFormKey((prev) => prev + 1);
               setIsWordDirty(false);
+              setPendingPrefill(null);
+              if (nextPrefill) {
+                setActivePrefill(nextPrefill);
+              }
             }}
             className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--danger)] text-white cursor-pointer"
           >

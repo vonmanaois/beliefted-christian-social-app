@@ -178,24 +178,36 @@ export default function WordFeed({
   const forYouWords = useMemo(() => {
     if (mode !== "forYou") return rankedWords;
     if (rankedWords.length === 0) return rankedWords;
-    const bucketSize = 8;
-    const shuffled: Word[] = [];
-    for (let i = 0; i < rankedWords.length; i += bucketSize) {
-      const bucket = rankedWords.slice(i, i + bucketSize);
-      bucket.sort(
+    const topCutoff = Math.min(24, rankedWords.length);
+    const top = rankedWords.slice(0, topCutoff);
+    const rest = rankedWords.slice(topCutoff);
+    const seedKey = `${forYouShuffleSeed}:${forYouTick}`;
+    const shuffleBySeed = (items: Word[], channel: string) =>
+      [...items].sort(
         (a, b) =>
-          hashString(`${forYouShuffleSeed}:${a._id}`) -
-          hashString(`${forYouShuffleSeed}:${b._id}`)
+          hashString(`${seedKey}:${channel}:${a._id}`) -
+          hashString(`${seedKey}:${channel}:${b._id}`)
       );
-      shuffled.push(...bucket);
+    const shuffledTop = shuffleBySeed(top, "top");
+    const shuffledRest = shuffleBySeed(rest, "rest");
+    const mixed: Word[] = [];
+    let i = 0;
+    let j = 0;
+    while (i < shuffledTop.length || j < shuffledRest.length) {
+      for (let k = 0; k < 2 && i < shuffledTop.length; k += 1) {
+        mixed.push(shuffledTop[i++]);
+      }
+      if (j < shuffledRest.length) {
+        mixed.push(shuffledRest[j++]);
+      }
     }
-    const rotationBase = Math.min(bucketSize, shuffled.length);
-    const rotation = rotationBase > 0 ? forYouSeed % rotationBase : 0;
+    const rotationBase = mixed.length > 0 ? mixed.length : 1;
+    const rotation = (forYouSeed + forYouTick) % rotationBase;
     if (rotation > 0) {
-      shuffled.push(...shuffled.splice(0, rotation));
+      mixed.push(...mixed.splice(0, rotation));
     }
-    return shuffled;
-  }, [mode, rankedWords, forYouShuffleSeed, forYouSeed]);
+    return mixed;
+  }, [mode, rankedWords, forYouShuffleSeed, forYouSeed, forYouTick]);
   const displayWords = useMemo(() => {
     if (mode !== "forYou") return rankedWords;
     if (seenIds.size === 0) return forYouWords;

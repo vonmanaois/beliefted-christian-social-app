@@ -73,6 +73,22 @@ export default function DailyVerseCard() {
           {verse.prompt}
         </p>
       )}
+      <div className="mt-4 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window === "undefined") return;
+            window.dispatchEvent(
+              new CustomEvent("open-word-composer-with-text", {
+                detail: { verse: { reference: verse.reference, text: verse.text } },
+              })
+            );
+          }}
+          className="rounded-full border border-[color:var(--panel-border)] bg-[color:var(--surface)] px-3 py-1.5 text-[11px] font-semibold text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+        >
+          Post about this verse
+        </button>
+      </div>
     </div>
   );
 }
