@@ -9,6 +9,7 @@ import Image from "next/image";
 import {
   Article,
   BellSimple,
+  CalendarBlank,
   GoogleLogo,
   House,
   Info,
@@ -563,6 +564,14 @@ export default function Sidebar() {
           <div className="flex items-center gap-4 justify-end w-full text-[color:var(--ink)]">
             <button
               type="button"
+              onClick={() => router.push("/events")}
+              className="flex items-center justify-center hover:text-[color:var(--accent)]"
+              aria-label="Events"
+            >
+              <CalendarBlank size={22} weight="regular" />
+            </button>
+            <button
+              type="button"
               onClick={openNotifications}
               className="flex items-center justify-center hover:text-[color:var(--accent)]"
               aria-label="Notifications"
@@ -978,6 +987,16 @@ export default function Sidebar() {
         <button
           type="button"
           className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+          onClick={() => router.push("/events")}
+        >
+          <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
+            <CalendarBlank size={22} weight="regular" />
+          </span>
+          <span className="hidden lg:inline">Events</span>
+        </button>
+        <button
+          type="button"
+          className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
           onClick={() => openInfoPanel("why")}
         >
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
@@ -1253,6 +1272,14 @@ export default function Sidebar() {
             aria-label="Faith Stories"
           >
             <Article size={24} weight="regular" />
+          </button>
+          <button
+            type="button"
+            className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+            onClick={() => router.push("/events")}
+            aria-label="Events"
+          >
+            <CalendarBlank size={24} weight="regular" />
           </button>
         </div>
       </nav>

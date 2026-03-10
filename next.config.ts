@@ -4,12 +4,12 @@ const isProd = process.env.NODE_ENV === "production";
 
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://www.gstatic.com https://www.googleapis.com",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://www.gstatic.com https://www.googleapis.com https://maps.googleapis.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob: https://lh3.googleusercontent.com https://res.cloudinary.com",
-  "connect-src 'self' https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com https://fcm.googleapis.com https://firebaseinstallations.googleapis.com https://firebasemessaging.googleapis.com https://firebasedynamiclinks.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.google-analytics.com https://stats.g.doubleclick.net",
-  "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://www.youtube.com/embed https://www.youtube-nocookie.com/embed https://open.spotify.com https://open.spotify.com/embed https://w.soundcloud.com",
+  "connect-src 'self' https://www.googleapis.com https://maps.googleapis.com https://oauth2.googleapis.com https://accounts.google.com https://fcm.googleapis.com https://firebaseinstallations.googleapis.com https://firebasemessaging.googleapis.com https://firebasedynamiclinks.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.google-analytics.com https://stats.g.doubleclick.net https://api.cloudinary.com",
+  "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://www.youtube.com/embed https://www.youtube-nocookie.com/embed https://open.spotify.com https://open.spotify.com/embed https://w.soundcloud.com https://www.google.com https://maps.google.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

@@ -10,6 +10,7 @@ import CommentModel from "@/models/Comment";
 import WordCommentModel from "@/models/WordComment";
 import UserModel from "@/models/User";
 import FaithStoryModel from "@/models/FaithStory";
+import EventModel from "@/models/Event";
 import PrayerCard from "@/components/prayer/PrayerCard";
 import WordCard from "@/components/word/WordCard";
 
@@ -208,6 +209,43 @@ export default async function PostDetail({
           }
         : null;
 
+    const sharedEventId = word.sharedEventId ? String(word.sharedEventId) : null;
+    let sharedEventFallback: {
+      title?: string | null;
+      posterImage?: string | null;
+      hostUsername?: string | null;
+    } | null = null;
+    if (
+      sharedEventId &&
+      (!word.sharedEventTitle || !word.sharedEventPoster || !word.sharedEventHostUsername)
+    ) {
+      const event = await EventModel.findById(sharedEventId)
+        .select("title posterImage hostId")
+        .lean();
+      if (event) {
+        const host = await UserModel.findById(event.hostId)
+          .select("username")
+          .lean();
+        sharedEventFallback = {
+          title: event.title ?? "",
+          posterImage: event.posterImage ?? null,
+          hostUsername: host?.username ?? null,
+        };
+      }
+    }
+    const sharedEvent =
+      sharedEventId &&
+      (word.sharedEventTitle || sharedEventFallback)
+        ? {
+            id: sharedEventId,
+            title: word.sharedEventTitle ?? sharedEventFallback?.title ?? "",
+            posterImage:
+              word.sharedEventPoster ?? sharedEventFallback?.posterImage ?? null,
+            hostUsername:
+              word.sharedEventHostUsername ?? sharedEventFallback?.hostUsername ?? null,
+          }
+        : null;
+
     return (
       <div>
         {showBackHeader && <PostBackHeader label="Word" />}
@@ -229,6 +267,8 @@ export default async function PostDetail({
                 ? String(word.sharedFaithStoryId)
                 : null,
               sharedFaithStory: sharedFaithStory ?? undefined,
+              sharedEventId: word.sharedEventId ? String(word.sharedEventId) : null,
+              sharedEvent: sharedEvent ?? undefined,
               scriptureRef: word.scriptureRef ?? null,
               createdAt:
                 word.createdAt instanceof Date

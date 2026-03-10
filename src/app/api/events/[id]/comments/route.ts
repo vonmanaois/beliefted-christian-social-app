@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Types } from "mongoose";
 import dbConnect from "@/lib/db";
-import WordCommentModel from "@/models/WordComment";
+import EventCommentModel from "@/models/EventComment";
 
 export async function GET(
   _req: Request,
@@ -12,15 +12,15 @@ export async function GET(
   const { id } = await params;
   const rawId = id ?? "";
   const cleanedId = rawId.replace(/^ObjectId\\(\"(.+)\"\\)$/, "$1");
-  const wordObjectId = Types.ObjectId.isValid(cleanedId)
+  const eventObjectId = Types.ObjectId.isValid(cleanedId)
     ? new Types.ObjectId(cleanedId)
     : null;
 
-  if (!wordObjectId) {
+  if (!eventObjectId) {
     return NextResponse.json([], { status: 200 });
   }
 
-  const comments = await WordCommentModel.find({ wordId: wordObjectId })
+  const comments = await EventCommentModel.find({ eventId: eventObjectId })
     .sort({ createdAt: -1 })
     .populate("userId", "_id name image username")
     .lean();

@@ -6,6 +6,7 @@ import UserModel from "@/models/User";
 import PrayerModel from "@/models/Prayer";
 import WordModel from "@/models/Word";
 import FaithStoryModel from "@/models/FaithStory";
+import EventModel from "@/models/Event";
 import CommentModel from "@/models/Comment";
 import WordCommentModel from "@/models/WordComment";
 import { Types } from "mongoose";
@@ -71,7 +72,7 @@ export async function GET(req: Request) {
       ...cursorFilter,
     })
       .select(
-        "content userId authorName authorUsername authorImage scriptureRef images imageOrientations sharedFaithStoryId sharedFaithStoryTitle sharedFaithStoryCover sharedFaithStoryAuthorUsername privacy likedBy savedBy createdAt"
+        "content userId authorName authorUsername authorImage scriptureRef images imageOrientations sharedFaithStoryId sharedFaithStoryTitle sharedFaithStoryCover sharedFaithStoryAuthorUsername sharedEventId sharedEventTitle sharedEventPoster sharedEventHostUsername privacy likedBy savedBy createdAt"
       )
       .sort({ createdAt: -1, _id: -1 })
       .limit(limit + 1)
@@ -121,6 +122,39 @@ export async function GET(req: Request) {
         title: story.title ?? "",
         coverImage: story.coverImage ?? null,
         authorUsername: story.authorUsername ?? null,
+      },
+    ])
+  );
+
+  const sharedEventIds = pageItems
+    .filter((item) => item.type === "word")
+    .map((item) => (item.data as { sharedEventId?: unknown }).sharedEventId)
+    .filter((id): id is Types.ObjectId | string => Boolean(id))
+    .map((id) => String(id));
+  const uniqueSharedEventIds = Array.from(new Set(sharedEventIds));
+  const sharedEvents = uniqueSharedEventIds.length
+    ? await EventModel.find({ _id: { $in: uniqueSharedEventIds } })
+        .select("title posterImage hostId")
+        .lean()
+    : [];
+  const sharedEventHostIds = Array.from(
+    new Set(sharedEvents.map((event) => String(event.hostId)).filter(Boolean))
+  );
+  const sharedEventHosts = sharedEventHostIds.length
+    ? await UserModel.find({ _id: { $in: sharedEventHostIds } })
+        .select("username")
+        .lean()
+    : [];
+  const sharedEventHostMap = new Map(
+    sharedEventHosts.map((user) => [String(user._id), user.username ?? null])
+  );
+  const sharedEventMap = new Map(
+    sharedEvents.map((event) => [
+      String(event._id),
+      {
+        title: event.title ?? "",
+        posterImage: event.posterImage ?? null,
+        hostUsername: sharedEventHostMap.get(String(event.hostId)) ?? null,
       },
     ])
   );
@@ -182,6 +216,11 @@ export async function GET(req: Request) {
           sharedStoryId && sharedStoryMap.has(sharedStoryId)
             ? sharedStoryMap.get(sharedStoryId) ?? null
             : null;
+        const sharedEventId = word.sharedEventId ? String(word.sharedEventId) : null;
+        const fallbackEvent =
+          sharedEventId && sharedEventMap.has(sharedEventId)
+            ? sharedEventMap.get(sharedEventId) ?? null
+            : null;
         return {
           type: "word",
           word: {
@@ -204,6 +243,23 @@ export async function GET(req: Request) {
                     authorUsername:
                       word.sharedFaithStoryAuthorUsername ??
                       fallbackShared?.authorUsername ??
+                      null,
+                  }
+                : null,
+            sharedEventId,
+            sharedEvent:
+              sharedEventId &&
+              (word.sharedEventTitle || fallbackEvent)
+                ? {
+                    id: sharedEventId,
+                    title: word.sharedEventTitle ?? fallbackEvent?.title ?? "",
+                    posterImage:
+                      word.sharedEventPoster ??
+                      fallbackEvent?.posterImage ??
+                      null,
+                    hostUsername:
+                      word.sharedEventHostUsername ??
+                      fallbackEvent?.hostUsername ??
                       null,
                   }
                 : null,

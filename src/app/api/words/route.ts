@@ -6,6 +6,7 @@ import WordModel from "@/models/Word";
 import WordCommentModel from "@/models/WordComment";
 import UserModel from "@/models/User";
 import FaithStoryModel from "@/models/FaithStory";
+import EventModel from "@/models/Event";
 import { Types } from "mongoose";
 import { revalidateTag, unstable_cache } from "next/cache";
 import { z } from "zod";
@@ -88,7 +89,7 @@ export async function GET(req: Request) {
     const filter = conditions.length ? { $and: conditions } : {};
     const words = await WordModel.find(filter)
       .select(
-        "content userId authorName authorUsername authorImage scriptureRef images imageOrientations sharedFaithStoryId sharedFaithStoryTitle sharedFaithStoryCover sharedFaithStoryAuthorUsername privacy likedBy savedBy createdAt"
+        "content userId authorName authorUsername authorImage scriptureRef images imageOrientations sharedFaithStoryId sharedFaithStoryTitle sharedFaithStoryCover sharedFaithStoryAuthorUsername sharedEventId sharedEventTitle sharedEventPoster sharedEventHostUsername privacy likedBy savedBy createdAt"
       )
       .sort({ createdAt: -1, _id: -1 })
       .limit(limit + 1)
@@ -117,6 +118,37 @@ export async function GET(req: Request) {
           title: story.title ?? "",
           coverImage: story.coverImage ?? null,
           authorUsername: story.authorUsername ?? null,
+        },
+      ])
+    );
+
+    const missingEventIds = items
+      .filter((word) => word.sharedEventId && !word.sharedEventTitle)
+      .map((word) => String(word.sharedEventId));
+    const uniqueMissingEventIds = Array.from(new Set(missingEventIds));
+    const sharedEvents = uniqueMissingEventIds.length
+      ? await EventModel.find({ _id: { $in: uniqueMissingEventIds } })
+          .select("title posterImage hostId")
+          .lean()
+      : [];
+    const eventHostIds = Array.from(
+      new Set(sharedEvents.map((event) => String(event.hostId)).filter(Boolean))
+    );
+    const eventHosts = eventHostIds.length
+      ? await UserModel.find({ _id: { $in: eventHostIds } })
+          .select("username")
+          .lean()
+      : [];
+    const eventHostMap = new Map(
+      eventHosts.map((user) => [String(user._id), user.username ?? null])
+    );
+    const sharedEventMap = new Map(
+      sharedEvents.map((event) => [
+        String(event._id),
+        {
+          title: event.title ?? "",
+          posterImage: event.posterImage ?? null,
+          hostUsername: eventHostMap.get(String(event.hostId)) ?? null,
         },
       ])
     );
@@ -189,6 +221,11 @@ export async function GET(req: Request) {
           sharedStoryId && sharedStoryMap.has(sharedStoryId)
             ? sharedStoryMap.get(sharedStoryId) ?? null
             : null;
+        const sharedEventId = word.sharedEventId ? String(word.sharedEventId) : null;
+        const fallbackEvent =
+          sharedEventId && sharedEventMap.has(sharedEventId)
+            ? sharedEventMap.get(sharedEventId) ?? null
+            : null;
 
         const privacy = (word as { privacy?: string | null }).privacy ?? "public";
         const isOwner = Boolean(viewerId && userIdString && viewerId === userIdString);
@@ -225,6 +262,23 @@ export async function GET(req: Request) {
                   authorUsername:
                     word.sharedFaithStoryAuthorUsername ??
                     fallbackShared?.authorUsername ??
+                    null,
+                }
+              : null,
+          sharedEventId,
+          sharedEvent:
+            sharedEventId &&
+            (word.sharedEventTitle || fallbackEvent)
+              ? {
+                  id: sharedEventId,
+                  title: word.sharedEventTitle ?? fallbackEvent?.title ?? "",
+                  posterImage:
+                    word.sharedEventPoster ??
+                    fallbackEvent?.posterImage ??
+                    null,
+                  hostUsername:
+                    word.sharedEventHostUsername ??
+                    fallbackEvent?.hostUsername ??
                     null,
                 }
               : null,
@@ -276,6 +330,7 @@ export async function POST(req: Request) {
     images: z.array(z.string().url()).max(4).optional(),
     imageOrientations: z.array(z.enum(["portrait", "landscape"])).max(4).optional(),
     sharedFaithStoryId: z.string().optional().or(z.literal("")),
+    sharedEventId: z.string().optional().or(z.literal("")),
     privacy: z.enum(["public", "followers", "private"]).optional(),
   });
 
@@ -291,9 +346,10 @@ export async function POST(req: Request) {
     ? body.data.imageOrientations
     : [];
   const sharedFaithStoryId = (body.data.sharedFaithStoryId ?? "").trim();
+  const sharedEventId = (body.data.sharedEventId ?? "").trim();
   const privacy = body.data.privacy ?? "public";
 
-  if (!content && images.length === 0 && !sharedFaithStoryId) {
+  if (!content && images.length === 0 && !sharedFaithStoryId && !sharedEventId) {
     return NextResponse.json(
       { error: "Content, images, or a shared story is required" },
       { status: 400 }
@@ -330,6 +386,33 @@ export async function POST(req: Request) {
     };
   }
 
+  let sharedEventData:
+    | {
+        id: string;
+        title: string;
+        posterImage: string | null;
+        hostUsername: string | null;
+      }
+    | null = null;
+
+  if (sharedEventId) {
+    const event = await EventModel.findById(sharedEventId)
+      .select("title posterImage hostId")
+      .lean();
+    if (!event) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+    const host = await UserModel.findById(event.hostId)
+      .select("username")
+      .lean();
+    sharedEventData = {
+      id: event._id.toString(),
+      title: event.title ?? "",
+      posterImage: event.posterImage ?? null,
+      hostUsername: host?.username ?? null,
+    };
+  }
+
   const word = await WordModel.create({
     content,
     userId: session.user.id,
@@ -344,6 +427,10 @@ export async function POST(req: Request) {
     sharedFaithStoryTitle: sharedStoryData?.title ?? undefined,
     sharedFaithStoryCover: sharedStoryData?.coverImage ?? undefined,
     sharedFaithStoryAuthorUsername: sharedStoryData?.authorUsername ?? undefined,
+    sharedEventId: sharedEventData?.id ?? undefined,
+    sharedEventTitle: sharedEventData?.title ?? undefined,
+    sharedEventPoster: sharedEventData?.posterImage ?? undefined,
+    sharedEventHostUsername: sharedEventData?.hostUsername ?? undefined,
     privacy,
   });
 

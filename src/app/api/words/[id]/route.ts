@@ -7,6 +7,7 @@ import WordCommentModel from "@/models/WordComment";
 import NotificationModel from "@/models/Notification";
 import ModerationLogModel from "@/models/ModerationLog";
 import FaithStoryModel from "@/models/FaithStory";
+import EventModel from "@/models/Event";
 import { isAdminEmail } from "@/lib/admin";
 import { revalidateTag } from "next/cache";
 import crypto from "crypto";
@@ -225,6 +226,43 @@ export async function GET(
         }
       : null;
 
+  const sharedEventId = word.sharedEventId ? String(word.sharedEventId) : null;
+  let sharedEventFallback: {
+    title?: string | null;
+    posterImage?: string | null;
+    hostUsername?: string | null;
+  } | null = null;
+  if (
+    sharedEventId &&
+    (!word.sharedEventTitle || !word.sharedEventPoster || !word.sharedEventHostUsername)
+  ) {
+    const event = await EventModel.findById(sharedEventId)
+      .select("title posterImage hostId")
+      .lean();
+    if (event) {
+      const host = await UserModel.findById(event.hostId)
+        .select("username")
+        .lean();
+      sharedEventFallback = {
+        title: event.title ?? "",
+        posterImage: event.posterImage ?? null,
+        hostUsername: host?.username ?? null,
+      };
+    }
+  }
+  const sharedEvent =
+    sharedEventId &&
+    (word.sharedEventTitle || sharedEventFallback)
+      ? {
+          id: sharedEventId,
+          title: word.sharedEventTitle ?? sharedEventFallback?.title ?? "",
+          posterImage:
+            word.sharedEventPoster ?? sharedEventFallback?.posterImage ?? null,
+          hostUsername:
+            word.sharedEventHostUsername ?? sharedEventFallback?.hostUsername ?? null,
+        }
+      : null;
+
   return NextResponse.json({
     ...word,
     _id: String(word._id),
@@ -248,6 +286,7 @@ export async function GET(
         }
       : null,
     sharedFaithStory,
+    sharedEvent,
   });
 }
 

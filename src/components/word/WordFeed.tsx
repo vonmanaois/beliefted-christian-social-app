@@ -129,6 +129,8 @@ export default function WordFeed({
           : undefined,
         sharedFaithStoryId:
           typeof word.sharedFaithStoryId === "string" ? word.sharedFaithStoryId : null,
+        sharedEventId:
+          typeof word.sharedEventId === "string" ? word.sharedEventId : null,
         privacy: (word.privacy === "followers" || word.privacy === "private"
           ? word.privacy
           : "public") as Word["privacy"],

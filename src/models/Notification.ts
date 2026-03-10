@@ -4,6 +4,7 @@ import UserModel from "@/models/User";
 import WordModel from "@/models/Word";
 import PrayerModel from "@/models/Prayer";
 import FaithStoryModel from "@/models/FaithStory";
+import EventModel from "@/models/Event";
 
 const NotificationSchema = new Schema(
   {
@@ -18,15 +19,23 @@ const NotificationSchema = new Schema(
         "comment",
         "word_like",
         "word_comment",
+        "word_comment_reply",
         "follow",
         "faith_like",
         "faith_comment",
         "mention",
         "moderation",
+        "event_invite",
+        "event_posted",
+        "event_rsvp",
+        "event_invite_accepted",
+        "event_invite_declined",
+        "event_comment",
       ],
       required: true,
     },
     faithStoryId: { type: Schema.Types.ObjectId, ref: "FaithStory" },
+    eventId: { type: Schema.Types.ObjectId, ref: "Event" },
     moderationReason: { type: String },
     moderationTarget: {
       type: String,
@@ -65,6 +74,7 @@ const buildPushPayload = async (doc: Notification) => {
     const bodyMap: Record<string, string> = {
       word_like: `${actorName} liked your word.`,
       word_comment: `${actorName} commented on your word.`,
+      word_comment_reply: `${actorName} replied to your comment.`,
       mention: `${actorName} mentioned you.`,
     };
     return {
@@ -107,6 +117,24 @@ const buildPushPayload = async (doc: Notification) => {
     return {
       title: "New activity",
       body: bodyMap[doc.type] ?? "Open Beliefted to see the latest activity.",
+      url,
+    };
+  }
+
+  if (doc.eventId) {
+    const event = await EventModel.findById(doc.eventId).select("title").lean();
+    const url = doc.eventId ? `/events/${doc.eventId}` : fallbackUrl;
+    const bodyMap: Record<string, string> = {
+      event_invite: `${actorName} invited you to an event.`,
+      event_posted: `${actorName} posted a new event.`,
+      event_rsvp: `${actorName} responded to your event.`,
+      event_invite_accepted: `${actorName} accepted your event invite.`,
+      event_invite_declined: `${actorName} declined your event invite.`,
+      event_comment: `${actorName} commented on your event.`,
+    };
+    return {
+      title: event?.title ? `Event: ${event.title}` : "Event update",
+      body: bodyMap[doc.type] ?? "Open Beliefted to see the event.",
       url,
     };
   }

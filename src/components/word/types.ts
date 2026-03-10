@@ -25,6 +25,13 @@ export type Word = {
     coverImage?: string | null;
     authorUsername?: string | null;
   } | null;
+  sharedEventId?: string | null;
+  sharedEvent?: {
+    id: string;
+    title: string;
+    posterImage?: string | null;
+    hostUsername?: string | null;
+  } | null;
 };
 
 export type CommentUser = {
@@ -39,4 +46,5 @@ export type WordCommentData = {
   content: string;
   createdAt: string;
   userId?: CommentUser | null;
+  parentId?: string | null;
 };

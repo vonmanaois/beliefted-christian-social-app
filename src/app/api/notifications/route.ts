@@ -7,6 +7,7 @@ import UserModel from "@/models/User";
 import "@/models/Word";
 import "@/models/Prayer";
 import "@/models/FaithStory";
+import "@/models/Event";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -33,6 +34,7 @@ export async function GET() {
     .populate("prayerId", "content authorUsername")
     .populate("wordId", "content authorUsername")
     .populate("faithStoryId", "title authorUsername")
+    .populate("eventId", "title")
     .lean();
 
   const enriched = notifications.map((note) => {

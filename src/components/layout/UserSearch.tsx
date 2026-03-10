@@ -12,7 +12,12 @@ type UserResult = {
   image?: string | null;
 };
 
-export default function UserSearch() {
+type UserSearchProps = {
+  onSelect?: (user: UserResult) => void;
+  placeholder?: string;
+};
+
+export default function UserSearch({ onSelect, placeholder = "Search people..." }: UserSearchProps) {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [results, setResults] = useState<UserResult[]>([]);
@@ -51,7 +56,7 @@ export default function UserSearch() {
     <div className="relative">
       <input
         className="soft-input text-sm w-full"
-        placeholder="Search people..."
+        placeholder={placeholder}
         value={query}
         onChange={(event) => {
           setQuery(event.target.value);
@@ -74,35 +79,58 @@ export default function UserSearch() {
               No people found. Try a different name or username.
             </p>
           ) : (
-            results.map((user) => (
-              <Link
-                key={user.id}
-                href={user.username ? `/profile/${user.username}` : "/profile"}
-                prefetch={false}
-                className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-[color:var(--surface-strong)]"
-              >
-                <div className="h-7 w-7 rounded-full bg-slate-200 overflow-hidden">
-                  {user.image ? (
-                    <Image
-                      src={cloudinaryTransform(user.image, { width: 56, height: 56 })}
-                      alt={user.name ?? "User"}
-                      width={56}
-                      height={56}
-                      sizes="28px"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : null}
-                </div>
-                <div className="text-sm leading-tight">
-                  <p className="text-[color:var(--ink)] font-semibold text-sm">
-                    {user.name ?? "User"}
-                  </p>
-                  {user.username && (
-                    <p className="text-xs text-[color:var(--subtle)]">@{user.username}</p>
-                  )}
-                </div>
-              </Link>
-            ))
+            results.map((user) => {
+              const content = (
+                <>
+                  <div className="h-7 w-7 rounded-full bg-slate-200 overflow-hidden">
+                    {user.image ? (
+                      <Image
+                        src={cloudinaryTransform(user.image, { width: 56, height: 56 })}
+                        alt={user.name ?? "User"}
+                        width={56}
+                        height={56}
+                        sizes="28px"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : null}
+                  </div>
+                  <div className="text-sm leading-tight">
+                    <p className="text-[color:var(--ink)] font-semibold text-sm">
+                      {user.name ?? "User"}
+                    </p>
+                    {user.username && (
+                      <p className="text-xs text-[color:var(--subtle)]">@{user.username}</p>
+                    )}
+                  </div>
+                </>
+              );
+              return onSelect ? (
+                <button
+                  key={user.id}
+                  type="button"
+                  onClick={() => {
+                    const label = user.username
+                      ? `@${user.username}`
+                      : user.name ?? "";
+                    setQuery(label);
+                    onSelect(user);
+                    setIsOpen(false);
+                  }}
+                  className="flex w-full items-center gap-3 px-3 py-2 rounded-xl hover:bg-[color:var(--surface-strong)]"
+                >
+                  {content}
+                </button>
+              ) : (
+                <Link
+                  key={user.id}
+                  href={user.username ? `/profile/${user.username}` : "/profile"}
+                  prefetch={false}
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-[color:var(--surface-strong)]"
+                >
+                  {content}
+                </Link>
+              );
+            })
           )}
         </div>
       )}

@@ -224,6 +224,8 @@ const WordCard = ({
   const [commentsActive, setCommentsActive] = useState(defaultShowComments);
   const [commentsReady, setCommentsReady] = useState(defaultShowComments);
   const [commentText, setCommentText] = useState("");
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentText, setEditingCommentText] = useState("");
   const [editingCommentOriginal, setEditingCommentOriginal] = useState("");
@@ -237,6 +239,7 @@ const WordCard = ({
   const commentEditRef = useRef<HTMLDivElement | null>(null);
   const commentFormRef = useRef<HTMLDivElement | null>(null);
   const commentInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const replyInputRef = useRef<HTMLTextAreaElement | null>(null);
   const commentButtonRef = useRef<HTMLButtonElement | null>(null);
   const [isLiking, setIsLiking] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -630,11 +633,17 @@ const WordCard = ({
   const [showFullContent, setShowFullContent] = useState(false);
 
   const commentMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({
+      content,
+      parentId,
+    }: {
+      content: string;
+      parentId?: string | null;
+    }) => {
       const response = await fetch("/api/word-comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wordId, content: commentText.trim() }),
+        body: JSON.stringify({ wordId, content, parentId }),
       });
       if (!response.ok) {
         if (response.status === 401) {
@@ -647,11 +656,16 @@ const WordCard = ({
         content: string;
         createdAt: string;
         userId?: CommentUser | null;
+        parentId?: string | null;
       };
     },
     onSuccess: async (newComment) => {
       setCommentError(null);
       setCommentText("");
+      if (newComment.parentId) {
+        setReplyText("");
+        setReplyingToId(null);
+      }
       updateWordCache((item) => ({
         ...item,
         commentCount: (item.commentCount ?? 0) + 1,
@@ -662,9 +676,13 @@ const WordCard = ({
           typeof newComment.userId === "string" ||
           !("name" in newComment.userId) ||
           !newComment.userId?.name);
+      const normalizedComment = {
+        ...newComment,
+        parentId: newComment.parentId ? String(newComment.parentId) : null,
+      };
       const hydratedComment = shouldHydrateUser
         ? {
-            ...newComment,
+            ...normalizedComment,
             userId: {
               _id: session.user.id,
               name: session.user.name ?? "User",
@@ -674,7 +692,7 @@ const WordCard = ({
                 null,
             },
           }
-        : newComment;
+        : normalizedComment;
       queryClient.setQueryData<WordCommentData[]>(
         ["word-comments", wordId],
         (current = []) => [hydratedComment as WordCommentData, ...current],
@@ -916,8 +934,37 @@ const WordCard = ({
 
     if (!commentText.trim()) return;
 
-    commentMutation.mutate();
+    commentMutation.mutate({ content: commentText.trim() });
   };
+
+  const handleReplySubmit = (parentId: string) => {
+    if (!session?.user?.id) {
+      openSignIn();
+      return;
+    }
+    if (!replyText.trim()) return;
+    commentMutation.mutate({ content: replyText.trim(), parentId });
+  };
+
+  const handleStartReply = useCallback(
+    (comment: WordCommentData) => {
+      if (!session?.user?.id) {
+        openSignIn();
+        return;
+      }
+      const username = comment.userId?.username;
+      const prefix = username ? `@${username} ` : "";
+      setReplyingToId(comment._id);
+      setReplyText(prefix);
+      setTimeout(() => replyInputRef.current?.focus(), 0);
+    },
+    [openSignIn, session?.user?.id],
+  );
+
+  const handleCancelReply = useCallback(() => {
+    setReplyingToId(null);
+    setReplyText("");
+  }, []);
 
   const handleStartEditComment = useCallback((comment: WordCommentData) => {
     setEditingCommentId(comment._id);
@@ -1026,6 +1073,9 @@ const WordCard = ({
     sharedStory?.authorUsername && sharedStory?.id
       ? `/faith-story/${sharedStory.authorUsername}/${sharedStory.id}`
       : null;
+  const sharedEvent = word.sharedEvent ?? null;
+  const sharedEventMissing = !sharedEvent && Boolean(word.sharedEventId);
+  const sharedEventHref = sharedEvent?.id ? `/events/${sharedEvent.id}` : null;
   const shareUrl = useMemo(() => {
     const username = word.user?.username ?? null;
     const base =
@@ -1219,6 +1269,39 @@ const WordCard = ({
                       {sharedStory
                         ? "Read full story"
                         : "This story is no longer available."}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {(sharedEvent || sharedEventMissing) && (
+                <div
+                  className="mt-3 w-full max-w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] cursor-pointer"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    if (sharedEventHref) {
+                      router.push(sharedEventHref, { scroll: false });
+                    }
+                  }}
+                >
+                  {sharedEvent?.posterImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={cloudinaryTransform(sharedEvent.posterImage, {
+                        width: 640,
+                      })}
+                      alt=""
+                      className="h-40 w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : null}
+                  <div className="p-3">
+                    <p className="text-sm font-semibold text-[color:var(--ink)]">
+                      {sharedEvent ? sharedEvent.title : "Event unavailable"}
+                    </p>
+                    <p className="mt-1 text-xs text-[color:var(--accent)]">
+                      {sharedEvent
+                        ? "View event"
+                        : "This event is no longer available."}
                     </p>
                   </div>
                 </div>
@@ -1453,6 +1536,13 @@ const WordCard = ({
               commentInputRef={commentInputRef}
               commentFormRef={commentFormRef}
               onSubmit={handleCommentSubmit}
+              replyingToId={replyingToId}
+              replyText={replyText}
+              onReplyTextChange={setReplyText}
+              onStartReply={handleStartReply}
+              onCancelReply={handleCancelReply}
+              onSubmitReply={handleReplySubmit}
+              replyInputRef={replyInputRef}
               commentError={commentError}
               isLoading={isLoadingComments}
               comments={comments}

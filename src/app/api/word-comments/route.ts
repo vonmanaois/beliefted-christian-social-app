@@ -24,6 +24,7 @@ export async function POST(req: Request) {
   const WordCommentSchema = z.object({
     content: z.string().trim().min(1).max(1000),
     wordId: z.string().min(1),
+    parentId: z.string().min(1).optional(),
   });
 
   const body = WordCommentSchema.safeParse(await req.json());
@@ -36,6 +37,7 @@ export async function POST(req: Request) {
 
   const content = body.data.content.trim();
   const wordId = body.data.wordId;
+  const parentId = body.data.parentId ?? null;
 
   if (!content || !wordId) {
     return NextResponse.json(
@@ -46,19 +48,43 @@ export async function POST(req: Request) {
 
   await dbConnect();
 
+  const word = await WordModel.findById(wordId).lean();
+  let parentUserId: string | null = null;
+  if (parentId) {
+    const parent = await WordCommentModel.findOne({ _id: parentId, wordId })
+      .select("userId")
+      .lean();
+    if (!parent?.userId) {
+      return NextResponse.json({ error: "Invalid parent comment" }, { status: 400 });
+    }
+    parentUserId = String(parent.userId);
+  }
+
   const comment = await WordCommentModel.create({
     content,
     userId: session.user.id,
     wordId,
+    parentId,
   });
 
-  const word = await WordModel.findById(wordId).lean();
   if (word?.userId && word.userId.toString() !== session.user.id) {
+    const wordOwnerId = String(word.userId);
+    if (!parentUserId || parentUserId !== wordOwnerId) {
+      await NotificationModel.create({
+        userId: word.userId,
+        actorId: session.user.id,
+        wordId,
+        type: "word_comment",
+      });
+    }
+  }
+
+  if (parentUserId && parentUserId !== String(session.user.id)) {
     await NotificationModel.create({
-      userId: word.userId,
+      userId: parentUserId,
       actorId: session.user.id,
       wordId,
-      type: "word_comment",
+      type: "word_comment_reply",
     });
   }
 

@@ -24,17 +24,25 @@ type NotificationItem = {
     | "comment"
     | "word_like"
     | "word_comment"
+    | "word_comment_reply"
     | "follow"
     | "faith_like"
     | "faith_comment"
     | "mention"
-    | "moderation";
+    | "moderation"
+    | "event_invite"
+    | "event_posted"
+    | "event_rsvp"
+    | "event_invite_accepted"
+    | "event_invite_declined"
+    | "event_comment";
   createdAt: string;
   actorId?: NotificationActor | null;
   userId?: NotificationRecipient | null;
   prayerId?: { _id?: string; content?: string; authorUsername?: string | null } | null;
   wordId?: { _id?: string; content?: string; authorUsername?: string | null } | null;
   faithStoryId?: { _id?: string; title?: string; authorUsername?: string | null } | null;
+  eventId?: { _id?: string; title?: string } | null;
   moderationReason?: string | null;
   moderationTarget?: "word" | "prayer" | "faith_story" | null;
   isFollowing?: boolean;
@@ -290,6 +298,9 @@ export default function NotificationsContent({
       const author = note.faithStoryId.authorUsername ?? recipient;
       return author ? `/faith-story/${author}/${note.faithStoryId._id}` : null;
     }
+    if (note.eventId?._id) {
+      return `/events/${note.eventId._id}`;
+    }
     return null;
   };
 
@@ -397,6 +408,8 @@ export default function NotificationsContent({
                                   ? "liked your word."
                                   : note.type === "word_comment"
                                     ? "posted reflection on your word."
+                                    : note.type === "word_comment_reply"
+                                      ? "replied to your comment."
                                     : note.type === "faith_like"
                                       ? "liked your faith story."
                                       : note.type === "faith_comment"
@@ -409,6 +422,18 @@ export default function NotificationsContent({
                                               : note.faithStoryId
                                                 ? "mentioned you in a faith story."
                                                 : "mentioned you."
+                                        : note.type === "event_invite"
+                                          ? "invited you to an event."
+                                          : note.type === "event_posted"
+                                            ? "posted a new event."
+                                            : note.type === "event_rsvp"
+                                              ? "responded to your event."
+                                              : note.type === "event_invite_accepted"
+                                                ? "accepted your event invite."
+                                              : note.type === "event_invite_declined"
+                                                ? "declined your event invite."
+                                                : note.type === "event_comment"
+                                                  ? "commented on your event."
                                         : "followed you."}
                           </>
                         )}

@@ -10,6 +10,7 @@ import { useUIStore } from "@/lib/uiStore";
 import { UserCircle } from "@phosphor-icons/react";
 import Spinner from "@/components/ui/Spinner";
 import DailyVerseCard from "@/components/home/DailyVerseCard";
+import EventFeedPreview from "@/components/events/EventFeedPreview";
 
 const WordForm = dynamic(() => import("@/components/word/WordForm"), {
   ssr: false,
@@ -26,12 +27,16 @@ export default function WordWall() {
   const [formKey, setFormKey] = useState(0);
   const [isWordDirty, setIsWordDirty] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
-  const [pendingPrefill, setPendingPrefill] = useState<{ reference: string; text: string } | null>(
-    null
-  );
-  const [activePrefill, setActivePrefill] = useState<{ reference: string; text: string } | null>(
-    null
-  );
+  const [pendingPrefillVerse, setPendingPrefillVerse] = useState<{
+    reference: string;
+    text: string;
+  } | null>(null);
+  const [activePrefillVerse, setActivePrefillVerse] = useState<{
+    reference: string;
+    text: string;
+  } | null>(null);
+  const [pendingPrefillText, setPendingPrefillText] = useState<string | null>(null);
+  const [activePrefillText, setActivePrefillText] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [feedMode, setFeedMode] = useState<"latest" | "forYou">(() => {
     if (typeof window === "undefined") return "latest";
@@ -61,15 +66,32 @@ export default function WordWall() {
         openSignIn();
         return;
       }
-      const detail = (event as CustomEvent<{ verse?: { reference?: string; text?: string } }>).detail;
+      const detail = (event as CustomEvent<{
+        verse?: { reference?: string; text?: string };
+        text?: string;
+      }>).detail;
       const verse = detail?.verse;
-      if (!verse?.reference || !verse?.text) return;
+      const text = detail?.text?.trim();
+      if (!verse?.reference || !verse?.text) {
+        if (!text) return;
+      }
       if (isWordDirty) {
-        setPendingPrefill({ reference: verse.reference, text: verse.text });
+        if (verse?.reference && verse?.text) {
+          setPendingPrefillVerse({ reference: verse.reference, text: verse.text });
+        }
+        if (text) {
+          setPendingPrefillText(text);
+        }
         setShowDiscardConfirm(true);
         return;
       }
-      setActivePrefill({ reference: verse.reference, text: verse.text });
+      if (verse?.reference && verse?.text) {
+        setActivePrefillVerse({ reference: verse.reference, text: verse.text });
+        setActivePrefillText(null);
+      } else if (text) {
+        setActivePrefillText(text);
+        setActivePrefillVerse(null);
+      }
       setFormKey((prev) => prev + 1);
     };
     window.addEventListener("open-word-composer-with-text", handleOpenWordWithText as EventListener);
@@ -105,6 +127,7 @@ export default function WordWall() {
   return (
     <section className={`feed-surface ${isMounted ? "feed-surface--enter" : "feed-surface--pre"}`}>
       <DailyVerseCard />
+      <EventFeedPreview />
       <div ref={formRef} className="wall-card flex items-start gap-3 rounded-none border-b-0 pb-3">
         <div className="avatar-ring">
           {session?.user?.image ? (
@@ -130,13 +153,16 @@ export default function WordWall() {
             compact
             showHeader={false}
             placeholder="What does God want you to share today?"
-            prefillVerse={activePrefill ?? undefined}
+            prefillVerse={activePrefillVerse ?? undefined}
+            initialContent={activePrefillText ?? undefined}
             onPosted={() => {
               setRefreshKey((prev) => prev + 1);
               setFormKey((prev) => prev + 1);
               setIsWordDirty(false);
-              setPendingPrefill(null);
-              setActivePrefill(null);
+              setPendingPrefillVerse(null);
+              setActivePrefillVerse(null);
+              setPendingPrefillText(null);
+              setActivePrefillText(null);
             }}
             onDirtyChange={setIsWordDirty}
           />
@@ -191,7 +217,8 @@ export default function WordWall() {
             type="button"
             onClick={() => {
               setShowDiscardConfirm(false);
-              setPendingPrefill(null);
+              setPendingPrefillVerse(null);
+              setPendingPrefillText(null);
             }}
             className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer hover:text-[color:var(--accent)]"
           >
@@ -200,13 +227,19 @@ export default function WordWall() {
           <button
             type="button"
             onClick={() => {
-              const nextPrefill = pendingPrefill;
+              const nextPrefillVerse = pendingPrefillVerse;
+              const nextPrefillText = pendingPrefillText;
               setShowDiscardConfirm(false);
               setFormKey((prev) => prev + 1);
               setIsWordDirty(false);
-              setPendingPrefill(null);
-              if (nextPrefill) {
-                setActivePrefill(nextPrefill);
+              setPendingPrefillVerse(null);
+              setPendingPrefillText(null);
+              if (nextPrefillVerse) {
+                setActivePrefillVerse(nextPrefillVerse);
+                setActivePrefillText(null);
+              } else if (nextPrefillText) {
+                setActivePrefillText(nextPrefillText);
+                setActivePrefillVerse(null);
               }
             }}
             className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--danger)] text-white cursor-pointer"
