@@ -415,7 +415,7 @@ export default function NotificationsContent({
                               : note.type === "word_like"
                                 ? "liked your word."
                                 : note.type === "story_like"
-                                  ? "liked your story."
+                                  ? "liked your day story."
                                 : note.type === "word_comment"
                                   ? "posted reflection on your word."
                                 : note.type === "word_comment_reply"

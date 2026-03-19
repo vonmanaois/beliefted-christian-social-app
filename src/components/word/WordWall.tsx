@@ -4,10 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
+import { UserCircle } from "@phosphor-icons/react";
 import WordFeed from "@/components/word/WordFeed";
 import Modal from "@/components/layout/Modal";
 import { useUIStore } from "@/lib/uiStore";
-import { UserCircle } from "@phosphor-icons/react";
 import Spinner from "@/components/ui/Spinner";
 import DailyVerseCard from "@/components/home/DailyVerseCard";
 import EventFeedPreview from "@/components/events/EventFeedPreview";
@@ -54,7 +54,6 @@ export default function WordWall() {
     const handleOpenWord = () => {
       if (!isAuthenticated) {
         openSignIn();
-        return;
       }
     };
     window.addEventListener("open-word-composer", handleOpenWord);
@@ -95,7 +94,10 @@ export default function WordWall() {
       }
       setFormKey((prev) => prev + 1);
     };
-    window.addEventListener("open-word-composer-with-text", handleOpenWordWithText as EventListener);
+    window.addEventListener(
+      "open-word-composer-with-text",
+      handleOpenWordWithText as EventListener
+    );
     return () =>
       window.removeEventListener(
         "open-word-composer-with-text",
@@ -127,85 +129,105 @@ export default function WordWall() {
 
   return (
     <>
-      <div className="relative z-20 -mb-2 px-3 sm:px-4 pt-4 overflow-visible">
+      <div className="relative z-20 px-3 sm:px-4 pt-4 overflow-visible">
         <DayStoryStrip />
       </div>
-      <section className={`feed-surface ${isMounted ? "feed-surface--enter" : "feed-surface--pre"}`}>
-        <DailyVerseCard />
-        <EventFeedPreview />
-        <div ref={formRef} className="wall-card flex items-start gap-3 rounded-none border-b-0 pb-3">
-        <div className="avatar-ring">
-          {session?.user?.image ? (
-            <Image
-              src={session.user.image}
-              alt="Profile"
-              width={56}
-              height={56}
-              sizes="32px"
-              className="avatar-core h-8 w-8 sm:h-10 sm:w-10 object-cover"
-            />
-          ) : (
-            <div className="avatar-core h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center">
-              <UserCircle size={20} weight="regular" className="text-[color:var(--subtle)]" />
+
+      <section
+        className={`feed-surface ${isMounted ? "feed-surface--enter" : "feed-surface--pre"}`}
+      >
+        <div className="feed-block">
+          <DailyVerseCard />
+        </div>
+
+        <div className="feed-block">
+          <EventFeedPreview />
+        </div>
+
+        <div className="feed-block">
+          <div ref={formRef} className="composer-shell px-3 py-3 sm:px-4 sm:py-4">
+            <div className="flex items-start gap-3">
+              <div className="avatar-ring mt-1">
+                {session?.user?.image ? (
+                  <Image
+                    src={session.user.image}
+                    alt="Profile"
+                    width={56}
+                    height={56}
+                    sizes="32px"
+                    className="avatar-core h-8 w-8 sm:h-10 sm:w-10 object-cover"
+                  />
+                ) : (
+                  <div className="avatar-core flex h-8 w-8 items-center justify-center sm:h-10 sm:w-10">
+                    <UserCircle
+                      size={20}
+                      weight="regular"
+                      className="text-[color:var(--subtle)]"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <WordForm
+                  key={formKey}
+                  variant="inline"
+                  flat
+                  compact
+                  showHeader={false}
+                  placeholder="What does God want you to share today?"
+                  prefillVerse={activePrefillVerse ?? undefined}
+                  initialContent={activePrefillText ?? undefined}
+                  onPosted={() => {
+                    setRefreshKey((prev) => prev + 1);
+                    setFormKey((prev) => prev + 1);
+                    setIsWordDirty(false);
+                    setPendingPrefillVerse(null);
+                    setActivePrefillVerse(null);
+                    setPendingPrefillText(null);
+                    setActivePrefillText(null);
+                  }}
+                  onDirtyChange={setIsWordDirty}
+                />
+              </div>
             </div>
-          )}
+          </div>
         </div>
-        <div className="flex-1">
-          <WordForm
-            key={formKey}
-            variant="inline"
-            flat
-            compact
-            showHeader={false}
-            placeholder="What does God want you to share today?"
-            prefillVerse={activePrefillVerse ?? undefined}
-            initialContent={activePrefillText ?? undefined}
-            onPosted={() => {
-              setRefreshKey((prev) => prev + 1);
-              setFormKey((prev) => prev + 1);
-              setIsWordDirty(false);
-              setPendingPrefillVerse(null);
-              setActivePrefillVerse(null);
-              setPendingPrefillText(null);
-              setActivePrefillText(null);
-            }}
-            onDirtyChange={setIsWordDirty}
-          />
-        </div>
-      </div>
-        <div className="px-3 sm:px-4 pt-2 pb-2 flex justify-end">
-        <div
-          className="inline-flex items-center gap-1 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--surface)] p-1 shadow-sm"
-          suppressHydrationWarning
-        >
-          <button
-            type="button"
-            onClick={() => setFeedMode("latest")}
-            className={`min-w-[84px] rounded-full px-4 py-1.5 text-center text-[12px] font-semibold transition ${
-              feedMode === "latest"
-                ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)] shadow"
-                : "text-[color:var(--subtle)] hover:text-[color:var(--ink)] hover:bg-[color:var(--surface-strong)]"
-            }`}
+
+        <div className="feed-tabs-shell">
+          <div
+            className="inline-flex items-center gap-1 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--surface)] p-1 shadow-sm"
+            suppressHydrationWarning
           >
-            Latest
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setFeedMode("forYou");
-              setForYouCycle((prev) => prev + 1);
-            }}
-            className={`min-w-[84px] rounded-full px-4 py-1.5 text-center text-[12px] font-semibold transition ${
-              feedMode === "forYou"
-                ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)] shadow"
-                : "text-[color:var(--subtle)] hover:text-[color:var(--ink)] hover:bg-[color:var(--surface-strong)]"
-            }`}
-          >
-            For You
-          </button>
+            <button
+              type="button"
+              onClick={() => setFeedMode("latest")}
+              className={`segmented-tab-button relative z-10 inline-flex min-w-[96px] items-center justify-center whitespace-nowrap rounded-full px-4 py-2 text-center text-[12px] font-semibold leading-none ${
+                feedMode === "latest"
+                  ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)] shadow"
+                  : "text-[color:var(--subtle)] hover:bg-[color:var(--surface-strong)] hover:text-[color:var(--ink)]"
+              }`}
+            >
+              Latest
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setFeedMode("forYou");
+                setForYouCycle((prev) => prev + 1);
+              }}
+              className={`segmented-tab-button relative z-10 inline-flex min-w-[96px] items-center justify-center whitespace-nowrap rounded-full px-4 py-2 text-center text-[12px] font-semibold leading-none ${
+                feedMode === "forYou"
+                  ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)] shadow"
+                  : "text-[color:var(--subtle)] hover:bg-[color:var(--surface-strong)] hover:text-[color:var(--ink)]"
+              }`}
+            >
+              For You
+            </button>
+          </div>
         </div>
-        </div>
-        <div key={feedMode} className="transition-opacity duration-150">
+
+        <div key={feedMode} className="tab-pane-soft-enter">
           <WordFeed refreshKey={refreshKey} mode={feedMode} forYouSeed={forYouCycle} />
         </div>
 
@@ -214,44 +236,44 @@ export default function WordWall() {
           isOpen={showDiscardConfirm}
           onClose={() => setShowDiscardConfirm(false)}
         >
-        <p className="text-sm text-[color:var(--subtle)]">
-          You have an unfinished post. Discard it?
-        </p>
-        <div className="mt-4 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setShowDiscardConfirm(false);
-              setPendingPrefillVerse(null);
-              setPendingPrefillText(null);
-            }}
-            className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer hover:text-[color:var(--accent)]"
-          >
-            Keep editing
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const nextPrefillVerse = pendingPrefillVerse;
-              const nextPrefillText = pendingPrefillText;
-              setShowDiscardConfirm(false);
-              setFormKey((prev) => prev + 1);
-              setIsWordDirty(false);
-              setPendingPrefillVerse(null);
-              setPendingPrefillText(null);
-              if (nextPrefillVerse) {
-                setActivePrefillVerse(nextPrefillVerse);
-                setActivePrefillText(null);
-              } else if (nextPrefillText) {
-                setActivePrefillText(nextPrefillText);
-                setActivePrefillVerse(null);
-              }
-            }}
-            className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--danger)] text-white cursor-pointer"
-          >
-            Discard
-          </button>
-        </div>
+          <p className="text-sm text-[color:var(--subtle)]">
+            You have an unfinished post. Discard it?
+          </p>
+          <div className="mt-4 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setShowDiscardConfirm(false);
+                setPendingPrefillVerse(null);
+                setPendingPrefillText(null);
+              }}
+              className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+            >
+              Keep editing
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const nextPrefillVerse = pendingPrefillVerse;
+                const nextPrefillText = pendingPrefillText;
+                setShowDiscardConfirm(false);
+                setFormKey((prev) => prev + 1);
+                setIsWordDirty(false);
+                setPendingPrefillVerse(null);
+                setPendingPrefillText(null);
+                if (nextPrefillVerse) {
+                  setActivePrefillVerse(nextPrefillVerse);
+                  setActivePrefillText(null);
+                } else if (nextPrefillText) {
+                  setActivePrefillText(nextPrefillText);
+                  setActivePrefillVerse(null);
+                }
+              }}
+              className="cursor-pointer rounded-lg bg-[color:var(--danger)] px-3 py-2 text-xs font-semibold text-white"
+            >
+              Discard
+            </button>
+          </div>
         </Modal>
       </section>
     </>

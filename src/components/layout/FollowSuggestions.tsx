@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -18,6 +18,10 @@ type SuggestionUser = {
 export default function FollowSuggestions() {
   const { data: session, status } = useSession();
   const [dismissedIds, setDismissedIds] = useState<string[]>([]);
+  const [exitingIds, setExitingIds] = useState<string[]>([]);
+  const [enteringIds, setEnteringIds] = useState<string[]>([]);
+  const [pendingFollowId, setPendingFollowId] = useState<string | null>(null);
+  const previousVisibleIdsRef = useRef<string[]>([]);
 
   const { data = [], isLoading, refetch, isFetching } = useQuery({
     queryKey: ["search-follow-suggestions", session?.user?.id ?? "guest"],
@@ -45,10 +49,21 @@ export default function FollowSuggestions() {
 
       return userId;
     },
+    onMutate: (userId) => {
+      setPendingFollowId(userId);
+      setExitingIds((current) => (current.includes(userId) ? current : [...current, userId]));
+    },
+    onError: (_, userId) => {
+      setPendingFollowId(null);
+      setExitingIds((current) => current.filter((id) => id !== userId));
+    },
     onSuccess: (userId) => {
-      setDismissedIds((current) =>
-        current.includes(userId) ? current : [...current, userId]
-      );
+      window.setTimeout(() => {
+        setDismissedIds((current) => (current.includes(userId) ? current : [...current, userId]));
+        setExitingIds((current) => current.filter((id) => id !== userId));
+        setPendingFollowId((current) => (current === userId ? null : current));
+        void refetch();
+      }, 260);
     },
   });
 
@@ -56,6 +71,23 @@ export default function FollowSuggestions() {
     () => data.filter((user) => !dismissedIds.includes(user.id)),
     [data, dismissedIds]
   );
+
+  useEffect(() => {
+    const previousIds = previousVisibleIdsRef.current;
+    const nextIds = visibleSuggestions.map((user) => user.id);
+    const insertedIds = nextIds.filter((id) => !previousIds.includes(id));
+
+    if (insertedIds.length > 0 && previousIds.length > 0) {
+      setEnteringIds((current) => Array.from(new Set([...current, ...insertedIds])));
+      const timeout = window.setTimeout(() => {
+        setEnteringIds((current) => current.filter((id) => !insertedIds.includes(id)));
+      }, 380);
+      previousVisibleIdsRef.current = nextIds;
+      return () => window.clearTimeout(timeout);
+    }
+
+    previousVisibleIdsRef.current = nextIds;
+  }, [visibleSuggestions]);
 
   if (status !== "authenticated") return null;
   if (isLoading) {
@@ -98,7 +130,13 @@ export default function FollowSuggestions() {
         {visibleSuggestions.map((user) => (
           <div
             key={user.id}
-            className="flex items-center justify-between gap-3 rounded-2xl border border-[color:var(--panel-border)] px-3 py-3"
+            className={[
+              "follow-suggestion-card flex items-center justify-between gap-3 rounded-2xl border border-[color:var(--panel-border)] px-3 py-3",
+              exitingIds.includes(user.id) ? "follow-suggestion-card--exit" : "",
+              enteringIds.includes(user.id) ? "follow-suggestion-card--enter" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
           >
             <Link
               href={user.username ? `/profile/${user.username}` : "/profile"}
@@ -132,10 +170,10 @@ export default function FollowSuggestions() {
             <button
               type="button"
               onClick={() => followMutation.mutate(user.id)}
-              disabled={followMutation.isPending}
+              disabled={followMutation.isPending || pendingFollowId === user.id}
               className="shrink-0 rounded-full bg-[color:var(--accent)] px-4 py-2 text-xs font-semibold text-[color:var(--accent-contrast)] disabled:opacity-60"
             >
-              Follow
+              {pendingFollowId === user.id ? "Following..." : "Follow"}
             </button>
           </div>
         ))}

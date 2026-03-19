@@ -135,20 +135,20 @@ const FaithStoryComments = memo(function FaithStoryComments({
                 />
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                    <div className="comment-meta-row">
                       <Link
                         href={comment.userId?.username ? `/profile/${comment.userId.username}` : "/profile"}
                         prefetch={false}
-                        className="text-[11px] sm:text-xs font-semibold text-[color:var(--ink)] cursor-pointer hover:underline"
+                        className="comment-author-link cursor-pointer"
                       >
                         {comment.userId?.name ?? "User"}
                       </Link>
                       {comment.userId?.username && (
-                        <span className="text-[11px] sm:text-xs text-[color:var(--subtle)]">
+                        <span className="comment-handle">
                           @{comment.userId.username}
                         </span>
                       )}
-                      <span className="text-[11px] sm:text-xs text-[color:var(--subtle)]">
+                      <span className="comment-timestamp">
                         {formatPostTime(comment.createdAt)}
                       </span>
                     </div>
@@ -211,23 +211,23 @@ const FaithStoryComments = memo(function FaithStoryComments({
                       </div>
                     </div>
                   ) : (
-                    <p className="mt-1 text-[13px] sm:text-sm text-[color:var(--ink)]">
+                    <p className="comment-body-copy mt-1">
                       <MentionText text={comment.content} />
                     </p>
                   )}
                   {sessionUserId && (
-                    <div className="mt-2 flex items-center gap-4">
+                    <div className="comment-action-row mt-2">
                       <button
                         type="button"
                         onClick={() => onStartReply(comment)}
-                        className="text-[11px] sm:text-xs font-semibold text-[color:var(--accent)]"
+                        className="comment-action-button text-[color:var(--accent)]"
                       >
                         Reply
                       </button>
                       <button
                         type="button"
                         onClick={() => onToggleLike(comment._id)}
-                        className={`inline-flex items-center gap-1 text-[11px] sm:text-xs font-semibold ${
+                        className={`comment-action-button ${
                           commentHasLiked ? "text-[color:var(--accent)]" : "text-[color:var(--subtle)]"
                         }`}
                       >
@@ -240,7 +240,7 @@ const FaithStoryComments = memo(function FaithStoryComments({
               </div>
 
               {replyingToId === comment._id ? (
-                <div className="ml-11 rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--surface)]/70 px-3 py-2">
+                <div className="reply-shell ml-11 px-3 py-2">
                   <form
                     onSubmit={(event) => {
                       event.preventDefault();
@@ -285,7 +285,7 @@ const FaithStoryComments = memo(function FaithStoryComments({
                     return (
                       <div key={reply._id} className="relative">
                         <span className="absolute left-2 top-5 h-[2px] w-6 bg-[color:var(--panel-border)]" />
-                        <div className="flex gap-3 rounded-xl bg-[color:var(--surface)]/70 px-3 py-2 shadow-[0_1px_0_rgba(0,0,0,0.04)]">
+                        <div className="reply-shell flex gap-3 px-3 py-2">
                           <Avatar
                             src={reply.userId?.image ?? null}
                             alt={reply.userId?.name ?? "User"}
@@ -295,28 +295,30 @@ const FaithStoryComments = memo(function FaithStoryComments({
                             className="h-7 w-7 text-[10px] cursor-pointer"
                           />
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 text-[11px] text-[color:var(--subtle)]">
-                              <span className="font-semibold text-[color:var(--ink)]">
+                            <div className="comment-meta-row">
+                              <span className="comment-author-link">
                                 {reply.userId?.name ?? "User"}
                               </span>
-                              {reply.userId?.username && <span>@{reply.userId.username}</span>}
-                              <span>{formatPostTime(reply.createdAt)}</span>
+                              {reply.userId?.username && (
+                                <span className="comment-handle">@{reply.userId.username}</span>
+                              )}
+                              <span className="comment-timestamp">{formatPostTime(reply.createdAt)}</span>
                             </div>
-                            <div className="mt-1 flex items-center gap-2 text-[11px] text-[color:var(--subtle)]">
+                            <div className="reply-context-copy mt-1">
                               <span className="h-[1px] w-5 bg-[color:var(--panel-border)]" />
                               <span>
                                 Replying to{" "}
                                 {comment.userId?.username ? `@${comment.userId.username}` : "this comment"}
                               </span>
                             </div>
-                            <p className="mt-1 text-[13px] sm:text-sm text-[color:var(--ink)]">
+                            <p className="comment-body-copy mt-1">
                               <MentionText text={reply.content} />
                             </p>
                             {sessionUserId && (
                               <button
                                 type="button"
                                 onClick={() => onToggleLike(reply._id)}
-                                className={`mt-2 inline-flex items-center gap-1 text-[11px] sm:text-xs font-semibold ${
+                                className={`comment-action-button mt-2 ${
                                   replyHasLiked ? "text-[color:var(--accent)]" : "text-[color:var(--subtle)]"
                                 }`}
                               >

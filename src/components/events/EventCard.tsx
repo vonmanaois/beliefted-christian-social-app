@@ -110,33 +110,41 @@ export default function EventCard({ event, onInvite, onEdit }: EventCardProps) {
 
   return (
     <article
-      className="rounded-3xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] overflow-hidden cursor-pointer"
+      className="overflow-hidden rounded-[28px] border border-[color:var(--panel-border)]/70 bg-[color:var(--panel)] shadow-[0_16px_36px_rgba(0,0,0,0.14)] cursor-pointer"
       onClick={() => router.push(`/events/${event._id}`)}
     >
+      <div className="h-1.5 w-full bg-[color:var(--accent)]/75" />
       {event.posterImage ? (
-        <div className="relative h-40 w-full">
+        <div className="relative aspect-[4/3] w-full">
           <Image
-            src={cloudinaryTransform(event.posterImage, { width: 1200, height: 600 })}
+            src={cloudinaryTransform(event.posterImage, {
+              width: 1200,
+              height: 900,
+              autoOrient: true,
+            })}
             alt={event.title}
             fill
             sizes="(max-width: 768px) 100vw, 640px"
-            className="object-cover"
+            className="object-cover [image-orientation:from-image]"
           />
         </div>
-      ) : null}
+      ) : (
+        <div className="aspect-[4/3] w-full bg-[linear-gradient(135deg,color-mix(in_srgb,var(--accent)_18%,transparent),transparent_58%),linear-gradient(180deg,color-mix(in_srgb,var(--surface-strong)_92%,transparent),color-mix(in_srgb,var(--panel)_96%,transparent))]" />
+      )}
       <div className="p-4 sm:p-5 flex flex-col gap-3">
         <div className="flex flex-col gap-1">
-          <p className="text-xs uppercase tracking-[0.2em] text-[color:var(--subtle)]">
+          <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-[color:var(--subtle)]">
             Event
           </p>
-          <h3 className="text-lg font-semibold text-[color:var(--ink)]">
+          <h3 className="text-xl font-semibold leading-tight text-[color:var(--ink)]">
             {event.title}
           </h3>
           {event.description ? (
-            <p className="text-sm text-[color:var(--subtle)]">{event.description}</p>
+            <p className="text-sm leading-6 text-[color:var(--subtle)]">{event.description}</p>
           ) : null}
         </div>
-        <div className="flex flex-col gap-2 text-xs text-[color:var(--subtle)]">
+        <div className="rounded-2xl bg-[color:var(--surface)]/72 px-3 py-3">
+          <div className="flex flex-col gap-2 text-xs text-[color:var(--subtle)]">
           <div className="flex items-center gap-2">
             <CalendarBlank size={14} />
             <span>{dateLabel}</span>
@@ -153,6 +161,7 @@ export default function EventCard({ event, onInvite, onEdit }: EventCardProps) {
               {goingCount} going · {interestedCount} interested
             </span>
           </div>
+        </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button

@@ -137,13 +137,13 @@ const buildPushPayload = async (doc: Notification) => {
     if (!story || (story.expiresAt && story.expiresAt.getTime() <= Date.now())) {
       return {
         title: "New activity",
-        body: `${actorName} liked your story.`,
+        body: `${actorName} liked your day story.`,
         url: fallbackUrl,
       };
     }
     return {
       title: "New activity",
-      body: `${actorName} liked your story.`,
+      body: `${actorName} liked your day story.`,
       url: fallbackUrl,
     };
   }

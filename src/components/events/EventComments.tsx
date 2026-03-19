@@ -214,14 +214,16 @@ export default function EventComments({ eventId, isHost = false }: EventComments
                     className="h-8 w-8 sm:h-9 sm:w-9 text-[11px] sm:text-xs cursor-pointer"
                   />
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 text-xs text-[color:var(--subtle)]">
-                      <span className="font-semibold text-[color:var(--ink)]">
+                    <div className="comment-meta-row">
+                      <span className="comment-author-link">
                         {comment.userId?.name ?? "User"}
                       </span>
-                      {comment.userId?.username && <span>@{comment.userId.username}</span>}
-                      <span>{formatTime(comment.createdAt)}</span>
+                      {comment.userId?.username && (
+                        <span className="comment-handle">@{comment.userId.username}</span>
+                      )}
+                      <span className="comment-timestamp">{formatTime(comment.createdAt)}</span>
                     </div>
-                    <p className="mt-1 text-sm text-[color:var(--ink)] whitespace-pre-line">
+                    <p className="comment-body-copy mt-1 whitespace-pre-line">
                       {comment.content}
                     </p>
                     {isHost ? (
@@ -244,7 +246,7 @@ export default function EventComments({ eventId, isHost = false }: EventComments
                   </div>
                 </div>
                 {replyingTo === comment._id ? (
-                  <div className="ml-11 rounded-xl border border-[color:var(--panel-border)] bg-white/40 p-3">
+                  <div className="reply-shell ml-11 p-3">
                     <form
                       onSubmit={(event) => {
                         event.preventDefault();
@@ -291,7 +293,7 @@ export default function EventComments({ eventId, isHost = false }: EventComments
                     {replies.map((reply) => (
                       <div key={reply._id} className="relative">
                         <span className="absolute left-2 top-5 h-[2px] w-6 bg-[color:var(--panel-border)]" />
-                        <div className="flex gap-3 rounded-xl bg-white/70 px-3 py-2 shadow-[0_1px_0_rgba(0,0,0,0.04)]">
+                        <div className="reply-shell flex gap-3 px-3 py-2">
                           <Avatar
                             src={reply.userId?.image ?? null}
                             alt={reply.userId?.name ?? "Host"}
@@ -305,23 +307,25 @@ export default function EventComments({ eventId, isHost = false }: EventComments
                             className="h-7 w-7 text-[10px] cursor-pointer"
                           />
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 text-xs text-[color:var(--subtle)]">
-                              <span className="font-semibold text-[color:var(--ink)]">
+                            <div className="comment-meta-row">
+                              <span className="comment-author-link">
                                 {reply.userId?.name ?? "Host"}
                               </span>
-                              {reply.userId?.username && <span>@{reply.userId.username}</span>}
+                              {reply.userId?.username && (
+                                <span className="comment-handle">@{reply.userId.username}</span>
+                              )}
                               {reply.isHostReply ? (
                                 <span className="rounded-full border border-[color:var(--panel-border)] px-2 py-0.5 text-[10px] font-semibold text-[color:var(--subtle)]">
                                   Host
                                 </span>
                               ) : null}
-                              <span>{formatTime(reply.createdAt)}</span>
+                              <span className="comment-timestamp">{formatTime(reply.createdAt)}</span>
                             </div>
-                            <div className="mt-1 flex items-center gap-2 text-[11px] text-[color:var(--subtle)]">
+                            <div className="reply-context-copy mt-1">
                               <span className="h-[1px] w-5 bg-[color:var(--panel-border)]" />
                               <span>Replying to this comment</span>
                             </div>
-                            <p className="mt-1 text-sm text-[color:var(--ink)] whitespace-pre-line">
+                            <p className="comment-body-copy mt-1 whitespace-pre-line">
                               {reply.content}
                             </p>
                           </div>

@@ -543,14 +543,14 @@ export default function WordForm({
       } pb-0`}
     >
       {prefillVerse ? (
-        <div className="rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--surface)] px-3 py-2 text-xs text-[color:var(--subtle)]">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--subtle)]">
+        <div className="rounded-2xl border border-[color:var(--panel-border)]/70 bg-[color:var(--surface)]/70 px-4 py-3 text-xs text-[color:var(--subtle)] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+          <p className="section-eyebrow">
             Verse of the Day
           </p>
-          <p className="mt-2 text-sm font-semibold text-[color:var(--ink)]">
+          <p className="mt-2 text-base font-semibold text-[color:var(--ink)]">
             {prefillVerse.reference}
           </p>
-          <p className="mt-2 text-[13px] leading-relaxed text-[color:var(--subtle)] whitespace-pre-line">
+          <p className="meta-copy mt-2 whitespace-pre-line">
             {prefillVerse.text}
           </p>
         </div>
@@ -559,7 +559,7 @@ export default function WordForm({
         value={content}
         onChangeValue={setContent}
         placeholder={placeholder}
-        className={`bg-transparent text-base text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full ${
+        className={`w-full resize-none bg-transparent text-[15px] leading-7 text-[color:var(--ink)] outline-none placeholder:text-[color:var(--subtle)]/75 focus:outline-none focus:ring-0 ${
           compact ? "min-h-[28px]" : "min-h-[36px]"
         }`}
         textareaRef={textAreaRef}
@@ -569,13 +569,13 @@ export default function WordForm({
         onFocus={handleUnauthedTextClick}
         onPaste={handlePasteImages}
       />
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3 relative overflow-visible">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        <div className="composer-toolbar relative min-w-0 flex-1 flex-wrap overflow-visible sm:flex-nowrap">
           <button
             type="button"
             onClick={() => setShowScriptureRef((prev) => !prev)}
             disabled={isFormDisabled}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
+            className="composer-tool-button"
             aria-label="Add verse reference"
           >
             <Plus size={14} weight="regular" />
@@ -585,7 +585,7 @@ export default function WordForm({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isFormDisabled}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
+            className="composer-icon-button"
             aria-label="Add images"
           >
             <ImageSquare size={16} weight="regular" />
@@ -600,7 +600,7 @@ export default function WordForm({
               setShowYoutubeInput((prev) => !prev);
             }}
             disabled={isFormDisabled || Boolean(spotifyUrl.trim())}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)] disabled:opacity-40 disabled:cursor-not-allowed"
+            className="composer-icon-button"
             aria-label="Add YouTube link"
           >
             <YoutubeLogo size={16} weight="regular" />
@@ -615,7 +615,7 @@ export default function WordForm({
               setShowSpotifyInput((prev) => !prev);
             }}
             disabled={isFormDisabled || Boolean(youtubeUrl.trim())}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)] disabled:opacity-40 disabled:cursor-not-allowed"
+            className="composer-icon-button"
             aria-label="Add Spotify link"
           >
             <SpotifyLogo size={16} weight="regular" />
@@ -624,7 +624,7 @@ export default function WordForm({
             type="button"
             onClick={() => setShowPrivacyMenu((prev) => !prev)}
             disabled={isFormDisabled}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
+            className="composer-icon-button"
             aria-label="Post privacy"
           >
             {privacy === "public" ? (
@@ -670,7 +670,7 @@ export default function WordForm({
             </div>
           )}
         </div>
-        <span className="text-[11px] text-[color:var(--subtle)]">
+        <span className="composer-counter-pill shrink-0 self-end sm:self-auto">
           {imageItems.length}/4
         </span>
       </div>
@@ -689,13 +689,13 @@ export default function WordForm({
           {imageItems.map((item, index) => (
             <div
               key={`${item.previewUrl}-${index}`}
-              className="relative h-20 w-20 shrink-0 snap-start overflow-hidden rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--surface-strong)]"
+              className="media-frame relative h-20 w-20 shrink-0 snap-start"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={item.previewUrl}
                 alt="Selected"
-                className="h-full w-full object-cover"
+                className="media-fade-in h-full w-full object-cover"
               />
               <button
                 type="button"
@@ -714,7 +714,7 @@ export default function WordForm({
       {showScriptureRef && (
         <input
           type="text"
-          className="bg-transparent text-sm text-[color:var(--ink)] outline-none border-b border-[color:var(--panel-border)] pb-1 focus:outline-none focus:ring-0"
+          className="rounded-xl border border-[color:var(--panel-border)]/70 bg-[color:var(--surface)]/55 px-3 py-2 text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0"
           placeholder="Scripture reference"
           value={scriptureRef}
           readOnly={!isAuthenticated}
@@ -727,7 +727,7 @@ export default function WordForm({
       {showYoutubeInput && (
         <input
           type="url"
-          className="bg-transparent text-sm text-[color:var(--ink)] outline-none border-b border-[color:var(--panel-border)] pb-1 focus:outline-none focus:ring-0"
+          className="rounded-xl border border-[color:var(--panel-border)]/70 bg-[color:var(--surface)]/55 px-3 py-2 text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0"
           placeholder="Paste YouTube link"
           value={youtubeUrl}
           readOnly={!isAuthenticated}
@@ -746,7 +746,7 @@ export default function WordForm({
       {showSpotifyInput && (
         <input
           type="url"
-          className="bg-transparent text-sm text-[color:var(--ink)] outline-none border-b border-[color:var(--panel-border)] pb-1 focus:outline-none focus:ring-0"
+          className="rounded-xl border border-[color:var(--panel-border)]/70 bg-[color:var(--surface)]/55 px-3 py-2 text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0"
           placeholder="Paste Spotify link"
           value={spotifyUrl}
           readOnly={!isAuthenticated}
@@ -765,7 +765,7 @@ export default function WordForm({
       <div
         className={`flex justify-end${
           variant === "inline"
-            ? " sticky bottom-0 z-10 -mx-2 mt-2 border-t border-[color:var(--panel-border)] bg-[color:var(--panel)]/95 px-2 py-2 backdrop-blur"
+            ? " sticky bottom-0 z-10 -mx-2 mt-3 border-t border-[color:var(--panel-border)]/70 bg-[color:var(--panel)]/95 px-2 py-3 backdrop-blur"
             : ""
         }`}
       >

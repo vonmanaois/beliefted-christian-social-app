@@ -701,7 +701,7 @@ export default function DayStoryStrip() {
 
   return (
     <>
-      <div className="flex items-center gap-3 overflow-x-auto pb-3">
+      <div className="day-story-strip flex items-start gap-3 overflow-x-auto px-1 pb-5 pt-1">
         <button
           type="button"
           onClick={() => {
@@ -711,12 +711,15 @@ export default function DayStoryStrip() {
             }
             setShowCreate(true);
           }}
-          className="flex flex-col items-center gap-2 min-w-[76px]"
+          className="group flex min-w-[72px] flex-col items-center gap-2.5"
         >
-          <div className="h-14 w-14 rounded-full border border-dashed border-[color:var(--panel-border)] flex items-center justify-center bg-[color:var(--surface)]">
-            <Plus size={18} className="text-[color:var(--subtle)]" />
+          <div className="relative flex h-16 w-16 items-center justify-center rounded-full border border-dashed border-[color:var(--panel-border)] bg-[color:var(--surface)]/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-transform duration-200 group-hover:scale-[1.03]">
+            <div className="absolute inset-[3px] rounded-full border border-[color:var(--panel-border)]/40 bg-[color:var(--panel)]/75" />
+            <Plus size={20} className="relative z-10 text-[color:var(--subtle)]" />
           </div>
-          <span className="text-[11px] text-[color:var(--subtle)]">My Day</span>
+          <span className="max-w-[76px] truncate text-[10px] font-medium tracking-[0.01em] text-[color:var(--subtle)]">
+            My Day
+          </span>
         </button>
         {isLoading ? (
           <div className="text-xs text-[color:var(--subtle)]">Loading stories...</div>
@@ -742,19 +745,21 @@ export default function DayStoryStrip() {
                 key={group.userId}
                 type="button"
                 onClick={() => handleOpenStoryGroup(group)}
-                className="flex flex-col items-center gap-2 min-w-[76px]"
+                className="group flex min-w-[72px] flex-col items-center gap-2.5"
               >
                 <div
-                  className="relative h-14 w-14 rounded-full p-[2px]"
+                  className="relative h-16 w-16 rounded-full p-[2px] transition-transform duration-200 group-hover:scale-[1.03]"
                   style={{
                     background: isViewed
-                      ? "rgba(255,255,255,0.08)"
-                      : `conic-gradient(#60a5fa ${progressRatio * 360}deg, rgba(255,255,255,0.12) 0deg)`,
-                    opacity: isViewed ? 0.58 : 1,
-                    boxShadow: isViewed ? "none" : "0 0 0 2px rgba(96, 165, 250, 0.22)",
+                      ? "rgba(255,255,255,0.09)"
+                      : `conic-gradient(from 180deg, color-mix(in srgb, var(--accent) 96%, white 4%) ${progressRatio * 360}deg, rgba(255,255,255,0.11) 0deg)`,
+                    opacity: isViewed ? 0.62 : 1,
+                    boxShadow: isViewed
+                      ? "0 0 0 1px rgba(255,255,255,0.03)"
+                      : "0 0 0 1px rgba(255,255,255,0.03), 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent), 0 12px 26px rgba(0,0,0,0.22)",
                   }}
                 >
-                  <div className="h-full w-full rounded-full overflow-hidden bg-[color:var(--surface)] p-[2px]">
+                  <div className="h-full w-full rounded-full overflow-hidden bg-[color:var(--surface)] p-[2px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                     <Avatar
                       src={group.user?.image ?? null}
                       alt={group.user?.name ?? "User"}
@@ -764,10 +769,10 @@ export default function DayStoryStrip() {
                     />
                   </div>
                   {!isViewed ? (
-                    <span className="absolute right-0 top-0 h-3.5 w-3.5 rounded-full border-2 border-[color:var(--panel)] bg-sky-400 shadow-[0_0_0_4px_rgba(96,165,250,0.18)]" />
+                    <span className="absolute right-0.5 top-0.5 h-3.5 w-3.5 rounded-full border-2 border-[color:var(--panel)] bg-[color:var(--accent)] shadow-[0_0_0_5px_color-mix(in_srgb,var(--accent)_18%,transparent)]" />
                   ) : null}
                 </div>
-                <span className="text-[11px] text-[color:var(--subtle)]">
+                <span className="max-w-[76px] truncate text-[10px] font-medium tracking-[0.01em] text-[color:var(--subtle)]">
                   {group.user?.username
                     ? `@${group.user.username}`
                     : previewStory.user?.name ?? "Story"}

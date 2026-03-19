@@ -140,7 +140,7 @@ const PrayerComments = memo(function PrayerComments({
                 />
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                    <div className="comment-meta-row">
                       <Link
                         href={
                           comment.userId?.username
@@ -148,16 +148,16 @@ const PrayerComments = memo(function PrayerComments({
                             : "/profile"
                         }
                         prefetch={false}
-                        className="text-[11px] sm:text-xs font-semibold text-[color:var(--ink)] cursor-pointer hover:underline"
+                        className="comment-author-link cursor-pointer"
                       >
                         {comment.userId?.name ?? "User"}
                       </Link>
                       {comment.userId?.username && (
-                        <span className="text-[11px] sm:text-xs text-[color:var(--subtle)]">
+                        <span className="comment-handle">
                           @{comment.userId.username}
                         </span>
                       )}
-                      <p className="text-[11px] sm:text-xs text-[color:var(--subtle)]">
+                      <p className="comment-timestamp">
                         {formatPostTime(comment.createdAt)}
                       </p>
                     </div>
@@ -222,7 +222,7 @@ const PrayerComments = memo(function PrayerComments({
                       </div>
                     </div>
                   ) : (
-                    <p className="mt-1 text-[13px] sm:text-sm text-[color:var(--ink)]">
+                    <p className="comment-body-copy mt-1">
                       <MentionText text={comment.content} />
                     </p>
                   )}

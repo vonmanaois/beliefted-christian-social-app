@@ -1254,14 +1254,14 @@ const WordCard = ({
                     : null;
                   if (dailyVerse) {
                     return (
-                      <div className="mt-1 rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--surface)] px-3 py-2 text-xs text-[color:var(--subtle)]">
-                        <p className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--subtle)]">
+                      <div className="mt-1 rounded-2xl border border-[color:var(--panel-border)]/70 bg-[color:var(--surface)]/70 px-4 py-3 text-xs text-[color:var(--subtle)] shadow-[0_10px_22px_rgba(0,0,0,0.06)]">
+                        <p className="section-eyebrow">
                           Daily Verse
                         </p>
-                        <p className="mt-2 text-sm font-semibold text-[color:var(--ink)]">
+                        <p className="mt-2 text-base font-semibold text-[color:var(--ink)]">
                           {dailyVerse.reference}
                         </p>
-                        <p className="mt-2 text-[13px] leading-relaxed text-[color:var(--subtle)] whitespace-pre-line">
+                        <p className="meta-copy mt-2 whitespace-pre-line">
                           {dailyVerse.text}
                         </p>
                       </div>
@@ -1299,7 +1299,7 @@ const WordCard = ({
             <div className={alignContent ? "pl-[48px] sm:pl-[52px]" : ""}>
               {(sharedStory || sharedStoryMissing) && (
                 <div
-                  className="mt-3 w-full max-w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] cursor-pointer"
+                  className="media-frame mt-3 w-full max-w-full cursor-pointer"
                   onClick={(event) => {
                     event.stopPropagation();
                     if (sharedStoryHref) {
@@ -1314,7 +1314,7 @@ const WordCard = ({
                         width: 640,
                       })}
                       alt=""
-                      className="h-40 w-full object-cover"
+                      className="media-fade-in h-48 w-full object-cover"
                       loading="lazy"
                     />
                   ) : null}
@@ -1332,7 +1332,7 @@ const WordCard = ({
               )}
               {(sharedEvent || sharedEventMissing) && (
                 <div
-                  className="mt-3 w-full max-w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] cursor-pointer"
+                  className="media-frame mt-3 w-full max-w-full cursor-pointer"
                   onClick={(event) => {
                     event.stopPropagation();
                     if (sharedEventHref) {
@@ -1347,7 +1347,7 @@ const WordCard = ({
                         width: 640,
                       })}
                       alt=""
-                      className="h-40 w-full object-cover"
+                      className="media-fade-in h-48 w-full object-cover"
                       loading="lazy"
                     />
                   ) : null}
@@ -1382,7 +1382,7 @@ const WordCard = ({
                         event.stopPropagation();
                         setImagesActive(true);
                       }}
-                      className="flex w-full items-center justify-center rounded-md border border-dashed border-[color:var(--border)] bg-white/70 px-4 py-6 text-sm font-medium text-[color:var(--ink)]"
+                      className="flex w-full items-center justify-center rounded-2xl border border-dashed border-[color:var(--panel-border)] bg-[color:var(--surface)]/68 px-4 py-7 text-sm font-medium text-[color:var(--ink)]"
                     >
                       Tap to load photos ({word.images.length})
                     </button>
@@ -1513,7 +1513,7 @@ const WordCard = ({
                           return (
                             <div
                               key={key}
-                              className={`relative shrink-0 snap-start w-[60%] sm:w-[44%] max-w-[220px] ${aspectClass} overflow-hidden rounded-md border border-transparent`}
+                              className={`media-frame relative shrink-0 snap-start w-[60%] sm:w-[44%] max-w-[220px] ${aspectClass}`}
                               onClick={(event) => {
                                 event.stopPropagation();
                                 if (
@@ -1532,7 +1532,7 @@ const WordCard = ({
                               <img
                                 src={thumbSrc}
                                 alt=""
-                                className="h-full w-full object-cover"
+                                className="media-fade-in h-full w-full object-cover"
                                 loading="lazy"
                               />
                             </div>

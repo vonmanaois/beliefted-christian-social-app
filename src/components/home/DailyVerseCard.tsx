@@ -26,7 +26,7 @@ export default function DailyVerseCard() {
 
   if (isDismissed) {
     return (
-      <div className="border-b border-[color:var(--panel-border)] px-4 py-3 sm:px-6 text-xs text-[color:var(--subtle)]">
+      <div className="px-4 py-2 sm:px-6 text-xs text-[color:var(--subtle)]">
         Daily verse hidden.
         <button
           type="button"
@@ -43,9 +43,9 @@ export default function DailyVerseCard() {
   }
 
   return (
-    <div className="border-b border-[color:var(--panel-border)] px-4 py-4 sm:px-6">
+    <div className="rounded-[24px] border border-[color:var(--panel-border)]/70 bg-[color:var(--surface)]/56 px-4 py-4 shadow-[0_12px_28px_rgba(0,0,0,0.08)] sm:px-6">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--subtle)]">
+        <p className="section-eyebrow">
           Daily Verse
         </p>
         <button
@@ -62,10 +62,10 @@ export default function DailyVerseCard() {
           <X size={16} />
         </button>
       </div>
-      <p className="mt-2 text-sm sm:text-base font-semibold text-[color:var(--ink)]">
+      <p className="mt-2 text-base font-semibold text-[color:var(--ink)]">
         {verse.reference}
       </p>
-      <p className="mt-2 text-[13px] sm:text-sm leading-relaxed text-[color:var(--subtle)] whitespace-pre-line">
+      <p className="meta-copy mt-2 whitespace-pre-line sm:text-sm">
         {verse.text}
       </p>
       {verse.prompt && (

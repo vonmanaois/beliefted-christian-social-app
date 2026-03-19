@@ -906,29 +906,28 @@ const PrayerCard = ({
         ) : prayer.kind === "request" && requestPoints.length ? (
           <>
             <div className={alignContent ? "pl-[48px] sm:pl-[52px]" : ""}>
-              <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-3 py-1 text-sm font-semibold text-[color:var(--accent)]">
-                <NotePencil size={16} weight="regular" />
-                Prayer Request
-              </div>
-              {prayer.scriptureRef && (
-                <div className="mt-2">
-                  <span className="verse-chip">
-                    <BookOpenText size={14} weight="regular" />
+              <div className="mt-3 rounded-2xl border border-[color:var(--panel-border)]/70 bg-[color:var(--surface)]/70 px-4 py-3 shadow-[0_10px_22px_rgba(0,0,0,0.06)]">
+                <p className="section-eyebrow inline-flex items-center gap-2">
+                  <NotePencil size={14} weight="regular" />
+                  Prayer Request
+                </p>
+                {prayer.scriptureRef ? (
+                  <p className="mt-2 text-base font-semibold text-[color:var(--ink)]">
                     {prayer.scriptureRef}
-                  </span>
+                  </p>
+                ) : null}
+                <div className="mt-3 space-y-3">
+                  {requestPoints.map((point, index) => (
+                    <div key={`${point.title}-${index}`}>
+                      <p className="text-[14px] font-semibold text-[color:var(--ink)]">
+                        <MentionText text={point.title} />
+                      </p>
+                      <p className="meta-copy mt-2 whitespace-pre-line">
+                        <MentionText text={point.description} />
+                      </p>
+                    </div>
+                  ))}
                 </div>
-              )}
-              <div className="mt-3 space-y-3">
-                {requestPoints.map((point, index) => (
-                  <div key={`${point.title}-${index}`}>
-                    <p className="text-[13px] sm:text-sm font-semibold text-[color:var(--ink)]">
-                      <MentionText text={point.title} />
-                    </p>
-                    <p className="mt-2 text-[13px] sm:text-sm leading-relaxed text-[color:var(--subtle)] whitespace-pre-line">
-                      <MentionText text={point.description} />
-                    </p>
-                  </div>
-                ))}
               </div>
             </div>
           </>
@@ -940,13 +939,16 @@ const PrayerCard = ({
                 Prayer
               </div>
               {prayer.scriptureRef && (
-                <p className="mt-2 text-xs font-semibold text-[color:var(--accent)]">
-                  {prayer.scriptureRef}
-                </p>
+                <div className="mt-2">
+                  <span className="verse-chip">
+                    <BookOpenText size={14} weight="regular" />
+                    {prayer.scriptureRef}
+                  </span>
+                </div>
               )}
               <>
                 {cleaned && (
-                  <p className="mt-1 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
+                  <p className="mt-2 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
                     <MentionText text={displayContent} />
                   </p>
                 )}
@@ -1258,7 +1260,7 @@ const PrayerEmbeds = memo(function PrayerEmbeds({
 }: PrayerEmbedsProps) {
   return (
     <div
-      className="mt-4 aspect-video w-full overflow-hidden rounded-2xl border border-[color:var(--panel-border)] bg-black/5"
+      className="media-frame mt-4 aspect-video w-full overflow-hidden bg-black/5"
       onClick={onStopPropagation}
     >
       <DeferredEmbed
@@ -1348,7 +1350,7 @@ const PrayerHeader = memo(function PrayerHeader({
                     {prayer.user?.name ?? "User"}
                   </Link>
                   {prayer.user?.username && (
-                    <span className="text-[12px] text-[color:var(--subtle)]">
+                    <span className="text-[13px] text-[color:var(--subtle)]">
                       @{prayer.user.username}
                     </span>
                   )}

@@ -72,6 +72,12 @@ export default function Sidebar() {
   const touchStartX = useRef<number | null>(null);
   const isPostDetailRef = useRef(false);
   const openedFromPushRef = useRef(false);
+  const isHomeRoute = pathname === "/";
+  const isProfileRoute = pathname === "/profile" || pathname.startsWith("/profile/");
+  const isSearchRoute = pathname === "/search";
+  const isJournalRoute = pathname === "/journal" || pathname.startsWith("/journal/");
+  const isFaithStoryRoute =
+    pathname === "/faith-stories" || pathname.startsWith("/faith-stories/");
   const triggerPanelClose = (target: "search") => {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("panel:close", { detail: { target } }));
@@ -1206,13 +1212,13 @@ export default function Sidebar() {
       </Modal>
 
       <nav
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-[color:var(--panel-border)] bg-[color:var(--panel)]/95 shadow-[0_-10px_30px_rgba(0,0,0,0.18)] backdrop-blur"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-[color:var(--panel-border)]/70 bg-[color:var(--panel)]/96 shadow-[0_-16px_36px_rgba(0,0,0,0.22)] backdrop-blur"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}
       >
-        <div className="flex items-center justify-around px-5 pt-3 pb-3 text-[color:var(--ink)]">
+        <div className="flex items-center justify-around px-4 pt-2.5 pb-3 text-[color:var(--ink)]">
           <button
           type="button"
-          className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+          className={`bottom-nav-button ${isHomeRoute ? "bottom-nav-button--active" : "bottom-nav-button--inactive"}`}
           onClick={() => {
             if (!scrollHomeIfActive()) {
               router.push("/");
@@ -1234,7 +1240,7 @@ export default function Sidebar() {
           </button>
           <button
             type="button"
-            className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+            className={`bottom-nav-button ${isProfileRoute ? "bottom-nav-button--active" : "bottom-nav-button--inactive"}`}
             onClick={() => {
             handleProfileNavigate();
           }}
@@ -1243,7 +1249,7 @@ export default function Sidebar() {
           </button>
           <button
             type="button"
-            className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+            className={`bottom-nav-button ${isSearchRoute ? "bottom-nav-button--active" : "bottom-nav-button--inactive"}`}
             onClick={() => {
               if (pathname === "/search") {
                 triggerPanelClose("search");
@@ -1258,7 +1264,7 @@ export default function Sidebar() {
           {isAuthenticated && (
             <button
               type="button"
-              className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+              className={`bottom-nav-button ${isJournalRoute ? "bottom-nav-button--active" : "bottom-nav-button--inactive"}`}
               onClick={() => router.push("/journal")}
               aria-label="Journal"
             >
@@ -1267,7 +1273,7 @@ export default function Sidebar() {
           )}
           <button
             type="button"
-            className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+            className={`bottom-nav-button ${isFaithStoryRoute ? "bottom-nav-button--active" : "bottom-nav-button--inactive"}`}
             onClick={() => router.push("/faith-stories")}
             aria-label="Faith Stories"
           >

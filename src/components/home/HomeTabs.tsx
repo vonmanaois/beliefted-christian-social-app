@@ -94,7 +94,7 @@ function HomeTabsInner() {
                   setNewWordPosts(false);
                   setActiveHomeTab("words");
                 }}
-                className={`flex-1 px-4 py-2 text-sm font-semibold transition ${
+                className={`segmented-tab-button relative z-10 inline-flex flex-1 items-center justify-center whitespace-nowrap px-4 py-2 text-sm font-semibold leading-none ${
                   activeTab === tab
                     ? "rounded-lg bg-[color:var(--accent)] !text-[color:var(--accent-contrast)] hover:!text-[color:var(--accent-contrast)]"
                     : "rounded-lg text-[color:var(--ink)] hover:text-[color:var(--accent)]"
@@ -143,7 +143,7 @@ function HomeTabsInner() {
                   setNewWordPosts(false);
                   setActiveHomeTab("words");
                 }}
-                className={`w-full rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                className={`segmented-tab-button relative z-10 inline-flex w-full items-center justify-center whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold leading-none ${
                   activeTab === tab
                     ? "bg-[color:var(--accent)] !text-[color:var(--accent-contrast)] hover:!text-[color:var(--accent-contrast)]"
                     : "text-[color:var(--ink)] hover:text-[color:var(--accent)]"
@@ -167,13 +167,13 @@ function HomeTabsInner() {
           className="flex w-[300%] transition-transform duration-300 ease-out"
           style={{ transform: `translateX(-${activeIndex * (100 / 3)}%)` }}
         >
-          <div className="w-full">
+          <div className="tab-pane-soft-enter w-full">
             <WordWall />
           </div>
-          <div className="w-full">
+          <div className="tab-pane-soft-enter w-full">
             <PrayerWall />
           </div>
-          <div className="w-full">
+          <div className="tab-pane-soft-enter w-full">
             <FollowingWall />
           </div>
         </div>
