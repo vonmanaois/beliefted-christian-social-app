@@ -15,7 +15,7 @@ export default function EventFeedPreview() {
   const { data, isLoading } = useQuery({
     queryKey: ["events", "preview"],
     queryFn: async () => {
-      const response = await fetch("/api/events?limit=3", { cache: "no-store" });
+      const response = await fetch("/api/events?limit=3&tab=upcoming", { cache: "no-store" });
       if (!response.ok) {
         throw new Error("Failed to load events");
       }

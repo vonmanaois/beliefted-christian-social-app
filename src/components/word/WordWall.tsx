@@ -11,6 +11,7 @@ import { UserCircle } from "@phosphor-icons/react";
 import Spinner from "@/components/ui/Spinner";
 import DailyVerseCard from "@/components/home/DailyVerseCard";
 import EventFeedPreview from "@/components/events/EventFeedPreview";
+import DayStoryStrip from "@/components/day/DayStoryStrip";
 
 const WordForm = dynamic(() => import("@/components/word/WordForm"), {
   ssr: false,
@@ -125,10 +126,14 @@ export default function WordWall() {
   }, [feedMode]);
 
   return (
-    <section className={`feed-surface ${isMounted ? "feed-surface--enter" : "feed-surface--pre"}`}>
-      <DailyVerseCard />
-      <EventFeedPreview />
-      <div ref={formRef} className="wall-card flex items-start gap-3 rounded-none border-b-0 pb-3">
+    <>
+      <div className="relative z-20 -mb-2 px-3 sm:px-4 pt-4 overflow-visible">
+        <DayStoryStrip />
+      </div>
+      <section className={`feed-surface ${isMounted ? "feed-surface--enter" : "feed-surface--pre"}`}>
+        <DailyVerseCard />
+        <EventFeedPreview />
+        <div ref={formRef} className="wall-card flex items-start gap-3 rounded-none border-b-0 pb-3">
         <div className="avatar-ring">
           {session?.user?.image ? (
             <Image
@@ -168,7 +173,7 @@ export default function WordWall() {
           />
         </div>
       </div>
-      <div className="px-3 sm:px-4 pt-2 pb-2 flex justify-end">
+        <div className="px-3 sm:px-4 pt-2 pb-2 flex justify-end">
         <div
           className="inline-flex items-center gap-1 rounded-full border border-[color:var(--panel-border)] bg-[color:var(--surface)] p-1 shadow-sm"
           suppressHydrationWarning
@@ -199,16 +204,16 @@ export default function WordWall() {
             For You
           </button>
         </div>
-      </div>
-      <div key={feedMode} className="transition-opacity duration-150">
-        <WordFeed refreshKey={refreshKey} mode={feedMode} forYouSeed={forYouCycle} />
-      </div>
+        </div>
+        <div key={feedMode} className="transition-opacity duration-150">
+          <WordFeed refreshKey={refreshKey} mode={feedMode} forYouSeed={forYouCycle} />
+        </div>
 
-      <Modal
-        title="Discard post?"
-        isOpen={showDiscardConfirm}
-        onClose={() => setShowDiscardConfirm(false)}
-      >
+        <Modal
+          title="Discard post?"
+          isOpen={showDiscardConfirm}
+          onClose={() => setShowDiscardConfirm(false)}
+        >
         <p className="text-sm text-[color:var(--subtle)]">
           You have an unfinished post. Discard it?
         </p>
@@ -247,8 +252,8 @@ export default function WordWall() {
             Discard
           </button>
         </div>
-      </Modal>
-
-    </section>
+        </Modal>
+      </section>
+    </>
   );
 }

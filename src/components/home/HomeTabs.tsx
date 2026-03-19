@@ -162,7 +162,7 @@ function HomeTabsInner() {
         </div>
       </div>
 
-      <div className="relative w-full overflow-hidden">
+      <div className="relative w-full overflow-x-hidden overflow-y-visible">
         <div
           className="flex w-[300%] transition-transform duration-300 ease-out"
           style={{ transform: `translateX(-${activeIndex * (100 / 3)}%)` }}

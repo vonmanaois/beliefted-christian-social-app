@@ -147,6 +147,16 @@ export default function WordFeed({
     refetchOnMount: false,
     refetchOnReconnect: mode === "forYou",
   });
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const triggerLoadMore = useCallback(async () => {
+    if (!hasNextPage || isFetchingNextPage || isFetching) return;
+    setIsLoadingMore(true);
+    try {
+      await fetchNextPage();
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [hasNextPage, isFetchingNextPage, isFetching, fetchNextPage]);
 
   const words = useMemo(() => data?.pages.flatMap((page) => page.items) ?? [], [data?.pages]);
   const forYouShuffleKey = useMemo(() => {
@@ -418,7 +428,7 @@ export default function WordFeed({
         pendingFetchRef.current = true;
         return;
       }
-      fetchNextPage();
+      triggerLoadMore();
     },
     [
       mode,
@@ -427,7 +437,7 @@ export default function WordFeed({
       hasNextPage,
       isFetchingNextPage,
       isFetching,
-      fetchNextPage,
+      triggerLoadMore,
       prefetchThreshold,
     ]
   );
@@ -436,15 +446,15 @@ export default function WordFeed({
     if (!pendingFetchRef.current) return;
     if (!hasNextPage || isFetchingNextPage || isFetching) return;
     pendingFetchRef.current = false;
-    fetchNextPage();
-  }, [hasNextPage, isFetchingNextPage, isFetching, fetchNextPage]);
+    triggerLoadMore();
+  }, [hasNextPage, isFetchingNextPage, isFetching, triggerLoadMore]);
 
   useEffect(() => {
     if (mode !== "forYou") return;
     if (isLoading) return;
     if (!hasNextPage || isFetchingNextPage || isFetching) return;
     if (displayWords.length >= minForYouFill) return;
-    fetchNextPage();
+    triggerLoadMore();
   }, [
     mode,
     isLoading,
@@ -453,7 +463,7 @@ export default function WordFeed({
     isFetching,
     displayWords.length,
     minForYouFill,
-    fetchNextPage,
+    triggerLoadMore,
   ]);
 
   useEffect(() => {
@@ -473,13 +483,13 @@ export default function WordFeed({
           pendingFetchRef.current = true;
           return;
         }
-        fetchNextPage();
+        triggerLoadMore();
       },
       { rootMargin: "600px" }
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [useVirtualized, hasNextPage, isFetchingNextPage, isFetching, fetchNextPage]);
+  }, [useVirtualized, hasNextPage, isFetchingNextPage, isFetching, triggerLoadMore]);
 
   const listRef = useRef<HTMLDivElement | null>(null);
 
@@ -707,6 +717,8 @@ export default function WordFeed({
     });
   };
 
+  const showLoadingMore = isFetchingNextPage || isLoadingMore;
+
   return (
     <div
       className="flex flex-col"
@@ -774,17 +786,17 @@ export default function WordFeed({
               )}
               endReached={() => {
                 if (hasNextPage && !isFetchingNextPage) {
-                  fetchNextPage();
+                  triggerLoadMore();
                 }
               }}
               components={{
                 Footer: () =>
                   hasNextPage ? (
                     <div className="flex items-center justify-center py-4">
-                      {isFetchingNextPage ? (
+                      {showLoadingMore ? (
                         <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--panel-border)] border-t-[color:var(--accent)]" />
                       ) : (
-                        <div className="h-2 w-2 rounded-full bg-[color:var(--panel-border)]" />
+                        <div className="h-2 w-2 rounded-full bg-[color:var(--panel-border)] animate-pulse" />
                       )}
                     </div>
                   ) : null,
@@ -799,10 +811,10 @@ export default function WordFeed({
               ))}
               {hasNextPage && (
                 <div ref={loadMoreRef} className="flex items-center justify-center py-4">
-                  {isFetchingNextPage ? (
+                  {showLoadingMore ? (
                     <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--panel-border)] border-t-[color:var(--accent)]" />
                   ) : (
-                    <div className="h-2 w-2 rounded-full bg-[color:var(--panel-border)]" />
+                    <div className="h-2 w-2 rounded-full bg-[color:var(--panel-border)] animate-pulse" />
                   )}
                 </div>
               )}

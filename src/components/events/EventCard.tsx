@@ -24,6 +24,9 @@ export default function EventCard({ event, onInvite, onEdit }: EventCardProps) {
   const [showShareConfirm, setShowShareConfirm] = useState(false);
   const [shareBusy, setShareBusy] = useState(false);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const stopClick = (event: React.MouseEvent | React.KeyboardEvent) => {
+    event.stopPropagation();
+  };
 
   const start = useMemo(() => new Date(event.startAt), [event.startAt]);
   const end = useMemo(
@@ -154,9 +157,11 @@ export default function EventCard({ event, onInvite, onEdit }: EventCardProps) {
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={() => handleRsvp("going")}
+            onClick={(event) => {
+              stopClick(event);
+              handleRsvp("going");
+            }}
             disabled={busy}
-            onMouseDown={(event) => event.stopPropagation()}
             className={`rounded-full px-3 py-1.5 text-xs font-semibold border ${
               rsvpStatus === "going"
                 ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)] border-transparent"
@@ -167,9 +172,11 @@ export default function EventCard({ event, onInvite, onEdit }: EventCardProps) {
           </button>
           <button
             type="button"
-            onClick={() => handleRsvp("interested")}
+            onClick={(event) => {
+              stopClick(event);
+              handleRsvp("interested");
+            }}
             disabled={busy}
-            onMouseDown={(event) => event.stopPropagation()}
             className={`rounded-full px-3 py-1.5 text-xs font-semibold border ${
               rsvpStatus === "interested"
                 ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)] border-transparent"
@@ -181,9 +188,11 @@ export default function EventCard({ event, onInvite, onEdit }: EventCardProps) {
           {rsvpStatus && rsvpStatus !== "not_going" ? (
             <button
               type="button"
-              onClick={() => handleRsvp("not_going")}
+              onClick={(event) => {
+                stopClick(event);
+                handleRsvp("not_going");
+              }}
               disabled={busy}
-              onMouseDown={(event) => event.stopPropagation()}
               className="rounded-full px-3 py-1.5 text-xs font-semibold border border-[color:var(--panel-border)] text-[color:var(--subtle)]"
             >
               Clear
@@ -192,9 +201,11 @@ export default function EventCard({ event, onInvite, onEdit }: EventCardProps) {
           {event.isHost && onInvite ? (
             <button
               type="button"
-              onClick={() => onInvite(event)}
+              onClick={(eventClick) => {
+                stopClick(eventClick);
+                onInvite(event);
+              }}
               className="ml-auto rounded-full px-3 py-1.5 text-xs font-semibold border border-[color:var(--panel-border)] text-[color:var(--ink)]"
-              onMouseDown={(event) => event.stopPropagation()}
             >
               Invite
             </button>
@@ -202,9 +213,11 @@ export default function EventCard({ event, onInvite, onEdit }: EventCardProps) {
           {event.isHost && onEdit ? (
             <button
               type="button"
-              onClick={() => onEdit(event)}
+              onClick={(eventClick) => {
+                stopClick(eventClick);
+                onEdit(event);
+              }}
               className="rounded-full px-3 py-1.5 text-xs font-semibold border border-[color:var(--panel-border)] text-[color:var(--ink)]"
-              onMouseDown={(event) => event.stopPropagation()}
             >
               Edit
             </button>
@@ -213,17 +226,21 @@ export default function EventCard({ event, onInvite, onEdit }: EventCardProps) {
             <>
               <button
                 type="button"
-                onClick={() => handleInviteResponse("accepted")}
+                onClick={(event) => {
+                  stopClick(event);
+                  handleInviteResponse("accepted");
+                }}
                 className="rounded-full px-3 py-1.5 text-xs font-semibold border border-[color:var(--accent)] text-[color:var(--accent)]"
-                onMouseDown={(event) => event.stopPropagation()}
               >
                 Accept
               </button>
               <button
                 type="button"
-                onClick={() => handleInviteResponse("declined")}
+                onClick={(event) => {
+                  stopClick(event);
+                  handleInviteResponse("declined");
+                }}
                 className="rounded-full px-3 py-1.5 text-xs font-semibold border border-[color:var(--panel-border)] text-[color:var(--subtle)]"
-                onMouseDown={(event) => event.stopPropagation()}
               >
                 Decline
               </button>
@@ -241,12 +258,12 @@ export default function EventCard({ event, onInvite, onEdit }: EventCardProps) {
           ) : null}
           <button
             type="button"
-            onClick={() => {
+            onClick={(event) => {
+              stopClick(event);
               setShareMessage(null);
               setShowShareConfirm(true);
             }}
             className="ml-auto rounded-full px-3 py-1.5 text-xs font-semibold border border-[color:var(--panel-border)] text-[color:var(--ink)] inline-flex items-center gap-1"
-            onMouseDown={(event) => event.stopPropagation()}
           >
             <PaperPlaneTilt size={12} />
             Share

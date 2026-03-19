@@ -1169,3 +1169,21 @@ html[data-theme="midnight"] .switch-thumb {
 input[type="radio"] {
   accent-color: var(--accent);
 }
+
+@keyframes story-progress-fill {
+  from {
+    width: 0%;
+  }
+
+  to {
+    width: 100%;
+  }
+}
+
+.story-progress-bar {
+  width: 100%;
+  transform-origin: left center;
+  animation-name: story-progress-fill;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}

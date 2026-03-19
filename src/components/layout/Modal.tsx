@@ -83,7 +83,7 @@ export default function Modal({
     >
       <div
         ref={dialogRef}
-        className={`panel w-full max-w-md p-6 relative cursor-pointer ${
+        className={`panel w-full max-w-md p-6 relative cursor-pointer max-h-[calc(100vh-3rem)] overflow-y-auto ${
           align === "left" ? "mt-16" : ""
         }`}
         onClick={(event) => event.stopPropagation()}

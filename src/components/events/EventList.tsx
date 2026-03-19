@@ -7,11 +7,12 @@ import type { EventItem } from "@/components/events/types";
 
 type EventListProps = {
   refreshKey: number;
+  tab: "upcoming" | "past";
   onInvite?: (event: EventItem) => void;
   onEdit?: (event: EventItem) => void;
 };
 
-export default function EventList({ refreshKey, onInvite, onEdit }: EventListProps) {
+export default function EventList({ refreshKey, tab, onInvite, onEdit }: EventListProps) {
   const {
     data,
     isLoading,
@@ -21,9 +22,10 @@ export default function EventList({ refreshKey, onInvite, onEdit }: EventListPro
     isFetchingNextPage,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ["events", refreshKey],
+    queryKey: ["events", refreshKey, tab],
     queryFn: async ({ pageParam }: { pageParam?: string | null }) => {
       const params = new URLSearchParams();
+      params.set("tab", tab);
       if (pageParam) params.set("cursor", pageParam);
       const response = await fetch(`/api/events?${params.toString()}`, {
         cache: "no-store",
@@ -62,7 +64,11 @@ export default function EventList({ refreshKey, onInvite, onEdit }: EventListPro
   }
 
   if (items.length === 0) {
-    return <p className="text-sm text-[color:var(--subtle)]">No events yet.</p>;
+    return (
+      <p className="text-sm text-[color:var(--subtle)]">
+        {tab === "past" ? "No past events yet." : "No upcoming events yet."}
+      </p>
+    );
   }
 
   return (

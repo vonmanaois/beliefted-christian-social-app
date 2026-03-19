@@ -5,6 +5,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import EventModel from "@/models/Event";
+import EventCommentModel from "@/models/EventComment";
 import EventInviteModel from "@/models/EventInvite";
 import EventRSVPModel from "@/models/EventRSVP";
 import UserModel from "@/models/User";
@@ -28,8 +29,27 @@ export async function GET(req: Request) {
   const limitParam = Number(searchParams.get("limit") ?? 30);
   const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 60) : 30;
   const cursor = searchParams.get("cursor");
+  const tab = searchParams.get("tab") === "past" ? "past" : "upcoming";
+  const now = new Date();
 
   await dbConnect();
+
+  const cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const expired = await EventModel.find({
+    $or: [
+      { endAt: { $lt: cutoff } },
+      { endAt: { $exists: false }, startAt: { $lt: cutoff } },
+    ],
+  })
+    .select("_id")
+    .lean();
+  if (expired.length) {
+    const expiredIds = expired.map((item) => item._id);
+    await EventModel.deleteMany({ _id: { $in: expiredIds } });
+    await EventRSVPModel.deleteMany({ eventId: { $in: expiredIds } });
+    await EventInviteModel.deleteMany({ eventId: { $in: expiredIds } });
+    await EventCommentModel.deleteMany({ eventId: { $in: expiredIds } });
+  }
 
   let followingIds: Types.ObjectId[] = [];
   if (viewerId) {
@@ -71,23 +91,40 @@ export async function GET(req: Request) {
   }
 
   const conditions: Record<string, unknown>[] = [{ $or: visibilityOr }];
+  if (tab === "past") {
+    conditions.push({
+      $or: [
+        { endAt: { $lt: now } },
+        { endAt: { $exists: false }, startAt: { $lt: now } },
+      ],
+    });
+  } else {
+    conditions.push({
+      $or: [
+        { endAt: { $gte: now } },
+        { endAt: { $exists: false }, startAt: { $gte: now } },
+      ],
+    });
+  }
+  const sortDirection = tab === "past" ? -1 : 1;
   if (cursor) {
     const decoded = Buffer.from(cursor, "base64").toString("utf8");
     const [startAtRaw, idRaw] = decoded.split("|");
     const startAt = startAtRaw ? new Date(startAtRaw) : null;
     const cursorId = idRaw && Types.ObjectId.isValid(idRaw) ? new Types.ObjectId(idRaw) : null;
     if (startAt && !Number.isNaN(startAt.getTime())) {
+      const comparator = sortDirection === -1 ? "$lt" : "$gt";
       conditions.push({
         $or: [
-          { startAt: { $gt: startAt } },
-          ...(cursorId ? [{ startAt, _id: { $gt: cursorId } }] : []),
+          { startAt: { [comparator]: startAt } },
+          ...(cursorId ? [{ startAt, _id: { [comparator]: cursorId } }] : []),
         ],
       });
     }
   }
 
   const events = await EventModel.find({ $and: conditions })
-    .sort({ startAt: 1, _id: 1 })
+    .sort({ startAt: sortDirection, _id: sortDirection })
     .limit(limit + 1)
     .lean();
 

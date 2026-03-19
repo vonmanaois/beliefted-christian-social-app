@@ -11,6 +11,7 @@ import type { EventItem } from "@/components/events/types";
 export default function EventBoard() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
+  const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
   const [inviteTarget, setInviteTarget] = useState<EventItem | null>(null);
   const [editTarget, setEditTarget] = useState<EventItem | null>(null);
   const [inviteUsername, setInviteUsername] = useState("");
@@ -65,8 +66,34 @@ export default function EventBoard() {
         </button>
       </div>
 
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab("upcoming")}
+          className={`rounded-full px-4 py-1.5 text-xs font-semibold border ${
+            activeTab === "upcoming"
+              ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)] border-transparent"
+              : "border-[color:var(--panel-border)] text-[color:var(--ink)]"
+          }`}
+        >
+          Upcoming
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("past")}
+          className={`rounded-full px-4 py-1.5 text-xs font-semibold border ${
+            activeTab === "past"
+              ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)] border-transparent"
+              : "border-[color:var(--panel-border)] text-[color:var(--ink)]"
+          }`}
+        >
+          Past
+        </button>
+      </div>
+
       <EventList
         refreshKey={refreshKey}
+        tab={activeTab}
         onInvite={(event) => {
           setInviteTarget(event);
           setInviteMessage(null);

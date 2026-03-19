@@ -1273,14 +1273,6 @@ export default function Sidebar() {
           >
             <Article size={24} weight="regular" />
           </button>
-          <button
-            type="button"
-            className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-            onClick={() => router.push("/events")}
-            aria-label="Events"
-          >
-            <CalendarBlank size={24} weight="regular" />
-          </button>
         </div>
       </nav>
     </>
