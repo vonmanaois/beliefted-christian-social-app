@@ -48,6 +48,16 @@ const MAX_RAW_STORY_BYTES = 25 * 1024 * 1024;
 const MAX_STORY_DIMENSION = 1600;
 const ACCEPTED_STORY_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
+const getStoryImageSrc = (imageUrl: string) =>
+  cloudinaryTransform(imageUrl, {
+    width: 1080,
+    height: 1920,
+    crop: "fit",
+    quality: "q_auto:good",
+    format: "f_auto",
+    autoOrient: true,
+  });
+
 const formatStoryAge = (createdAt: string) => {
   const diffMs = Math.max(Date.now() - new Date(createdAt).getTime(), 0);
   const minutes = Math.floor(diffMs / 60_000);
@@ -140,8 +150,9 @@ const prepareStoryImage = async (file: File) => {
 };
 
 export default function DayStoryStrip() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
+  const viewerId = session?.user?.id ? String(session.user.id) : null;
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [storyFile, setStoryFile] = useState<File | null>(null);
@@ -158,8 +169,12 @@ export default function DayStoryStrip() {
   const swipeStartXRef = useRef<number | null>(null);
   const swipeHandledRef = useRef(false);
   const [storyImageError, setStoryImageError] = useState(false);
+  const [loadedStorySources, setLoadedStorySources] = useState<string[]>([]);
+  const [isActiveStoryImageReady, setIsActiveStoryImageReady] = useState(false);
   const [optimisticViewedIds, setOptimisticViewedIds] = useState<string[]>([]);
+  const [ownerSeenStoryIds, setOwnerSeenStoryIds] = useState<string[]>([]);
   const [isPaused, setIsPaused] = useState(false);
+  const [storyDeleteNotice, setStoryDeleteNotice] = useState<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -168,6 +183,34 @@ export default function DayStoryStrip() {
       }
     };
   }, [storyPreview]);
+
+  useEffect(() => {
+    if (!viewerId || typeof window === "undefined") {
+      setOwnerSeenStoryIds([]);
+      return;
+    }
+    try {
+      const stored = window.localStorage.getItem(`day-story-owner-seen:${viewerId}`);
+      if (!stored) {
+        setOwnerSeenStoryIds([]);
+        return;
+      }
+      const parsed = JSON.parse(stored) as unknown;
+      setOwnerSeenStoryIds(
+        Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : []
+      );
+    } catch {
+      setOwnerSeenStoryIds([]);
+    }
+  }, [viewerId]);
+
+  useEffect(() => {
+    if (!viewerId || typeof window === "undefined") return;
+    window.localStorage.setItem(
+      `day-story-owner-seen:${viewerId}`,
+      JSON.stringify(ownerSeenStoryIds)
+    );
+  }, [ownerSeenStoryIds, viewerId]);
 
   const { data: stories = [], isLoading } = useQuery({
     queryKey: ["day-stories"],
@@ -221,6 +264,33 @@ export default function DayStoryStrip() {
       ? activeGroup.stories[activeStoryIndex]
       : null;
 
+  const activeStorySource = activeStory && !storyImageError
+    ? getStoryImageSrc(activeStory.imageUrl)
+    : activeStory?.imageUrl ?? null;
+
+  const adjacentStorySources = useMemo(() => {
+    if (activeGroupIndex === null || !groupedStories.length) return [];
+
+    const currentGroup = groupedStories[activeGroupIndex];
+    if (!currentGroup) return [];
+
+    const previousStory =
+      activeStoryIndex > 0
+        ? currentGroup.stories[activeStoryIndex - 1]
+        : activeGroupIndex > 0
+          ? groupedStories[activeGroupIndex - 1]?.stories.at(-1)
+          : null;
+
+    const nextStory =
+      activeStoryIndex + 1 < currentGroup.stories.length
+        ? currentGroup.stories[activeStoryIndex + 1]
+        : groupedStories[activeGroupIndex + 1]?.stories[0] ?? null;
+
+    return [previousStory, nextStory]
+      .filter((story): story is DayStoryItem => Boolean(story?.imageUrl))
+      .map((story) => getStoryImageSrc(story.imageUrl));
+  }, [activeGroupIndex, activeStoryIndex, groupedStories]);
+
   useEffect(() => {
     if (!activeStory) return;
     const previous = document.body.style.overflow;
@@ -233,6 +303,39 @@ export default function DayStoryStrip() {
   useEffect(() => {
     setStoryImageError(false);
   }, [activeStory?._id]);
+
+  useEffect(() => {
+    if (!activeStorySource) {
+      setIsActiveStoryImageReady(false);
+      return;
+    }
+    setIsActiveStoryImageReady(loadedStorySources.includes(activeStorySource));
+  }, [activeStorySource, loadedStorySources]);
+
+  useEffect(() => {
+    if (!activeStory || typeof window === "undefined") return;
+
+    const preloadSources = [getStoryImageSrc(activeStory.imageUrl), ...adjacentStorySources];
+    const preloadedImages = preloadSources.map((src) => {
+      const image = new window.Image();
+      image.decoding = "async";
+      image.fetchPriority = src === preloadSources[0] ? "high" : "low";
+      image.loading = src === preloadSources[0] ? "eager" : "lazy";
+      image.onload = () => {
+        setLoadedStorySources((current) =>
+          current.includes(src) ? current : [...current, src]
+        );
+      };
+      image.src = src;
+      return image;
+    });
+
+    return () => {
+      preloadedImages.forEach((image) => {
+        image.src = "";
+      });
+    };
+  }, [activeStory, adjacentStorySources]);
 
   useEffect(() => {
     if (!activeGroup) {
@@ -290,7 +393,13 @@ export default function DayStoryStrip() {
   }, [activeGroup, activeStory, groupedStories.length, isPaused]);
 
   useEffect(() => {
-    if (!activeStory || activeStory.isOwner) return;
+    if (!activeStory) return;
+    if (activeStory.isOwner) {
+      setOwnerSeenStoryIds((current) =>
+        current.includes(activeStory._id) ? current : [...current, activeStory._id]
+      );
+      return;
+    }
     setOptimisticViewedIds((current) =>
       current.includes(activeStory._id) ? current : [...current, activeStory._id]
     );
@@ -350,6 +459,24 @@ export default function DayStoryStrip() {
       }
       return (await response.json()) as { liked: boolean; likeCount: number };
     },
+    onMutate: async (storyId) => {
+      await queryClient.cancelQueries({ queryKey: ["day-stories"] });
+      const previousStories = queryClient.getQueryData<DayStoryItem[]>(["day-stories"]) ?? [];
+
+      queryClient.setQueryData<DayStoryItem[]>(["day-stories"], (current = []) =>
+        current.map((story) => {
+          if (story._id !== storyId) return story;
+          const currentlyLiked = Boolean(story.hasLiked);
+          return {
+            ...story,
+            hasLiked: !currentlyLiked,
+            likeCount: Math.max(0, (story.likeCount ?? 0) + (currentlyLiked ? -1 : 1)),
+          };
+        })
+      );
+
+      return { previousStories };
+    },
     onSuccess: (data, storyId) => {
       queryClient.setQueryData<DayStoryItem[]>(["day-stories"], (current = []) =>
         current.map((story) =>
@@ -358,6 +485,10 @@ export default function DayStoryStrip() {
             : story
         )
       );
+    },
+    onError: (_error, _storyId, context) => {
+      if (!context?.previousStories) return;
+      queryClient.setQueryData(["day-stories"], context.previousStories);
     },
   });
 
@@ -370,11 +501,50 @@ export default function DayStoryStrip() {
       }
       return storyId;
     },
+    onMutate: async (storyId) => {
+      await queryClient.cancelQueries({ queryKey: ["day-stories"] });
+      const previousStories = queryClient.getQueryData<DayStoryItem[]>(["day-stories"]) ?? [];
+
+      const nextStories = previousStories.filter((story) => story._id !== storyId);
+      queryClient.setQueryData<DayStoryItem[]>(["day-stories"], nextStories);
+
+      const deletedGroupIndex = activeGroupIndex;
+      const deletedStoryIndex = activeStoryIndex;
+
+      if (activeStory?._id === storyId) {
+        const remainingGroupStories = (activeGroup?.stories ?? []).filter(
+          (story) => story._id !== storyId
+        );
+        if (remainingGroupStories.length > 0) {
+          setActiveStoryIndex(Math.min(activeStoryIndex, remainingGroupStories.length - 1));
+        } else {
+          setActiveGroupIndex(null);
+          setActiveStoryIndex(0);
+        }
+      }
+
+      return { previousStories, deletedGroupIndex, deletedStoryIndex };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["day-stories"] });
-      setActiveGroupIndex(null);
+      setStoryDeleteNotice("Story deleted.");
+    },
+    onError: (_error, _storyId, context) => {
+      if (!context?.previousStories) return;
+      queryClient.setQueryData(["day-stories"], context.previousStories);
+      if (typeof context.deletedGroupIndex === "number") {
+        setActiveGroupIndex(context.deletedGroupIndex);
+        setActiveStoryIndex(context.deletedStoryIndex ?? 0);
+      }
+      setStoryDeleteNotice("Failed to delete story.");
     },
   });
+
+  useEffect(() => {
+    if (!storyDeleteNotice) return;
+    const timeout = window.setTimeout(() => setStoryDeleteNotice(null), 2200);
+    return () => window.clearTimeout(timeout);
+  }, [storyDeleteNotice]);
 
   const viewersQuery = useQuery({
     queryKey: ["day-story-viewers", activeStory?._id],
@@ -438,7 +608,10 @@ export default function DayStoryStrip() {
   const handleOpenStoryGroup = (group: StoryGroup) => {
     const groupIndex = groupedStories.findIndex((item) => item.userId === group.userId);
     const firstUnviewedIndex = group.stories.findIndex(
-      (story) => !story.isOwner && !story.hasViewed
+      (story) =>
+        story.isOwner
+          ? !ownerSeenStoryIds.includes(story._id)
+          : !story.hasViewed && !optimisticViewedIds.includes(story._id)
     );
     setIsPaused(false);
     setActiveGroupIndex(groupIndex >= 0 ? groupIndex : 0);
@@ -552,11 +725,15 @@ export default function DayStoryStrip() {
             const previewStory = group.stories[group.stories.length - 1];
             const isViewed = group.stories.every(
               (story) =>
-                story.isOwner || story.hasViewed || optimisticViewedIds.includes(story._id)
+                story.isOwner
+                  ? ownerSeenStoryIds.includes(story._id)
+                  : story.hasViewed || optimisticViewedIds.includes(story._id)
             );
             const viewedCount = group.stories.filter(
               (story) =>
-                story.isOwner || story.hasViewed || optimisticViewedIds.includes(story._id)
+                story.isOwner
+                  ? ownerSeenStoryIds.includes(story._id)
+                  : story.hasViewed || optimisticViewedIds.includes(story._id)
             ).length;
             const progressRatio =
               group.stories.length > 0 ? viewedCount / group.stories.length : 0;
@@ -736,23 +913,35 @@ export default function DayStoryStrip() {
                 </div>
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/80 to-transparent" />
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/80 to-transparent" />
+                {!isActiveStoryImageReady ? (
+                  <div className="absolute inset-0 bg-black">
+                    <div className="absolute inset-0 animate-pulse bg-gradient-to-b from-white/10 via-white/[0.04] to-white/10" />
+                    <div className="absolute inset-x-6 top-1/2 h-8 -translate-y-1/2 rounded-full bg-white/10" />
+                  </div>
+                ) : null}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={
-                    storyImageError
-                      ? activeStory.imageUrl
-                      : cloudinaryTransform(activeStory.imageUrl, {
-                          width: 1080,
-                          height: 1920,
-                          crop: "fit",
-                          quality: "q_auto:good",
-                          format: "f_auto",
-                          autoOrient: true,
-                        })
-                  }
+                  src={activeStorySource ?? ""}
                   alt="Story"
-                  className="absolute inset-0 h-full w-full object-contain bg-black"
-                  onError={() => setStoryImageError(true)}
+                  className={`absolute inset-0 h-full w-full object-contain bg-black transition-opacity duration-200 ${
+                    isActiveStoryImageReady ? "opacity-100" : "opacity-0"
+                  }`}
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
+                  onLoad={() => {
+                    if (!activeStorySource) return;
+                    setLoadedStorySources((current) =>
+                      current.includes(activeStorySource)
+                        ? current
+                        : [...current, activeStorySource]
+                    );
+                    setIsActiveStoryImageReady(true);
+                  }}
+                  onError={() => {
+                    setStoryImageError(true);
+                    setIsActiveStoryImageReady(true);
+                  }}
                 />
                 <button
                   type="button"
@@ -819,21 +1008,23 @@ export default function DayStoryStrip() {
                   <CaretRight size={22} weight="bold" />
                 </button>
                 <div
-                  className="absolute inset-x-0 bottom-0 z-10 flex items-center justify-between gap-3 px-4 pb-[calc(env(safe-area-inset-bottom)+20px)] pt-3 text-white"
+                  className="absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-3 px-4 pb-[calc(env(safe-area-inset-bottom)+28px)] pt-3 text-white"
                 >
                   <div className="flex items-center gap-4 text-sm rounded-full bg-black/50 px-3 py-2 backdrop-blur">
-                    <span className="inline-flex items-center gap-1">
-                      <Eye size={16} /> {activeStory.viewCount ?? 0}
-                    </span>
+                    {activeStory.isOwner ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Eye size={16} /> {activeStory.viewCount ?? 0}
+                      </span>
+                    ) : null}
                     <button
                       type="button"
                       onClick={() => likeMutation.mutate(activeStory._id)}
-                      className={`inline-flex items-center gap-1 ${
+                      className={`inline-flex items-center gap-1.5 rounded-full px-1 py-1 text-base ${
                         activeStory.hasLiked ? "text-rose-400" : "text-white"
                       }`}
                     >
-                      <Heart size={16} weight={activeStory.hasLiked ? "fill" : "regular"} />{" "}
-                      {activeStory.likeCount ?? 0}
+                      <Heart size={20} weight={activeStory.hasLiked ? "fill" : "regular"} />
+                      <span className="text-sm font-semibold">{activeStory.likeCount ?? 0}</span>
                     </button>
                   </div>
                   {activeStory.isOwner ? (
@@ -848,14 +1039,33 @@ export default function DayStoryStrip() {
                       <button
                         type="button"
                         onClick={() => deleteMutation.mutate(activeStory._id)}
+                        disabled={deleteMutation.isPending}
                         className="rounded-full border border-white/40 bg-black/60 px-3 py-1 text-xs font-semibold text-white inline-flex items-center gap-1 backdrop-blur"
                       >
                         <Trash size={12} />
-                        Delete
+                        {deleteMutation.isPending ? "Deleting..." : "Delete"}
                       </button>
                     </div>
                   ) : null}
                 </div>
+                {deleteMutation.isPending ? (
+                  <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/45 backdrop-blur-[2px]">
+                    <div className="rounded-full border border-white/15 bg-black/70 px-4 py-2 text-sm font-semibold text-white">
+                      Deleting story...
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
+
+      {portalReady && storyDeleteNotice
+        ? createPortal(
+            <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[10030] flex justify-center px-4">
+              <div className="rounded-full border border-[color:var(--panel-border)] bg-[color:var(--panel)]/95 px-4 py-2 text-sm font-semibold text-[color:var(--ink)] shadow-[0_10px_30px_rgba(0,0,0,0.28)] backdrop-blur">
+                {storyDeleteNotice}
               </div>
             </div>,
             document.body

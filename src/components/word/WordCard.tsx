@@ -766,6 +766,63 @@ const WordCard = ({
     },
   });
 
+  const commentLikeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/word-comments/${id}/like`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        if (response.status === 401) {
+          openSignIn();
+        }
+        throw new Error("Failed to like comment");
+      }
+      return (await response.json()) as { liked: boolean; likeCount: number; };
+    },
+    onMutate: async (id) => {
+      const viewerId = session?.user?.id ? String(session.user.id) : null;
+      if (!viewerId) return null;
+      await queryClient.cancelQueries({ queryKey: ["word-comments", wordId] });
+      const previousComments =
+        queryClient.getQueryData<WordCommentData[]>(["word-comments", wordId]) ?? [];
+      queryClient.setQueryData<WordCommentData[]>(["word-comments", wordId], (current = []) =>
+        current.map((comment) => {
+          if (comment._id !== id) return comment;
+          const hasLiked = (comment.likedBy ?? []).includes(viewerId);
+          return {
+            ...comment,
+            likedBy: hasLiked
+              ? (comment.likedBy ?? []).filter((likedId) => likedId !== viewerId)
+              : [...(comment.likedBy ?? []), viewerId],
+          };
+        })
+      );
+      return { previousComments };
+    },
+    onError: (_error, _id, context) => {
+      if (context?.previousComments) {
+        queryClient.setQueryData(["word-comments", wordId], context.previousComments);
+      }
+      setCommentError("Couldn't update comment like.");
+    },
+    onSuccess: (data, id) => {
+      setCommentError(null);
+      const viewerId = session?.user?.id ? String(session.user.id) : null;
+      if (!viewerId) return;
+      queryClient.setQueryData<WordCommentData[]>(["word-comments", wordId], (current = []) =>
+        current.map((comment) => {
+          if (comment._id !== id) return comment;
+          return {
+            ...comment,
+            likedBy: data.liked
+              ? [...new Set([...(comment.likedBy ?? []), viewerId])]
+              : (comment.likedBy ?? []).filter((likedId) => likedId !== viewerId),
+          };
+        })
+      );
+    },
+  });
+
   const editMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch(`/api/words/${wordId}`, {
@@ -1555,6 +1612,7 @@ const WordCard = ({
               onCancelEdit={handleCancelEditComment}
               onSaveEdit={handleSaveEditComment}
               onRequestDelete={handleRequestDeleteComment}
+              onToggleLike={(id) => commentLikeMutation.mutate(id)}
               commentEditRef={commentEditRef}
               onRetrySubmit={handleCommentSubmit}
               formatPostTime={formatPostTime}

@@ -538,7 +538,7 @@ export default function WordForm({
       data-show-header={_showHeader ? "true" : "false"}
       className={`${
       variant === "modal" ? "modal-form" : flat ? "feed-form" : "panel-glass"
-    } flex flex-col gap-2 ${
+    } min-w-0 flex flex-col gap-2 ${
         compact ? "p-3" : "p-4"
       } pb-0`}
     >
@@ -684,11 +684,12 @@ export default function WordForm({
         onChange={handleSelectImages}
       />
       {imageItems.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto">
+        <div className="w-full max-w-full overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex w-max min-w-full gap-2">
           {imageItems.map((item, index) => (
             <div
               key={`${item.previewUrl}-${index}`}
-              className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--surface-strong)]"
+              className="relative h-20 w-20 shrink-0 snap-start overflow-hidden rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--surface-strong)]"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -707,6 +708,7 @@ export default function WordForm({
               </button>
             </div>
           ))}
+          </div>
         </div>
       )}
       {showScriptureRef && (

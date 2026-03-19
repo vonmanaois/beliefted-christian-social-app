@@ -25,9 +25,13 @@ type NotificationItem = {
     | "word_like"
     | "word_comment"
     | "word_comment_reply"
+    | "word_comment_like"
     | "follow"
+    | "story_like"
     | "faith_like"
     | "faith_comment"
+    | "faith_comment_reply"
+    | "faith_comment_like"
     | "mention"
     | "moderation"
     | "event_invite"
@@ -42,6 +46,7 @@ type NotificationItem = {
   prayerId?: { _id?: string; content?: string; authorUsername?: string | null } | null;
   wordId?: { _id?: string; content?: string; authorUsername?: string | null } | null;
   faithStoryId?: { _id?: string; title?: string; authorUsername?: string | null } | null;
+  dayStoryId?: { _id?: string; createdAt?: string; expiresAt?: string } | null;
   eventId?: { _id?: string; title?: string } | null;
   moderationReason?: string | null;
   moderationTarget?: "word" | "prayer" | "faith_story" | null;
@@ -298,6 +303,9 @@ export default function NotificationsContent({
       const author = note.faithStoryId.authorUsername ?? recipient;
       return author ? `/faith-story/${author}/${note.faithStoryId._id}` : null;
     }
+    if (note.dayStoryId?._id) {
+      return null;
+    }
     if (note.eventId?._id) {
       return `/events/${note.eventId._id}`;
     }
@@ -404,16 +412,24 @@ export default function NotificationsContent({
                               ? "prayed for your prayer."
                               : note.type === "comment"
                                 ? "posted encouragement on your prayer."
-                                : note.type === "word_like"
-                                  ? "liked your word."
-                                  : note.type === "word_comment"
-                                    ? "posted reflection on your word."
-                                    : note.type === "word_comment_reply"
-                                      ? "replied to your comment."
+                              : note.type === "word_like"
+                                ? "liked your word."
+                                : note.type === "story_like"
+                                  ? "liked your story."
+                                : note.type === "word_comment"
+                                  ? "posted reflection on your word."
+                                : note.type === "word_comment_reply"
+                                  ? "replied to your comment."
+                                : note.type === "word_comment_like"
+                                  ? "liked your comment."
                                     : note.type === "faith_like"
                                       ? "liked your faith story."
                                       : note.type === "faith_comment"
                                         ? "posted reflection on your faith story."
+                                      : note.type === "faith_comment_reply"
+                                        ? "replied to your comment."
+                                        : note.type === "faith_comment_like"
+                                          ? "liked your comment."
                                         : note.type === "mention"
                                           ? note.wordId
                                             ? "mentioned you in a word."

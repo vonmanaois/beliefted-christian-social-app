@@ -7,6 +7,7 @@ import UserModel from "@/models/User";
 import "@/models/Word";
 import "@/models/Prayer";
 import "@/models/FaithStory";
+import "@/models/DayStory";
 import "@/models/Event";
 
 export async function GET() {
@@ -34,6 +35,7 @@ export async function GET() {
     .populate("prayerId", "content authorUsername")
     .populate("wordId", "content authorUsername")
     .populate("faithStoryId", "title authorUsername")
+    .populate("dayStoryId", "createdAt expiresAt")
     .populate("eventId", "title")
     .lean();
 

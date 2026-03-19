@@ -13,8 +13,8 @@ import PostBackHeader from "@/components/ui/PostBackHeader";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useUIStore } from "@/lib/uiStore";
 import FaithStoryEditor from "@/components/faith/FaithStoryEditor";
+import FaithStoryComments, { type FaithCommentData } from "@/components/faith/FaithStoryComments";
 import MentionText from "@/components/ui/MentionText";
-import MentionTextarea from "@/components/ui/MentionTextarea";
 import { linkifyMentionsHtml } from "@/lib/mentions";
 
 type FaithStoryDetailProps = {
@@ -32,24 +32,29 @@ type FaithStoryDetailProps = {
   };
 };
 
-type Comment = {
-  _id: string;
-  content: string;
-  createdAt: string;
-  userId?: {
-    _id?: string | null;
-    name?: string | null;
-    image?: string | null;
-    username?: string | null;
-  } | null;
-};
-
 const formatFullDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
     year: "numeric",
   });
+
+const formatPostTime = (iso: string) => {
+  const now = Date.now();
+  const value = new Date(iso).getTime();
+  const diffMs = Math.max(0, now - value);
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  if (diffMs < minute) return "just now";
+  if (diffMs < hour) return `${Math.floor(diffMs / minute)}m`;
+  if (diffMs < day) return `${Math.floor(diffMs / hour)}h`;
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+};
 
 const ADMIN_REASONS = ["Off-topic", "Inappropriate", "Spam", "Asking money"] as const;
 
@@ -83,6 +88,9 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
   const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
   const [editCoverPreview, setEditCoverPreview] = useState<string | null>(null);
   const [commentText, setCommentText] = useState("");
+  const [commentMenuId, setCommentMenuId] = useState<string | null>(null);
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentText, setEditingCommentText] = useState("");
   const [editingCommentOriginal, setEditingCommentOriginal] = useState("");
@@ -95,6 +103,7 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
   const [isSharing, setIsSharing] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const commentEditRef = useRef<HTMLDivElement | null>(null);
+  const replyInputRef = useRef<HTMLTextAreaElement | null>(null);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
 
   const isOwner =
@@ -139,7 +148,7 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
       if (!response.ok) {
         throw new Error("Failed to load comments");
       }
-      return (await response.json()) as Comment[];
+      return (await response.json()) as FaithCommentData[];
     },
   });
 
@@ -168,6 +177,17 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [editingCommentId, editingCommentText, editingCommentOriginal]);
+
+  useEffect(() => {
+    if (!commentMenuId) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("[data-comment-menu]")) return;
+      setCommentMenuId(null);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [commentMenuId]);
 
   const likeMutation = useMutation({
     mutationFn: async () => {
@@ -208,11 +228,17 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
   });
 
   const commentMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({
+      content,
+      parentId,
+    }: {
+      content: string;
+      parentId?: string | null;
+    }) => {
       const response = await fetch("/api/faith-story-comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storyId: story._id, content: commentText.trim() }),
+        body: JSON.stringify({ storyId: story._id, content, parentId }),
       });
       if (!response.ok) {
         if (response.status === 401) {
@@ -220,10 +246,9 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
         }
         throw new Error("Failed to post comment");
       }
-      return (await response.json()) as Comment;
+      return (await response.json()) as FaithCommentData;
     },
     onSuccess: async (newComment) => {
-      setCommentText("");
       const shouldHydrateUser =
         session?.user?.id &&
         (!newComment.userId ||
@@ -233,6 +258,8 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
       const hydratedComment = shouldHydrateUser
         ? {
             ...newComment,
+            parentId: newComment.parentId ? String(newComment.parentId) : null,
+            likedBy: Array.isArray(newComment.likedBy) ? newComment.likedBy : [],
             userId: {
               _id: session.user.id,
               name: session.user.name ?? "User",
@@ -242,10 +269,21 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
             },
           }
         : newComment;
-      queryClient.setQueryData<Comment[]>(
+      queryClient.setQueryData<FaithCommentData[]>(
         ["faith-story-comments", story._id],
-        (current = []) => [hydratedComment as Comment, ...current]
+        (current = []) => {
+          if (newComment.parentId) {
+            return [...current, hydratedComment as FaithCommentData];
+          }
+          return [hydratedComment as FaithCommentData, ...current];
+        }
       );
+      if (newComment.parentId) {
+        setReplyText("");
+        setReplyingToId(null);
+      } else {
+        setCommentText("");
+      }
     },
   });
 
@@ -263,7 +301,7 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
     },
     onSuccess: (data) => {
       if (editingCommentId) {
-        queryClient.setQueryData<Comment[]>(
+        queryClient.setQueryData<FaithCommentData[]>(
           ["faith-story-comments", story._id],
           (current = []) =>
             current.map((comment) =>
@@ -290,7 +328,7 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
     },
     onSuccess: async () => {
       if (pendingDeleteCommentId) {
-        queryClient.setQueryData<Comment[]>(
+        queryClient.setQueryData<FaithCommentData[]>(
           ["faith-story-comments", story._id],
           (current = []) => current.filter((comment) => comment._id !== pendingDeleteCommentId)
         );
@@ -607,6 +645,86 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
     }
   };
 
+  const commentLikeMutation = useMutation({
+    mutationFn: async (commentId: string) => {
+      const response = await fetch(`/api/faith-story-comments/${commentId}/like`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to like comment");
+      }
+      return (await response.json()) as { count: number; liked: boolean };
+    },
+    onMutate: async (commentId) => {
+      if (!session?.user?.id) return null;
+      const viewerId = String(session.user.id);
+      const previousComments =
+        queryClient.getQueryData<FaithCommentData[]>(["faith-story-comments", story._id]) ?? [];
+
+      queryClient.setQueryData<FaithCommentData[]>(["faith-story-comments", story._id], (current = []) =>
+        current.map((comment) => {
+          if (comment._id !== commentId) return comment;
+          const hasLiked = (comment.likedBy ?? []).includes(viewerId);
+          return {
+            ...comment,
+            likedBy: hasLiked
+              ? (comment.likedBy ?? []).filter((likedId) => likedId !== viewerId)
+              : [...(comment.likedBy ?? []), viewerId],
+          };
+        })
+      );
+
+      return { previousComments, commentId, viewerId };
+    },
+    onError: (_error, _commentId, context) => {
+      if (context?.previousComments) {
+        queryClient.setQueryData(["faith-story-comments", story._id], context.previousComments);
+      }
+    },
+    onSuccess: (data, _commentId, context) => {
+      if (!context?.viewerId) return;
+      queryClient.setQueryData<FaithCommentData[]>(["faith-story-comments", story._id], (current = []) =>
+        current.map((comment) => {
+          if (comment._id !== context.commentId) return comment;
+          return {
+            ...comment,
+            likedBy: data.liked
+              ? [...new Set([...(comment.likedBy ?? []), context.viewerId])]
+              : (comment.likedBy ?? []).filter((likedId) => likedId !== context.viewerId),
+          };
+        })
+      );
+    },
+  });
+
+  const handleCommentSubmit = (event?: React.FormEvent) => {
+    event?.preventDefault();
+    if (!commentText.trim()) return;
+    commentMutation.mutate({ content: commentText.trim() });
+  };
+
+  const handleStartReply = (comment: FaithCommentData) => {
+    if (!session?.user?.id) {
+      openSignIn();
+      return;
+    }
+    setCommentMenuId(null);
+    setReplyingToId(comment._id);
+    setReplyText(comment.userId?.username ? `@${comment.userId.username} ` : "");
+  };
+
+  const handleSubmitReply = (parentId: string) => {
+    if (!replyText.trim()) return;
+    commentMutation.mutate({ content: replyText.trim(), parentId });
+  };
+
+  const handleStartEdit = (comment: FaithCommentData) => {
+    setCommentMenuId(null);
+    setEditingCommentId(comment._id);
+    setEditingCommentText(comment.content);
+    setEditingCommentOriginal(comment.content);
+  };
+
   return (
     <div>
       <PostBackHeader label="Faith Story" refreshOnBack />
@@ -847,162 +965,56 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
         <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-[color:var(--subtle)]">
           Comments
         </h2>
-        {session?.user?.id ? (
-          <form
-            className="mt-4 flex flex-col gap-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (!commentText.trim()) return;
-              commentMutation.mutate();
+        <div className="mt-4">
+          <FaithStoryComments
+            sessionUserId={session?.user?.id ? String(session.user.id) : null}
+            commentText={commentText}
+            onCommentTextChange={setCommentText}
+            onSubmit={handleCommentSubmit}
+            replyingToId={replyingToId}
+            replyText={replyText}
+            onReplyTextChange={setReplyText}
+            onStartReply={handleStartReply}
+            onCancelReply={() => {
+              setReplyingToId(null);
+              setReplyText("");
             }}
-          >
-            <MentionTextarea
-              value={commentText}
-              onChangeValue={setCommentText}
-              placeholder="Write a comment..."
-              className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full"
-            />
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                className="post-button"
-                disabled={!commentText.trim()}
-              >
-                Post comment
-              </button>
-            </div>
-          </form>
-        ) : (
-          <button
-            type="button"
-            onClick={openSignIn}
-            className="mt-3 text-sm text-[color:var(--subtle)] hover:text-[color:var(--accent)]"
-          >
-            Sign in to comment.
-          </button>
-        )}
-
-        <div className="mt-6 flex flex-col gap-3 text-[13px] sm:text-sm">
-          {isLoadingComments ? (
-            <div className="text-[color:var(--subtle)]">Loading comments...</div>
-          ) : comments.length === 0 ? (
-            <div className="text-[color:var(--subtle)]">No comments yet.</div>
-          ) : (
-            comments.map((comment, index) => {
-              const commentOwnerId = comment.userId?._id
-                ? String(comment.userId._id)
-                : null;
-              const isCommentOwner = Boolean(
-                session?.user?.id && commentOwnerId === String(session.user.id)
-              );
-
-              return (
-                <div
-                  key={comment._id}
-                  className={`flex gap-3 pt-3 ${
-                    index === 0 ? "" : "border-t border-[color:var(--panel-border)]"
-                  }`}
-                >
-                  <Avatar
-                    src={comment.userId?.image ?? null}
-                    alt={comment.userId?.name ?? "User"}
-                    size={36}
-                    href={
-                      comment.userId?.username
-                        ? `/profile/${comment.userId.username}`
-                        : "/profile"
-                    }
-                    fallback={(comment.userId?.name?.[0] ?? "U").toUpperCase()}
-                    className="h-8 w-8 text-[11px] cursor-pointer"
-                  />
-                  <div className="flex-1">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] sm:text-xs font-semibold text-[color:var(--ink)]">
-                          {comment.userId?.name ?? "User"}
-                        </span>
-                        {comment.userId?.username && (
-                          <span className="text-[11px] sm:text-xs text-[color:var(--subtle)]">
-                            @{comment.userId.username}
-                          </span>
-                        )}
-                        <span className="text-[11px] sm:text-xs text-[color:var(--subtle)]">
-                          {new Date(comment.createdAt).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </span>
-                      </div>
-                      {isCommentOwner && (
-                        <div className="relative">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingCommentId(comment._id);
-                              setEditingCommentText(comment.content);
-                              setEditingCommentOriginal(comment.content);
-                            }}
-                            className="text-xs font-semibold text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPendingDeleteCommentId(comment._id);
-                              setShowCommentDeleteConfirm(true);
-                            }}
-                            className="ml-3 text-xs font-semibold text-[color:var(--danger)]"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    {editingCommentId === comment._id ? (
-                      <div ref={commentEditRef} className="mt-2 flex flex-col gap-2">
-                        <MentionTextarea
-                          value={editingCommentText}
-                          onChangeValue={setEditingCommentText}
-                          className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full"
-                        />
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              commentEditMutation.mutate({
-                                id: comment._id,
-                                content: editingCommentText.trim(),
-                              })
-                            }
-                            className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--accent)] text-[color:var(--accent-contrast)] cursor-pointer"
-                            disabled={!editingCommentText.trim()}
-                          >
-                            Save
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingCommentId(null);
-                              setEditingCommentText("");
-                              setEditingCommentOriginal("");
-                            }}
-                            className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="mt-1 text-[13px] sm:text-sm text-[color:var(--ink)]">
-                        <MentionText text={comment.content} />
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          )}
+            onSubmitReply={handleSubmitReply}
+            replyInputRef={replyInputRef}
+            comments={comments}
+            isLoading={isLoadingComments}
+            editingCommentId={editingCommentId}
+            editingCommentText={editingCommentText}
+            onEditingCommentTextChange={setEditingCommentText}
+            onStartEdit={handleStartEdit}
+            onCancelEdit={() => {
+              setEditingCommentId(null);
+              setEditingCommentText("");
+              setEditingCommentOriginal("");
+            }}
+            onSaveEdit={(id, content) =>
+              commentEditMutation.mutate({
+                id,
+                content: content.trim(),
+              })
+            }
+            onRequestDelete={(id) => {
+              setCommentMenuId(null);
+              setPendingDeleteCommentId(id);
+              setShowCommentDeleteConfirm(true);
+            }}
+            commentEditRef={commentEditRef}
+            commentMenuId={commentMenuId}
+            onToggleCommentMenu={setCommentMenuId}
+            onToggleLike={(id) => {
+              if (!session?.user?.id) {
+                openSignIn();
+                return;
+              }
+              commentLikeMutation.mutate(id);
+            }}
+            formatPostTime={formatPostTime}
+          />
         </div>
       </div>
 

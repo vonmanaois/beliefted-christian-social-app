@@ -23,6 +23,20 @@ export async function GET(
     .sort({ createdAt: -1 })
     .populate("userId", "_id name image username")
     .lean();
+  const normalized = comments.map((comment) => ({
+    ...comment,
+    _id: String(comment._id),
+    parentId: comment.parentId ? String(comment.parentId) : null,
+    likedBy: Array.isArray(comment.likedBy) ? comment.likedBy.map((id) => String(id)) : [],
+    userId: comment.userId
+      ? {
+          _id: String((comment.userId as { _id?: unknown })?._id ?? ""),
+          name: (comment.userId as { name?: string | null })?.name ?? null,
+          image: (comment.userId as { image?: string | null })?.image ?? null,
+          username: (comment.userId as { username?: string | null })?.username ?? null,
+        }
+      : null,
+  }));
 
-  return NextResponse.json(comments);
+  return NextResponse.json(normalized);
 }

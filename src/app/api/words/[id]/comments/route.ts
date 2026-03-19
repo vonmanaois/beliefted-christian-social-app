@@ -29,6 +29,7 @@ export async function GET(
     ...comment,
     _id: String(comment._id),
     parentId: comment.parentId ? String(comment.parentId) : null,
+    likedBy: Array.isArray(comment.likedBy) ? comment.likedBy.map((id) => String(id)) : [],
     userId: comment.userId
       ? {
           _id: String((comment.userId as { _id?: unknown })?._id ?? ""),

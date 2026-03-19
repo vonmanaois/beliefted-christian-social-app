@@ -5,6 +5,7 @@ import WordModel from "@/models/Word";
 import PrayerModel from "@/models/Prayer";
 import FaithStoryModel from "@/models/FaithStory";
 import EventModel from "@/models/Event";
+import DayStoryModel from "@/models/DayStory";
 
 const NotificationSchema = new Schema(
   {
@@ -20,9 +21,13 @@ const NotificationSchema = new Schema(
         "word_like",
         "word_comment",
         "word_comment_reply",
+        "word_comment_like",
         "follow",
+        "story_like",
         "faith_like",
         "faith_comment",
+        "faith_comment_reply",
+        "faith_comment_like",
         "mention",
         "moderation",
         "event_invite",
@@ -35,6 +40,7 @@ const NotificationSchema = new Schema(
       required: true,
     },
     faithStoryId: { type: Schema.Types.ObjectId, ref: "FaithStory" },
+    dayStoryId: { type: Schema.Types.ObjectId, ref: "DayStory" },
     eventId: { type: Schema.Types.ObjectId, ref: "Event" },
     moderationReason: { type: String },
     moderationTarget: {
@@ -75,6 +81,7 @@ const buildPushPayload = async (doc: Notification) => {
       word_like: `${actorName} liked your word.`,
       word_comment: `${actorName} commented on your word.`,
       word_comment_reply: `${actorName} replied to your comment.`,
+      word_comment_like: `${actorName} liked your comment.`,
       mention: `${actorName} mentioned you.`,
     };
     return {
@@ -113,11 +120,31 @@ const buildPushPayload = async (doc: Notification) => {
     const bodyMap: Record<string, string> = {
       faith_like: `${actorName} liked your faith story.`,
       faith_comment: `${actorName} commented on your faith story.`,
+      faith_comment_reply: `${actorName} replied to your comment.`,
+      faith_comment_like: `${actorName} liked your comment.`,
     };
     return {
       title: "New activity",
       body: bodyMap[doc.type] ?? "Open Beliefted to see the latest activity.",
       url,
+    };
+  }
+
+  if (doc.dayStoryId) {
+    const story = await DayStoryModel.findById(doc.dayStoryId)
+      .select("expiresAt")
+      .lean();
+    if (!story || (story.expiresAt && story.expiresAt.getTime() <= Date.now())) {
+      return {
+        title: "New activity",
+        body: `${actorName} liked your story.`,
+        url: fallbackUrl,
+      };
+    }
+    return {
+      title: "New activity",
+      body: `${actorName} liked your story.`,
+      url: fallbackUrl,
     };
   }
 

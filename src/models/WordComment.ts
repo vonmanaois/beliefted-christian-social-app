@@ -6,6 +6,7 @@ const WordCommentSchema = new Schema(
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     wordId: { type: Schema.Types.ObjectId, ref: "Word", required: true },
     parentId: { type: Schema.Types.ObjectId, ref: "WordComment", default: null },
+    likedBy: [{ type: Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );

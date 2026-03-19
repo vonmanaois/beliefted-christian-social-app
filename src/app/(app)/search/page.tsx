@@ -2,6 +2,7 @@
 
  import { useEffect, useState } from "react";
   import UserSearch from "@/components/layout/UserSearch";
+import FollowSuggestions from "@/components/layout/FollowSuggestions";
 
 export default function SearchPage() {
   const [entered, setEntered] = useState(false);
@@ -39,6 +40,7 @@ export default function SearchPage() {
            <div className="mt-6">
              <UserSearch />
            </div>
+           <FollowSuggestions />
          </div>
   );
 }

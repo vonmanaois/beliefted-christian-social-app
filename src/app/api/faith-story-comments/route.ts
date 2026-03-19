@@ -25,6 +25,7 @@ export async function POST(req: Request) {
   const CommentSchema = z.object({
     content: z.string().trim().min(1).max(1000),
     storyId: z.string().min(1),
+    parentId: z.string().min(1).optional(),
   });
 
   const body = CommentSchema.safeParse(await req.json());
@@ -34,6 +35,7 @@ export async function POST(req: Request) {
 
   const content = body.data.content.trim();
   const cleanedStoryId = body.data.storyId.replace(/^ObjectId\(\"(.+)\"\)$/, "$1");
+  const parentId = body.data.parentId ?? null;
   const storyObjectId = Types.ObjectId.isValid(cleanedStoryId)
     ? new Types.ObjectId(cleanedStoryId)
     : null;
@@ -44,19 +46,43 @@ export async function POST(req: Request) {
 
   await dbConnect();
 
+  let parentUserId: string | null = null;
+  if (parentId) {
+    const parent = await FaithStoryCommentModel.findOne({ _id: parentId, storyId: storyObjectId })
+      .select("userId")
+      .lean();
+    if (!parent?.userId) {
+      return NextResponse.json({ error: "Invalid parent comment" }, { status: 400 });
+    }
+    parentUserId = String(parent.userId);
+  }
+
   const comment = await FaithStoryCommentModel.create({
     content,
     userId: session.user.id,
     storyId: storyObjectId,
+    parentId,
   });
 
   const story = await FaithStoryModel.findById(storyObjectId).select("userId").lean();
   if (story?.userId && story.userId.toString() !== session.user.id) {
+    const storyOwnerId = String(story.userId);
+    if (!parentUserId || parentUserId !== storyOwnerId) {
     await NotificationModel.create({
       userId: story.userId,
       actorId: session.user.id,
       faithStoryId: storyObjectId,
       type: "faith_comment",
+    });
+    }
+  }
+
+  if (parentUserId && parentUserId !== String(session.user.id)) {
+    await NotificationModel.create({
+      userId: parentUserId,
+      actorId: session.user.id,
+      faithStoryId: storyObjectId,
+      type: "faith_comment_reply",
     });
   }
 

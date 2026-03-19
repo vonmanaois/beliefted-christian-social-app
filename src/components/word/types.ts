@@ -47,4 +47,5 @@ export type WordCommentData = {
   createdAt: string;
   userId?: CommentUser | null;
   parentId?: string | null;
+  likedBy?: string[];
 };

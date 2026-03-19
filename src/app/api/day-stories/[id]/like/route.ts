@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import DayStoryModel from "@/models/DayStory";
+import NotificationModel from "@/models/Notification";
 
 export async function POST(
   _req: Request,
@@ -21,7 +22,7 @@ export async function POST(
 
   await dbConnect();
 
-  const story = await DayStoryModel.findById(id).select("likedBy expiresAt").lean();
+  const story = await DayStoryModel.findById(id).select("likedBy expiresAt userId").lean();
   if (!story) {
     return NextResponse.json({ error: "Story not found" }, { status: 404 });
   }
@@ -36,6 +37,25 @@ export async function POST(
     : { $addToSet: { likedBy: session.user.id } };
   const updated = await DayStoryModel.findByIdAndUpdate(id, update, { new: true }).lean();
   const count = updated?.likedBy?.length ?? story.likedBy?.length ?? 0;
+
+  const storyOwnerId = String(story.userId);
+  if (storyOwnerId !== userId) {
+    if (alreadyLiked) {
+      await NotificationModel.deleteMany({
+        userId: storyOwnerId,
+        actorId: session.user.id,
+        dayStoryId: id,
+        type: "story_like",
+      });
+    } else {
+      await NotificationModel.create({
+        userId: storyOwnerId,
+        actorId: session.user.id,
+        dayStoryId: id,
+        type: "story_like",
+      });
+    }
+  }
 
   return NextResponse.json({ liked: !alreadyLiked, likeCount: count });
 }

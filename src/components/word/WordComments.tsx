@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import Link from "next/link";
-import { DotsThreeOutline } from "@phosphor-icons/react";
+import { DotsThreeOutline, Heart } from "@phosphor-icons/react";
 import Avatar from "@/components/ui/Avatar";
 import MentionText from "@/components/ui/MentionText";
 import MentionTextarea from "@/components/ui/MentionTextarea";
@@ -35,6 +35,7 @@ type WordCommentsProps = {
   onCancelEdit: () => void;
   onSaveEdit: (id: string, content: string) => void;
   onRequestDelete: (id: string) => void;
+  onToggleLike: (id: string) => void;
   commentEditRef: React.RefObject<HTMLDivElement | null>;
   formatPostTime: (timestamp: string) => string;
 };
@@ -66,6 +67,7 @@ const WordComments = memo(function WordComments({
   onCancelEdit,
   onSaveEdit,
   onRequestDelete,
+  onToggleLike,
   commentEditRef,
   formatPostTime,
 }: WordCommentsProps) {
@@ -144,6 +146,9 @@ const WordComments = memo(function WordComments({
               : null;
             const isCommentOwner = Boolean(
               sessionUserId && commentOwnerId === sessionUserId
+            );
+            const commentHasLiked = Boolean(
+              sessionUserId && (comment.likedBy ?? []).includes(sessionUserId)
             );
             const replies = repliesByParent[comment._id] ?? [];
 
@@ -255,18 +260,32 @@ const WordComments = memo(function WordComments({
                       </p>
                     )}
                     {sessionUserId && (
-                      <button
-                        type="button"
-                        onClick={() => onStartReply(comment)}
-                        className="mt-2 text-[11px] sm:text-xs font-semibold text-[color:var(--accent)]"
-                      >
-                        Reply
-                      </button>
+                      <div className="mt-2 flex items-center gap-4">
+                        <button
+                          type="button"
+                          onClick={() => onStartReply(comment)}
+                          className="text-[11px] sm:text-xs font-semibold text-[color:var(--accent)]"
+                        >
+                          Reply
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onToggleLike(comment._id)}
+                          className={`inline-flex items-center gap-1 text-[11px] sm:text-xs font-semibold ${
+                            commentHasLiked
+                              ? "text-[color:var(--accent)]"
+                              : "text-[color:var(--subtle)]"
+                          }`}
+                        >
+                          <Heart size={14} weight={commentHasLiked ? "fill" : "regular"} />
+                          <span>{comment.likedBy?.length ?? 0}</span>
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
                 {replyingToId === comment._id ? (
-                  <div className="ml-11 rounded-xl border border-[color:var(--panel-border)] bg-white/40 px-3 py-2">
+                  <div className="ml-11 rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--surface)]/70 px-3 py-2">
                     <form
                       onSubmit={(event) => {
                         event.preventDefault();
@@ -303,46 +322,69 @@ const WordComments = memo(function WordComments({
                 {replies.length ? (
                   <div className="relative ml-11 flex flex-col gap-2 pl-6">
                     <span className="absolute left-2 top-0 bottom-0 w-[2px] bg-[color:var(--panel-border)]" />
-                    {replies.map((reply) => (
-                      <div key={reply._id} className="relative">
-                        <span className="absolute left-2 top-5 h-[2px] w-6 bg-[color:var(--panel-border)]" />
-                        <div className="flex gap-3 rounded-xl bg-white/70 px-3 py-2 shadow-[0_1px_0_rgba(0,0,0,0.04)]">
-                          <Avatar
-                            src={reply.userId?.image ?? null}
-                            alt={reply.userId?.name ?? "User"}
-                            size={32}
-                            href={
-                              reply.userId?.username
-                                ? `/profile/${reply.userId.username}`
-                                : "/profile"
-                            }
-                            fallback={(reply.userId?.name?.[0] ?? "U").toUpperCase()}
-                            className="h-7 w-7 text-[10px] cursor-pointer"
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 text-[11px] text-[color:var(--subtle)]">
-                              <span className="font-semibold text-[color:var(--ink)]">
-                                {reply.userId?.name ?? "User"}
-                              </span>
-                              {reply.userId?.username && <span>@{reply.userId.username}</span>}
-                              <span>{formatPostTime(reply.createdAt)}</span>
+                    {replies.map((reply) => {
+                      const replyHasLiked = Boolean(
+                        sessionUserId && (reply.likedBy ?? []).includes(sessionUserId)
+                      );
+
+                      return (
+                        <div key={reply._id} className="relative">
+                          <span className="absolute left-2 top-5 h-[2px] w-6 bg-[color:var(--panel-border)]" />
+                          <div className="flex gap-3 rounded-xl bg-[color:var(--surface)]/70 px-3 py-2 shadow-[0_1px_0_rgba(0,0,0,0.04)]">
+                            <Avatar
+                              src={reply.userId?.image ?? null}
+                              alt={reply.userId?.name ?? "User"}
+                              size={32}
+                              href={
+                                reply.userId?.username
+                                  ? `/profile/${reply.userId.username}`
+                                  : "/profile"
+                              }
+                              fallback={(reply.userId?.name?.[0] ?? "U").toUpperCase()}
+                              className="h-7 w-7 text-[10px] cursor-pointer"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 text-[11px] text-[color:var(--subtle)]">
+                                <span className="font-semibold text-[color:var(--ink)]">
+                                  {reply.userId?.name ?? "User"}
+                                </span>
+                                {reply.userId?.username && <span>@{reply.userId.username}</span>}
+                                <span>{formatPostTime(reply.createdAt)}</span>
+                              </div>
+                              <div className="mt-1 flex items-center gap-2 text-[11px] text-[color:var(--subtle)]">
+                                <span className="h-[1px] w-5 bg-[color:var(--panel-border)]" />
+                                <span>
+                                  Replying to{" "}
+                                  {comment.userId?.username
+                                    ? `@${comment.userId.username}`
+                                    : "this comment"}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-[13px] sm:text-sm text-[color:var(--ink)]">
+                                <MentionText text={reply.content} />
+                              </p>
+                              {sessionUserId && (
+                                <button
+                                  type="button"
+                                  onClick={() => onToggleLike(reply._id)}
+                                  className={`mt-2 inline-flex items-center gap-1 text-[11px] sm:text-xs font-semibold ${
+                                    replyHasLiked
+                                      ? "text-[color:var(--accent)]"
+                                      : "text-[color:var(--subtle)]"
+                                  }`}
+                                >
+                                  <Heart
+                                    size={14}
+                                    weight={replyHasLiked ? "fill" : "regular"}
+                                  />
+                                  <span>{reply.likedBy?.length ?? 0}</span>
+                                </button>
+                              )}
                             </div>
-                            <div className="mt-1 flex items-center gap-2 text-[11px] text-[color:var(--subtle)]">
-                              <span className="h-[1px] w-5 bg-[color:var(--panel-border)]" />
-                              <span>
-                                Replying to{" "}
-                                {comment.userId?.username
-                                  ? `@${comment.userId.username}`
-                                  : "this comment"}
-                              </span>
-                            </div>
-                            <p className="mt-1 text-[13px] sm:text-sm text-[color:var(--ink)]">
-                              <MentionText text={reply.content} />
-                            </p>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : null}
               </div>
