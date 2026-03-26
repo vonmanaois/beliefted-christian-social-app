@@ -66,7 +66,7 @@ const PrayerComments = memo(function PrayerComments({
             value={commentText}
             onChangeValue={onCommentTextChange}
             placeholder="Share a reflection..."
-            className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full px-3 py-2"
+            className="comment-body-input bg-transparent comment-input min-h-[28px] text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full px-3 py-2"
             textareaRef={commentInputRef}
           />
           <div className="flex justify-end">
@@ -201,7 +201,7 @@ const PrayerComments = memo(function PrayerComments({
                       <MentionTextarea
                         value={editingCommentText}
                         onChangeValue={onEditingCommentTextChange}
-                        className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full"
+                        className="comment-body-input bg-transparent comment-input min-h-[28px] text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full"
                       />
                       <div className="flex items-center gap-2">
                         <button

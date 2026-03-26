@@ -71,7 +71,7 @@ export default function JournalForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <input
-        className="bg-transparent text-lg font-semibold text-[color:var(--ink)] outline-none border-b border-[color:var(--panel-border)] pb-2 focus:outline-none focus:ring-0 focus:border-[color:var(--panel-border)]"
+        className="form-body-input bg-transparent text-lg font-semibold text-[color:var(--ink)] outline-none border-b border-[color:var(--panel-border)] pb-2 focus:outline-none focus:ring-0 focus:border-[color:var(--panel-border)]"
         placeholder="Title"
         value={title}
         readOnly={!isAuthenticated}

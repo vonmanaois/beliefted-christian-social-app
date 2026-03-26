@@ -559,7 +559,7 @@ export default function WordForm({
         value={content}
         onChangeValue={setContent}
         placeholder={placeholder}
-        className={`w-full resize-none bg-transparent text-[15px] leading-7 text-[color:var(--ink)] outline-none placeholder:text-[color:var(--subtle)]/75 focus:outline-none focus:ring-0 ${
+        className={`composer-body-input w-full resize-none bg-transparent text-[color:var(--ink)] outline-none placeholder:text-[color:var(--subtle)]/75 focus:outline-none focus:ring-0 ${
           compact ? "min-h-[28px]" : "min-h-[36px]"
         }`}
         textareaRef={textAreaRef}
@@ -714,7 +714,7 @@ export default function WordForm({
       {showScriptureRef && (
         <input
           type="text"
-          className="rounded-xl border border-[color:var(--panel-border)]/70 bg-[color:var(--surface)]/55 px-3 py-2 text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0"
+          className="composer-body-input rounded-xl border border-[color:var(--panel-border)]/70 bg-[color:var(--surface)]/55 px-3 py-2 text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0"
           placeholder="Scripture reference"
           value={scriptureRef}
           readOnly={!isAuthenticated}
@@ -727,7 +727,7 @@ export default function WordForm({
       {showYoutubeInput && (
         <input
           type="url"
-          className="rounded-xl border border-[color:var(--panel-border)]/70 bg-[color:var(--surface)]/55 px-3 py-2 text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0"
+          className="composer-body-input rounded-xl border border-[color:var(--panel-border)]/70 bg-[color:var(--surface)]/55 px-3 py-2 text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0"
           placeholder="Paste YouTube link"
           value={youtubeUrl}
           readOnly={!isAuthenticated}
@@ -746,7 +746,7 @@ export default function WordForm({
       {showSpotifyInput && (
         <input
           type="url"
-          className="rounded-xl border border-[color:var(--panel-border)]/70 bg-[color:var(--surface)]/55 px-3 py-2 text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0"
+          className="composer-body-input rounded-xl border border-[color:var(--panel-border)]/70 bg-[color:var(--surface)]/55 px-3 py-2 text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0"
           placeholder="Paste Spotify link"
           value={spotifyUrl}
           readOnly={!isAuthenticated}

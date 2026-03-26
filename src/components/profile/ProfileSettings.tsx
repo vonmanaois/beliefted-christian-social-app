@@ -184,7 +184,7 @@ export default function ProfileSettings({
         </p>
       </div>
       <input
-        className="soft-input text-sm"
+        className="soft-input form-body-input"
         placeholder="Your name"
         value={name}
         onChange={(event) => setName(event.target.value)}
@@ -196,7 +196,7 @@ export default function ProfileSettings({
         </p>
       </div>
       <textarea
-        className="soft-input text-sm min-h-[90px]"
+        className="soft-input form-body-input min-h-[90px]"
         placeholder="Share a short bio..."
         value={bio}
         onChange={(event) => setBio(event.target.value)}
@@ -212,7 +212,7 @@ export default function ProfileSettings({
         </p>
       </div>
       <input
-        className="soft-input text-sm"
+        className="soft-input form-body-input"
         placeholder="username"
         value={username}
         onChange={(event) => setUsername(event.target.value)}

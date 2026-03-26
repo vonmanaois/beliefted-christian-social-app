@@ -173,7 +173,7 @@ export default function EventComments({ eventId, isHost = false }: EventComments
             value={commentText}
             onChangeValue={setCommentText}
             placeholder="Ask a question or leave a note..."
-            className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full px-3 py-2"
+            className="comment-body-input bg-transparent comment-input min-h-[28px] text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full px-3 py-2"
             textareaRef={inputRef}
           />
           <div className="flex justify-end">
@@ -262,7 +262,7 @@ export default function EventComments({ eventId, isHost = false }: EventComments
                         value={replyText}
                         onChangeValue={setReplyText}
                         placeholder="Reply as the host..."
-                        className="bg-transparent comment-input min-h-[24px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full"
+                        className="comment-body-input bg-transparent comment-input min-h-[24px] text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full"
                         textareaRef={replyInputRef}
                       />
                       <div className="flex items-center justify-end gap-2">
@@ -293,34 +293,40 @@ export default function EventComments({ eventId, isHost = false }: EventComments
                     {replies.map((reply) => (
                       <div key={reply._id} className="relative">
                         <span className="absolute left-2 top-5 h-[2px] w-6 bg-[color:var(--panel-border)]" />
-                        <div className="reply-shell flex gap-3 px-3 py-2">
-                          <Avatar
-                            src={reply.userId?.image ?? null}
-                            alt={reply.userId?.name ?? "Host"}
-                            size={32}
-                            href={
-                              reply.userId?.username
-                                ? `/profile/${reply.userId.username}`
-                                : "/profile"
-                            }
-                            fallback={(reply.userId?.name?.[0] ?? "H").toUpperCase()}
-                            className="h-7 w-7 text-[10px] cursor-pointer"
-                          />
-                          <div className="flex-1">
-                            <div className="comment-meta-row">
-                              <span className="comment-author-link">
-                                {reply.userId?.name ?? "Host"}
-                              </span>
-                              {reply.userId?.username && (
-                                <span className="comment-handle">@{reply.userId.username}</span>
-                              )}
-                              {reply.isHostReply ? (
-                                <span className="rounded-full border border-[color:var(--panel-border)] px-2 py-0.5 text-[10px] font-semibold text-[color:var(--subtle)]">
-                                  Host
+                        <div className="reply-shell reply-card px-3">
+                          <div className="reply-header">
+                            <Avatar
+                              src={reply.userId?.image ?? null}
+                              alt={reply.userId?.name ?? "Host"}
+                              size={24}
+                              href={
+                                reply.userId?.username
+                                  ? `/profile/${reply.userId.username}`
+                                  : "/profile"
+                              }
+                              fallback={(reply.userId?.name?.[0] ?? "H").toUpperCase()}
+                              className="reply-avatar cursor-pointer"
+                            />
+                            <div className="reply-meta-stack">
+                              <div className="reply-author-row">
+                                <span className="reply-author-name">
+                                  {reply.userId?.name ?? "Host"}
                                 </span>
-                              ) : null}
-                              <span className="comment-timestamp">{formatTime(reply.createdAt)}</span>
+                              </div>
+                              <div className="reply-submeta-row">
+                                {reply.userId?.username && (
+                                  <span className="comment-handle">@{reply.userId.username}</span>
+                                )}
+                                {reply.isHostReply ? (
+                                  <span className="rounded-full border border-[color:var(--panel-border)] px-2 py-0.5 text-[10px] font-semibold text-[color:var(--subtle)]">
+                                    Host
+                                  </span>
+                                ) : null}
+                                <span className="comment-timestamp">{formatTime(reply.createdAt)}</span>
+                              </div>
                             </div>
+                          </div>
+                          <div className="pl-[34px]">
                             <div className="reply-context-copy mt-1">
                               <span className="h-[1px] w-5 bg-[color:var(--panel-border)]" />
                               <span>Replying to this comment</span>

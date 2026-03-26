@@ -140,7 +140,7 @@ export default function EventCard({ event, onInvite, onEdit }: EventCardProps) {
             {event.title}
           </h3>
           {event.description ? (
-            <p className="text-sm leading-6 text-[color:var(--subtle)]">{event.description}</p>
+            <p className="detail-body-copy text-[color:var(--subtle)]">{event.description}</p>
           ) : null}
         </div>
         <div className="rounded-2xl bg-[color:var(--surface)]/72 px-3 py-3">

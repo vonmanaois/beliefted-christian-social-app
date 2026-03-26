@@ -61,13 +61,33 @@ self.addEventListener("push", (event) => {
     }
   })();
   const dataPayload = payload.data || payload;
-  const title = dataPayload.title || "Beliefted";
+  const title = dataPayload.title || payload.notification?.title || "Beliefted";
   const options = {
-    body: dataPayload.body || "You have a new notification.",
-    icon: "/sheep-home-192.png",
-    badge: "/sheep-home-192.png",
+    body:
+      dataPayload.body ||
+      payload.notification?.body ||
+      "You have a new notification.",
+    icon:
+      dataPayload.icon ||
+      payload.notification?.icon ||
+      "/sheep-home-512.png",
+    badge:
+      dataPayload.badge ||
+      payload.notification?.badge ||
+      "/notification-badge.svg",
+    tag:
+      dataPayload.tag ||
+      payload.notification?.tag ||
+      "beliefted-activity",
+    renotify: true,
+    requireInteraction: false,
+    vibrate: [120, 60, 120],
+    timestamp: Date.now(),
     data: {
-      url: dataPayload.url || "/?open=notifications",
+      url:
+        dataPayload.url ||
+        payload.fcmOptions?.link ||
+        "/?open=notifications",
     },
   };
 
@@ -85,15 +105,36 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const targetUrl = event.notification?.data?.url || "/";
+  const targetUrl = new URL(
+    event.notification?.data?.url || "/",
+    self.location.origin
+  ).toString();
   event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
-      const existing = clients.find((client) => client.url.includes(targetUrl));
-      if (existing) {
-        existing.focus();
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (clients) => {
+      const sameOriginClients = clients.filter((client) => {
+        try {
+          return new URL(client.url).origin === self.location.origin;
+        } catch {
+          return false;
+        }
+      });
+
+      const preferredClient =
+        sameOriginClients.find((client) => "focus" in client) ?? sameOriginClients[0];
+
+      if (preferredClient) {
+        await preferredClient.focus();
+        if ("navigate" in preferredClient) {
+          await preferredClient.navigate(targetUrl);
+        }
+        preferredClient.postMessage({
+          type: "notification-open",
+          url: targetUrl,
+        });
         return;
       }
-      self.clients.openWindow(targetUrl);
-    })
+
+      await self.clients.openWindow(targetUrl);
+    }),
   );
 });

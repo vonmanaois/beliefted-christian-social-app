@@ -56,6 +56,7 @@ NotificationSchema.index({ userId: 1, createdAt: -1 });
 NotificationSchema.index({ userId: 1, readAt: 1 });
 
 const buildPushPayload = async (doc: Notification) => {
+  const notificationId = String((doc as { _id?: unknown })._id ?? "");
   const actor = doc.actorId
     ? await UserModel.findById(doc.actorId).select("name username").lean()
     : null;
@@ -68,6 +69,7 @@ const buildPushPayload = async (doc: Notification) => {
       title: "New follower",
       body: `${actorName} followed you.`,
       url: profile,
+      tag: `follow-${notificationId}`,
     };
   }
 
@@ -88,6 +90,7 @@ const buildPushPayload = async (doc: Notification) => {
       title: "New activity",
       body: bodyMap[doc.type] ?? "Open Beliefted to see the latest activity.",
       url,
+      tag: `${doc.type}-${notificationId}`,
     };
   }
 
@@ -106,6 +109,7 @@ const buildPushPayload = async (doc: Notification) => {
       title: "New activity",
       body: bodyMap[doc.type] ?? "Open Beliefted to see the latest activity.",
       url,
+      tag: `${doc.type}-${notificationId}`,
     };
   }
 
@@ -127,6 +131,7 @@ const buildPushPayload = async (doc: Notification) => {
       title: "New activity",
       body: bodyMap[doc.type] ?? "Open Beliefted to see the latest activity.",
       url,
+      tag: `${doc.type}-${notificationId}`,
     };
   }
 
@@ -139,12 +144,14 @@ const buildPushPayload = async (doc: Notification) => {
         title: "New activity",
         body: `${actorName} liked your day story.`,
         url: fallbackUrl,
+        tag: `${doc.type}-${notificationId}`,
       };
     }
     return {
       title: "New activity",
       body: `${actorName} liked your day story.`,
       url: fallbackUrl,
+      tag: `${doc.type}-${notificationId}`,
     };
   }
 
@@ -163,6 +170,7 @@ const buildPushPayload = async (doc: Notification) => {
       title: event?.title ? `Event: ${event.title}` : "Event update",
       body: bodyMap[doc.type] ?? "Open Beliefted to see the event.",
       url,
+      tag: `${doc.type}-${notificationId}`,
     };
   }
 
@@ -171,6 +179,7 @@ const buildPushPayload = async (doc: Notification) => {
       title: "Content update",
       body: "There is an update to your content.",
       url: fallbackUrl,
+      tag: `${doc.type}-${notificationId}`,
     };
   }
 
@@ -178,6 +187,7 @@ const buildPushPayload = async (doc: Notification) => {
     title: "New notification",
     body: "Open Beliefted to see the latest activity.",
     url: fallbackUrl,
+    tag: `${doc.type}-${notificationId}`,
   };
 };
 

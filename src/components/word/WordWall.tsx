@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
@@ -39,16 +39,42 @@ export default function WordWall() {
   const [pendingPrefillText, setPendingPrefillText] = useState<string | null>(null);
   const [activePrefillText, setActivePrefillText] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
-  const [feedMode, setFeedMode] = useState<"latest" | "forYou">(() => {
-    if (typeof window === "undefined") return "latest";
-    const saved = window.localStorage.getItem("wordFeedMode");
-    return saved === "forYou" ? "forYou" : "latest";
-  });
   const [forYouCycle, setForYouCycle] = useState(0);
   const formRef = useRef<HTMLDivElement | null>(null);
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
   const { openSignIn } = useUIStore();
+  const feedMode = useSyncExternalStore(
+    useCallback((callback: () => void) => {
+      if (typeof window === "undefined") {
+        return () => undefined;
+      }
+      const handleStorage = (event: Event) => {
+        if (event instanceof StorageEvent && event.key && event.key !== "wordFeedMode") {
+          return;
+        }
+        callback();
+      };
+      window.addEventListener("storage", handleStorage);
+      window.addEventListener("word-feed-mode-change", handleStorage);
+      return () => {
+        window.removeEventListener("storage", handleStorage);
+        window.removeEventListener("word-feed-mode-change", handleStorage);
+      };
+    }, []),
+    () => {
+      if (typeof window === "undefined") return "latest" as const;
+      const saved = window.localStorage.getItem("wordFeedMode");
+      return saved === "forYou" ? "forYou" : "latest";
+    },
+    () => "latest" as const,
+  );
+
+  const setFeedMode = useCallback((next: "latest" | "forYou") => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("wordFeedMode", next);
+    window.dispatchEvent(new Event("word-feed-mode-change"));
+  }, []);
 
   useEffect(() => {
     const handleOpenWord = () => {
@@ -121,11 +147,6 @@ export default function WordWall() {
     const id = window.requestAnimationFrame(() => setIsMounted(true));
     return () => window.cancelAnimationFrame(id);
   }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem("wordFeedMode", feedMode);
-  }, [feedMode]);
 
   return (
     <>

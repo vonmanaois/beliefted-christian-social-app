@@ -948,7 +948,7 @@ const PrayerCard = ({
               )}
               <>
                 {cleaned && (
-                  <p className="mt-2 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
+                  <p className="feed-body-copy mt-2 text-[color:var(--ink)] whitespace-pre-line">
                     <MentionText text={displayContent} />
                   </p>
                 )}

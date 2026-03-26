@@ -245,7 +245,6 @@ export default async function PostDetail({
               word.sharedEventHostUsername ?? sharedEventFallback?.hostUsername ?? null,
           }
         : null;
-
     return (
       <div>
         {showBackHeader && <PostBackHeader label="Word" />}

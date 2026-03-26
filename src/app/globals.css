@@ -3,6 +3,13 @@
 :root {
   --font-sans: var(--font-inter);
   --font-serif: var(--font-inter);
+  --font-root-size: 16px;
+  --font-body-size: 1rem;
+  --font-meta-size: 0.75rem;
+  --font-title-size: 1rem;
+  --font-feed-body-size: 0.95rem;
+  --font-composer-size: 0.95rem;
+  --font-detail-body-size: 0.95rem;
   color-scheme: light;
   --ink: #0b0b0b;
   --subtle: #6b6b6b;
@@ -18,6 +25,40 @@
   --ring: rgba(0, 0, 0, 0.12);
   --danger: #cc3b3b;
   --badge: #e34343;
+}
+
+html {
+  font-size: var(--font-root-size);
+}
+
+html[data-font-scale="small"] {
+  --font-root-size: 15px;
+  --font-body-size: 0.98rem;
+  --font-meta-size: 0.72rem;
+  --font-title-size: 0.98rem;
+  --font-feed-body-size: 0.92rem;
+  --font-composer-size: 0.93rem;
+  --font-detail-body-size: 0.93rem;
+}
+
+html[data-font-scale="default"] {
+  --font-root-size: 16px;
+  --font-body-size: 1rem;
+  --font-meta-size: 0.75rem;
+  --font-title-size: 1rem;
+  --font-feed-body-size: 0.95rem;
+  --font-composer-size: 0.95rem;
+  --font-detail-body-size: 0.95rem;
+}
+
+html[data-font-scale="large"] {
+  --font-root-size: 17px;
+  --font-body-size: 1.02rem;
+  --font-meta-size: 0.78rem;
+  --font-title-size: 1.04rem;
+  --font-feed-body-size: 1.02rem;
+  --font-composer-size: 1rem;
+  --font-detail-body-size: 1rem;
 }
 
 html[data-theme="midnight"] {
@@ -100,6 +141,7 @@ body {
   margin: 0;
   font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system,
     sans-serif;
+  font-size: var(--font-body-size);
   background:
     radial-gradient(circle at top left, rgba(255, 255, 255, 0.8) 0%, transparent 55%),
     radial-gradient(circle at 45% 20%, rgba(0, 0, 0, 0.05), transparent 45%),
@@ -129,8 +171,17 @@ body {
   outline: none;
   min-height: 200px;
   color: var(--ink);
-  font-size: 0.95rem;
-  line-height: 1.6;
+  font-size: var(--font-detail-body-size);
+  line-height: 1.72;
+}
+
+.editor-surface .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: color-mix(in srgb, var(--subtle) 84%, transparent);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  font-size: var(--font-detail-body-size);
 }
 
 .editor-surface .ProseMirror p {
@@ -215,6 +266,11 @@ body {
   color: var(--accent-contrast);
   border-color: var(--accent);
   background: var(--accent);
+}
+
+.faith-story-content {
+  font-size: var(--font-detail-body-size);
+  line-height: 1.72;
 }
 
 .faith-story-content p {
@@ -915,6 +971,43 @@ html[data-theme="banana"] .panel-glass {
   resize: none;
 }
 
+.feed-body-copy {
+  font-size: var(--font-feed-body-size);
+  line-height: 1.72;
+}
+
+.comment-body-input {
+  font-size: var(--font-composer-size);
+  line-height: 1.65;
+}
+
+.comment-body-input::placeholder {
+  font-size: var(--font-composer-size);
+}
+
+.composer-body-input {
+  font-size: var(--font-composer-size);
+  line-height: 1.72;
+}
+
+.composer-body-input::placeholder {
+  font-size: var(--font-composer-size);
+}
+
+.detail-body-copy {
+  font-size: var(--font-detail-body-size);
+  line-height: 1.72;
+}
+
+.form-body-input {
+  font-size: var(--font-composer-size);
+  line-height: 1.6;
+}
+
+.form-body-input::placeholder {
+  font-size: var(--font-composer-size);
+}
+
 .verse-chip {
   display: inline-flex;
   align-items: center;
@@ -1173,8 +1266,63 @@ button[data-no-focus-ring="true"]:focus-visible {
   display: none;
 }
 
+@keyframes story-skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.story-skeleton-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--surface) 86%, transparent) 0%,
+    color-mix(in srgb, var(--surface-strong) 98%, white 2%) 48%,
+    color-mix(in srgb, var(--surface) 86%, transparent) 100%
+  );
+  background-size: 220% 100%;
+  animation: story-skeleton-shimmer 1.5s linear infinite;
+}
+
+.story-skeleton-ring {
+  position: relative;
+  display: flex;
+  height: 4.25rem;
+  width: 4.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 3px;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--accent) 80%, white 20%),
+      color-mix(in srgb, var(--accent) 36%, transparent)
+    );
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent),
+    0 10px 24px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.story-skeleton-avatar {
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--panel) 82%, transparent);
+  background-color: color-mix(in srgb, var(--surface) 92%, transparent);
+}
+
+.story-skeleton-label {
+  height: 0.625rem;
+  width: 3.5rem;
+  border-radius: 999px;
+}
+
 .section-eyebrow {
-  font-size: 10px;
+  font-size: var(--font-meta-size);
   font-weight: 600;
   letter-spacing: 0.28em;
   text-transform: uppercase;
@@ -1182,7 +1330,7 @@ button[data-no-focus-ring="true"]:focus-visible {
 }
 
 .meta-copy {
-  font-size: 12px;
+  font-size: calc(var(--font-meta-size) + 0.03rem);
   line-height: 1.45;
   color: var(--subtle);
 }
@@ -1192,13 +1340,13 @@ button[data-no-focus-ring="true"]:focus-visible {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
+  font-size: calc(var(--font-meta-size) + 0.02rem);
   line-height: 1;
   color: var(--subtle);
 }
 
 .comment-author-link {
-  font-size: 12px;
+  font-size: calc(var(--font-title-size) - 0.12rem);
   font-weight: 600;
   line-height: 1;
   color: var(--ink);
@@ -1210,13 +1358,13 @@ button[data-no-focus-ring="true"]:focus-visible {
 
 .comment-handle,
 .comment-timestamp {
-  font-size: 10px;
+  font-size: var(--font-meta-size);
   line-height: 1;
   color: var(--subtle);
 }
 
 .comment-body-copy {
-  font-size: 13px;
+  font-size: calc(var(--font-body-size) - 0.08rem);
   line-height: 1.55;
   color: var(--ink);
 }
@@ -1224,16 +1372,23 @@ button[data-no-focus-ring="true"]:focus-visible {
 .comment-action-row {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
 }
 
 .comment-action-button {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 11px;
+  justify-content: center;
+  gap: 6px;
+  min-height: 24px;
+  font-size: calc(var(--font-meta-size) + 0.02rem);
   font-weight: 600;
   line-height: 1;
+}
+
+.comment-like-button {
+  min-width: 30px;
+  padding-right: 2px;
 }
 
 .reply-shell {
@@ -1243,13 +1398,101 @@ button[data-no-focus-ring="true"]:focus-visible {
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
 }
 
+.reply-card {
+  padding-top: 14px;
+  padding-bottom: 12px;
+}
+
+.reply-header {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: start;
+}
+
+.reply-avatar {
+  height: 24px;
+  width: 24px;
+  font-size: 10px;
+}
+
+.reply-meta-stack {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.reply-author-row {
+  min-width: 0;
+}
+
+.reply-author-name {
+  display: block;
+  font-size: calc(var(--font-title-size) - 0.06rem);
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.reply-submeta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-meta-size);
+  line-height: 1;
+  color: var(--subtle);
+}
+
+.reply-submeta-row .comment-handle,
+.reply-submeta-row .comment-timestamp {
+  font-size: var(--font-meta-size);
+}
+
 .reply-context-copy {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 10px;
+  font-size: var(--font-meta-size);
   line-height: 1;
   color: var(--subtle);
+}
+
+.font-scale-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--panel-border) 82%, transparent);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  padding: 4px;
+}
+
+.font-scale-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--subtle);
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.font-scale-button[data-active="true"] {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.font-scale-button[data-active="false"]:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--surface-strong) 86%, transparent);
 }
 
 .composer-toolbar {

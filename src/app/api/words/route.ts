@@ -334,7 +334,8 @@ export async function POST(req: Request) {
     privacy: z.enum(["public", "followers", "private"]).optional(),
   });
 
-  const body = WordSchema.safeParse(await req.json());
+  const rawBody = await req.json();
+  const body = WordSchema.safeParse(rawBody);
   if (!body.success) {
     return NextResponse.json({ error: "Invalid word data" }, { status: 400 });
   }
@@ -351,7 +352,7 @@ export async function POST(req: Request) {
 
   if (!content && images.length === 0 && !sharedFaithStoryId && !sharedEventId) {
     return NextResponse.json(
-      { error: "Content, images, or a shared story is required" },
+      { error: "Content, images, or a share is required" },
       { status: 400 }
     );
   }

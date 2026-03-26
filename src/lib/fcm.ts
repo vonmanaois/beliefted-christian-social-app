@@ -5,6 +5,9 @@ type FcmPayload = {
   title: string;
   body: string;
   url?: string;
+  tag?: string;
+  icon?: string;
+  badge?: string;
 };
 
 export const sendFcmToUser = async (userId: string, payload: FcmPayload) => {
@@ -22,6 +25,28 @@ export const sendFcmToUser = async (userId: string, payload: FcmPayload) => {
             title: payload.title,
             body: payload.body,
             url: payload.url ?? "/",
+            tag: payload.tag ?? "beliefted-activity",
+            icon: payload.icon ?? "/sheep-home-512.png",
+            badge: payload.badge ?? "/notification-badge.svg",
+          },
+          webpush: {
+            headers: {
+              Urgency: "high",
+            },
+            fcmOptions: {
+              link: payload.url ?? "/",
+            },
+            notification: {
+              title: payload.title,
+              body: payload.body,
+              icon: payload.icon ?? "/sheep-home-512.png",
+              badge: payload.badge ?? "/notification-badge.svg",
+              tag: payload.tag ?? "beliefted-activity",
+              renotify: true,
+              requireInteraction: false,
+              timestamp: Date.now(),
+              vibrate: [120, 60, 120],
+            },
           },
         });
       } catch (error) {

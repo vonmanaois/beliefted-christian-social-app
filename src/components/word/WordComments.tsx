@@ -95,7 +95,7 @@ const WordComments = memo(function WordComments({
             value={commentText}
             onChangeValue={onCommentTextChange}
             placeholder="Share a reflection..."
-            className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full px-3 py-2"
+            className="comment-body-input bg-transparent comment-input min-h-[28px] text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full px-3 py-2"
             textareaRef={commentInputRef}
           />
           <div className="flex justify-end">
@@ -234,7 +234,7 @@ const WordComments = memo(function WordComments({
                         <MentionTextarea
                           value={editingCommentText}
                           onChangeValue={onEditingCommentTextChange}
-                          className="bg-transparent comment-input min-h-[28px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full"
+                          className="comment-body-input bg-transparent comment-input min-h-[28px] text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full"
                         />
                         <div className="flex items-center gap-2">
                           <button
@@ -271,7 +271,7 @@ const WordComments = memo(function WordComments({
                         <button
                           type="button"
                           onClick={() => onToggleLike(comment._id)}
-                          className={`comment-action-button ${
+                          className={`comment-action-button comment-like-button ${
                             commentHasLiked
                               ? "text-[color:var(--accent)]"
                               : "text-[color:var(--subtle)]"
@@ -297,7 +297,7 @@ const WordComments = memo(function WordComments({
                         value={replyText}
                         onChangeValue={onReplyTextChange}
                         placeholder="Reply..."
-                        className="bg-transparent comment-input min-h-[24px] text-sm text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full"
+                        className="comment-body-input bg-transparent comment-input min-h-[24px] text-[color:var(--ink)] outline-none focus:outline-none focus:ring-0 resize-none w-full"
                         textareaRef={replyInputRef}
                       />
                       <div className="flex items-center justify-end gap-2">
@@ -330,31 +330,37 @@ const WordComments = memo(function WordComments({
                       return (
                         <div key={reply._id} className="relative">
                           <span className="absolute left-2 top-5 h-[2px] w-6 bg-[color:var(--panel-border)]" />
-                          <div className="reply-shell flex gap-3 px-3 py-2">
-                            <Avatar
-                              src={reply.userId?.image ?? null}
-                              alt={reply.userId?.name ?? "User"}
-                              size={32}
-                              href={
-                                reply.userId?.username
-                                  ? `/profile/${reply.userId.username}`
-                                  : "/profile"
-                              }
-                              fallback={(reply.userId?.name?.[0] ?? "U").toUpperCase()}
-                              className="h-7 w-7 text-[10px] cursor-pointer"
-                            />
-                            <div className="flex-1">
-                              <div className="comment-meta-row">
-                                <span className="comment-author-link">
-                                  {reply.userId?.name ?? "User"}
-                                </span>
-                                {reply.userId?.username && (
-                                  <span className="comment-handle">@{reply.userId.username}</span>
-                                )}
-                                <span className="comment-timestamp">
-                                  {formatPostTime(reply.createdAt)}
-                                </span>
+                          <div className="reply-shell reply-card px-3">
+                            <div className="reply-header">
+                              <Avatar
+                                src={reply.userId?.image ?? null}
+                                alt={reply.userId?.name ?? "User"}
+                                size={24}
+                                href={
+                                  reply.userId?.username
+                                    ? `/profile/${reply.userId.username}`
+                                    : "/profile"
+                                }
+                                fallback={(reply.userId?.name?.[0] ?? "U").toUpperCase()}
+                                className="reply-avatar cursor-pointer"
+                              />
+                              <div className="reply-meta-stack">
+                                <div className="reply-author-row">
+                                  <span className="reply-author-name">
+                                    {reply.userId?.name ?? "User"}
+                                  </span>
+                                </div>
+                                <div className="reply-submeta-row">
+                                  {reply.userId?.username && (
+                                    <span className="comment-handle">@{reply.userId.username}</span>
+                                  )}
+                                  <span className="comment-timestamp">
+                                    {formatPostTime(reply.createdAt)}
+                                  </span>
+                                </div>
                               </div>
+                            </div>
+                            <div className="pl-[34px]">
                               <div className="reply-context-copy mt-1">
                                 <span className="h-[1px] w-5 bg-[color:var(--panel-border)]" />
                                 <span>
@@ -371,7 +377,7 @@ const WordComments = memo(function WordComments({
                                 <button
                                   type="button"
                                   onClick={() => onToggleLike(reply._id)}
-                                  className={`comment-action-button mt-2 ${
+                                  className={`comment-action-button comment-like-button mt-2 ${
                                     replyHasLiked
                                       ? "text-[color:var(--accent)]"
                                       : "text-[color:var(--subtle)]"

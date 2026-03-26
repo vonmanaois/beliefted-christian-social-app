@@ -55,7 +55,7 @@ export default function UserSearch({ onSelect, placeholder = "Search people..." 
   return (
     <div className="relative">
       <input
-        className="soft-input text-sm w-full"
+        className="soft-input form-body-input w-full"
         placeholder={placeholder}
         value={query}
         onChange={(event) => {

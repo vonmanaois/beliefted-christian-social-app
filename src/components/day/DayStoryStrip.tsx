@@ -722,7 +722,20 @@ export default function DayStoryStrip() {
           </span>
         </button>
         {isLoading ? (
-          <div className="text-xs text-[color:var(--subtle)]">Loading stories...</div>
+          <div className="flex items-start gap-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div
+                key={index}
+                className="flex min-w-[72px] flex-col items-center gap-2.5"
+                aria-hidden="true"
+              >
+                <div className="story-skeleton-ring">
+                  <div className="story-skeleton-avatar story-skeleton-shimmer" />
+                </div>
+                <div className="story-skeleton-label story-skeleton-shimmer" />
+              </div>
+            ))}
+          </div>
         ) : (
           groupedStories.map((group) => {
             const previewStory = group.stories[group.stories.length - 1];

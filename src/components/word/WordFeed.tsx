@@ -718,6 +718,7 @@ export default function WordFeed({
   };
 
   const showLoadingMore = isFetchingNextPage || isLoadingMore;
+  const showForYouSkeleton = mode === "forYou" && isFetching && !isFetchingNextPage;
 
   return (
     <div
@@ -755,12 +756,17 @@ export default function WordFeed({
           {pullDistance >= threshold ? "Release to refresh" : "Pull to refresh"}
         </div>
       )}
-      {isFetching && (
+      {isFetching && !showForYouSkeleton && (
         <div className="mb-3 loading-bar">
           <div className="loading-bar__fill" />
         </div>
       )}
       <div className="relative min-h-[40vh]">
+        {showForYouSkeleton && (
+          <div className="pointer-events-none absolute inset-0 z-10">
+            <FeedSkeleton count={2} />
+          </div>
+        )}
         {useVirtualized && isRestoring && (
           <div className="pointer-events-none absolute inset-0 z-10">
             <FeedSkeleton count={2} />
@@ -768,7 +774,9 @@ export default function WordFeed({
         )}
         <div
           className={`transition-opacity ${
-            useVirtualized && isRestoring ? "opacity-0 pointer-events-none" : "opacity-100"
+            (useVirtualized && isRestoring) || showForYouSkeleton
+              ? "opacity-0 pointer-events-none"
+              : "opacity-100"
           }`}
         >
           {useVirtualized ? (

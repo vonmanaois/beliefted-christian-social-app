@@ -838,11 +838,11 @@ export default function FaithStoryDetail({ story }: FaithStoryDetailProps) {
 
             {showFullContent || !isLongContent ? (
               <div
-                className="faith-story-content text-sm text-[color:var(--ink)]"
+                className="faith-story-content text-[color:var(--ink)]"
                 dangerouslySetInnerHTML={{ __html: linkedContent }}
               />
             ) : (
-              <p className="text-sm text-[color:var(--ink)] whitespace-pre-line">
+              <p className="detail-body-copy text-[color:var(--ink)] whitespace-pre-line">
                 <MentionText text={previewText} />
               </p>
             )}

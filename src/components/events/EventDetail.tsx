@@ -137,7 +137,7 @@ export default function EventDetail() {
       <div className="panel p-4">
         <h1 className="text-xl font-semibold text-[color:var(--ink)]">{event.title}</h1>
         {event.description ? (
-          <p className="mt-2 text-sm text-[color:var(--subtle)]">{event.description}</p>
+          <p className="detail-body-copy mt-2 text-[color:var(--subtle)]">{event.description}</p>
         ) : null}
         <div className="mt-4 flex flex-col gap-2 text-xs text-[color:var(--subtle)]">
           <div className="flex items-center gap-2">

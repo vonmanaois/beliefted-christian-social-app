@@ -938,7 +938,6 @@ const WordCard = ({
     }
     scheduleCommentsActivation();
   }, [showComments, scheduleCommentsActivation]);
-
   const handleLike = useCallback(
     async (event?: React.MouseEvent) => {
       event?.stopPropagation();
@@ -1199,7 +1198,6 @@ const WordCard = ({
       // ignore clipboard errors
     }
   }, [shareUrl]);
-
   return (
     <article
       className={`wall-card flex flex-col gap-2 rounded-none cursor-pointer transition-card overflow-visible max-w-full min-w-0 ${isRemoving ? "fade-out-card" : ""}`}
@@ -1278,7 +1276,7 @@ const WordCard = ({
                   );
                 })()}
                 {cleaned && (
-                  <p className="mt-1 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)] whitespace-pre-line">
+                  <p className="feed-body-copy mt-1 text-[color:var(--ink)] whitespace-pre-line">
                     <MentionText text={displayContent} />
                   </p>
                 )}

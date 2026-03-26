@@ -30,6 +30,8 @@ import { useUIStore } from "@/lib/uiStore";
 import { getToken, onMessage } from "firebase/messaging";
 import { getFirebaseMessaging } from "@/lib/firebaseClient";
 
+type FontScale = "small" | "default" | "large";
+
 export default function Sidebar() {
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
@@ -57,6 +59,7 @@ export default function Sidebar() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [isMenuClosing, setIsMenuClosing] = useState(false);
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+  const [fontScale, setFontScaleState] = useState<FontScale>("default");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notificationsClosing, setNotificationsClosing] = useState(false);
   const [infoPanel, setInfoPanel] = useState<"why" | "guidelines" | null>(null);
@@ -313,6 +316,11 @@ export default function Sidebar() {
     router.replace(pathname);
   }, [isAuthenticated, openNotifications, pathname, router]);
 
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    router.prefetch("/journal");
+  }, [isAuthenticated, router]);
+
   const hasHomeBadge = newWordPosts || newPrayerPosts;
 
   const { data: profileSummary } = useQuery({
@@ -403,6 +411,49 @@ export default function Sidebar() {
   const toggleThemeMenu = useCallback(() => {
     setThemeMenuOpen((prev) => !prev);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem("beliefted_font_scale");
+    const nextScale: FontScale =
+      stored === "small" || stored === "large" || stored === "default"
+        ? stored
+        : "default";
+    document.documentElement.dataset.fontScale = nextScale;
+    setFontScaleState(nextScale);
+  }, []);
+
+  const setFontScale = useCallback((nextScale: FontScale) => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("beliefted_font_scale", nextScale);
+    document.documentElement.dataset.fontScale = nextScale;
+    setFontScaleState(nextScale);
+  }, []);
+
+  const renderFontScaleControls = () => (
+    <div className="mt-3 rounded-xl bg-[color:var(--panel)] p-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--subtle)]">
+        Font Size
+      </p>
+      <div className="mt-3 font-scale-group">
+        {(["small", "default", "large"] as const).map((scale) => (
+          <button
+            key={scale}
+            type="button"
+            onClick={() => setFontScale(scale)}
+            className="font-scale-button"
+            data-active={fontScale === scale ? "true" : "false"}
+            aria-pressed={fontScale === scale}
+          >
+            {scale === "small" ? "A-" : scale === "large" ? "A+" : "A"}
+          </button>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-[color:var(--subtle)]">
+        Small, default, or large text across the app.
+      </p>
+    </div>
+  );
 
   useEffect(() => {
     if (!showMobileMenu) return;
@@ -703,12 +754,15 @@ export default function Sidebar() {
                     className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface-strong)]"
                     aria-expanded={themeMenuOpen}
                   >
-                    Theme
+                    Theme & Font
                   </button>
                   {themeMenuOpen && (
-                    <div className="mt-3 rounded-xl bg-[color:var(--panel)] p-3">
-                      <ThemeToggle />
-                    </div>
+                    <>
+                      <div className="mt-3 rounded-xl bg-[color:var(--panel)] p-3">
+                        <ThemeToggle />
+                      </div>
+                      {renderFontScaleControls()}
+                    </>
                   )}
                 </div>
 
@@ -959,6 +1013,8 @@ export default function Sidebar() {
             type="button"
             className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
             onClick={() => router.push("/journal")}
+            onMouseEnter={() => router.prefetch("/journal")}
+            onTouchStart={() => router.prefetch("/journal")}
           >
             <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
               <Notebook size={22} weight="regular" />
@@ -1028,12 +1084,17 @@ export default function Sidebar() {
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
             <SlidersHorizontal size={22} weight="regular" />
           </span>
-          <span className="hidden lg:inline">Themes</span>
+          <span className="hidden lg:inline">Theme & Font</span>
         </button>
         {themeMenuOpen && (
-          <div className="hidden lg:block rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-3">
-            <ThemeToggle />
-          </div>
+          <>
+            <div className="hidden lg:block rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-3">
+              <ThemeToggle />
+            </div>
+            <div className="hidden lg:block rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-3">
+              {renderFontScaleControls()}
+            </div>
+          </>
         )}
         {isAuthenticated && (
           <div className="hidden lg:flex flex-col gap-3 rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-3">
@@ -1266,6 +1327,7 @@ export default function Sidebar() {
               type="button"
               className={`bottom-nav-button ${isJournalRoute ? "bottom-nav-button--active" : "bottom-nav-button--inactive"}`}
               onClick={() => router.push("/journal")}
+              onTouchStart={() => router.prefetch("/journal")}
               aria-label="Journal"
             >
               <Notebook size={24} weight="regular" />

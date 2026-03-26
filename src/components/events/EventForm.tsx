@@ -267,7 +267,7 @@ export default function EventForm({ onCreated, onUpdated, initialEvent }: EventF
       <div>
         <label className="text-xs font-semibold text-[color:var(--subtle)]">Title</label>
         <input
-          className="soft-input text-sm w-full mt-1"
+          className="soft-input form-body-input w-full mt-1"
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           placeholder="Church picnic, worship night..."
@@ -277,7 +277,7 @@ export default function EventForm({ onCreated, onUpdated, initialEvent }: EventF
       <div>
         <label className="text-xs font-semibold text-[color:var(--subtle)]">Description</label>
         <textarea
-          className="soft-input text-sm w-full mt-1 min-h-[90px]"
+          className="soft-input form-body-input w-full mt-1 min-h-[90px]"
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           placeholder="What is this event about?"
@@ -288,7 +288,7 @@ export default function EventForm({ onCreated, onUpdated, initialEvent }: EventF
           <label className="text-xs font-semibold text-[color:var(--subtle)]">Start</label>
           <input
             type="datetime-local"
-            className="soft-input text-sm w-full mt-1"
+            className="soft-input form-body-input w-full mt-1"
             value={startAt}
             onChange={(event) => setStartAt(event.target.value)}
             onBlur={() => setStartAt((value) => snapToQuarterHour(value))}
@@ -300,7 +300,7 @@ export default function EventForm({ onCreated, onUpdated, initialEvent }: EventF
           <label className="text-xs font-semibold text-[color:var(--subtle)]">End</label>
           <input
             type="datetime-local"
-            className="soft-input text-sm w-full mt-1"
+            className="soft-input form-body-input w-full mt-1"
             value={endAt}
             onChange={(event) => setEndAt(event.target.value)}
             onBlur={() => setEndAt((value) => snapToQuarterHour(value))}
@@ -312,7 +312,7 @@ export default function EventForm({ onCreated, onUpdated, initialEvent }: EventF
         <label className="text-xs font-semibold text-[color:var(--subtle)]">Location</label>
         <input
           ref={locationInputRef}
-          className="soft-input text-sm w-full mt-1"
+          className="soft-input form-body-input w-full mt-1"
           value={locationText}
           onChange={(event) => setLocationText(event.target.value)}
           placeholder="Church hall, 123 Main St"
@@ -334,7 +334,7 @@ export default function EventForm({ onCreated, onUpdated, initialEvent }: EventF
         <div>
           <label className="text-xs font-semibold text-[color:var(--subtle)]">Visibility</label>
           <select
-            className="soft-input text-sm w-full mt-1"
+            className="soft-input form-body-input w-full mt-1"
             value={visibility}
             onChange={(event) => setVisibility(event.target.value as typeof visibility)}
           >
@@ -348,7 +348,7 @@ export default function EventForm({ onCreated, onUpdated, initialEvent }: EventF
           <input
             type="number"
             min={1}
-            className="soft-input text-sm w-full mt-1"
+            className="soft-input form-body-input w-full mt-1"
             value={capacity}
             onChange={(event) => setCapacity(event.target.value)}
             placeholder="Optional"
